@@ -5,30 +5,67 @@ defineProps<{
   collapsed?: boolean
 }>()
 
+const router = useRouter()
+const toast = useToast()
 const colorMode = useColorMode()
 const appConfig = useAppConfig()
+const { user: supabaseUser, signOut } = useSupabase()
 
 const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose']
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
 
-const user = ref({
-  name: 'Benjamin Canac',
-  avatar: {
-    src: 'https://github.com/benjamincanac.png',
-    alt: 'Benjamin Canac'
+const user = computed(() => {
+  if (supabaseUser.value) {
+    const metadata = supabaseUser.value.user_metadata || {}
+    const firstName = metadata.first_name || ''
+    const lastName = metadata.last_name || ''
+    const fullName = `${firstName} ${lastName}`.trim() || supabaseUser.value.email || 'Utilisateur'
+
+    return {
+      name: fullName,
+      email: supabaseUser.value.email || '',
+      avatar: {
+        src: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`,
+        alt: fullName
+      }
+    }
+  }
+
+  return {
+    name: 'Utilisateur',
+    email: '',
+    avatar: {
+      src: 'https://ui-avatars.com/api/?name=User&background=random',
+      alt: 'Utilisateur'
+    }
   }
 })
+
+const handleSignOut = async () => {
+  try {
+    await signOut()
+    toast.add({
+      title: 'Déconnexion réussie',
+      color: 'green'
+    })
+    router.push('/login')
+  } catch (error: any) {
+    toast.add({
+      title: 'Erreur lors de la déconnexion',
+      description: error.message || 'Une erreur est survenue',
+      color: 'red'
+    })
+  }
+}
 
 const items = computed<DropdownMenuItem[][]>(() => ([[{
   type: 'label',
   label: user.value.name,
+  description: user.value.email,
   avatar: user.value.avatar
 }], [{
   label: 'Profil',
   icon: 'i-lucide-user'
-}, {
-  label: 'Facturation',
-  icon: 'i-lucide-credit-card'
 }, {
   label: 'Paramètres',
   icon: 'i-lucide-settings',
@@ -147,7 +184,8 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
   target: '_blank'
 }, {
   label: 'Déconnexion',
-  icon: 'i-lucide-log-out'
+  icon: 'i-lucide-log-out',
+  onClick: handleSignOut
 }]]))
 </script>
 
