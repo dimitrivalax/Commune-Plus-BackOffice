@@ -14,29 +14,36 @@ const { user: supabaseUser, signOut } = useSupabase()
 const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose']
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
 
-const user = computed(() => {
-  if (supabaseUser.value) {
-    const metadata = supabaseUser.value.user_metadata || {}
-    const firstName = metadata.first_name || ''
-    const lastName = metadata.last_name || ''
-    const fullName = `${firstName} ${lastName}`.trim() || supabaseUser.value.email || 'Utilisateur'
+const isMounted = ref(false)
 
+onMounted(() => {
+  isMounted.value = true
+})
+
+const user = computed(() => {
+  // Utiliser les valeurs par défaut jusqu'à ce que le composant soit monté pour éviter les problèmes d'hydratation
+  if (!isMounted.value || !supabaseUser.value) {
     return {
-      name: fullName,
-      email: supabaseUser.value.email || '',
+      name: 'Utilisateur',
+      email: '',
       avatar: {
-        src: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`,
-        alt: fullName
+        src: 'https://ui-avatars.com/api/?name=User&background=random',
+        alt: 'Utilisateur'
       }
     }
   }
 
+  const metadata = supabaseUser.value.user_metadata || {}
+  const firstName = metadata.first_name || ''
+  const lastName = metadata.last_name || ''
+  const fullName = `${firstName} ${lastName}`.trim() || supabaseUser.value.email || 'Utilisateur'
+
   return {
-    name: 'Utilisateur',
-    email: '',
+    name: fullName,
+    email: supabaseUser.value.email || '',
     avatar: {
-      src: 'https://ui-avatars.com/api/?name=User&background=random',
-      alt: 'Utilisateur'
+      src: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`,
+      alt: fullName
     }
   }
 })

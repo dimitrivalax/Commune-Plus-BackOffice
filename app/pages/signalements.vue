@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { breakpointsTailwind } from '@vueuse/core'
 import type { Signalement } from '~/types'
 import SignalementsList from '~/components/signalements/SignalementsList.vue'
+import SignalementsMap from '~/components/signalements/SignalementsMap.vue'
 import SignalementDetail from '~/components/signalements/SignalementDetail.vue'
 
 const tabItems = [{
@@ -19,6 +20,7 @@ const tabItems = [{
   value: 'traité'
 }]
 const selectedTab = ref('all')
+const viewMode = ref<'table' | 'map'>('table')
 
 const { data: signalements } = await useFetch<Signalement[]>('/api/signalements', { default: () => [] })
 
@@ -63,16 +65,14 @@ const handleUpdate = (updated: Signalement) => {
     selectedSignalement.value = updated
   }
 }
+
+const handleMarkerClick = (signalement: Signalement) => {
+  selectedSignalement.value = signalement
+}
 </script>
 
 <template>
-  <UDashboardPanel
-    id="signalements-1"
-    :default-size="25"
-    :min-size="20"
-    :max-size="30"
-    resizable
-  >
+  <UDashboardPanel id="signalements-1" :default-size="25" :min-size="20" :max-size="30" resizable>
     <UDashboardNavbar title="Signalements">
       <template #leading>
         <UDashboardSidebarCollapse />
@@ -82,23 +82,42 @@ const handleUpdate = (updated: Signalement) => {
       </template>
 
       <template #right>
-        <UTabs
-          v-model="selectedTab"
-          :items="tabItems"
-          :content="false"
-          size="xs"
-        />
+        <div class="flex items-center gap-2">
+          <UButtonGroup>
+            <UButton
+              :variant="viewMode === 'table' ? 'solid' : 'outline'"
+              icon="i-lucide-list"
+              @click="viewMode = 'table'"
+              size="xs"
+            />
+            <UButton
+              :variant="viewMode === 'map' ? 'solid' : 'outline'"
+              icon="i-lucide-map"
+              @click="viewMode = 'map'"
+              size="xs"
+            />
+          </UButtonGroup>
+          <UTabs v-model="selectedTab" :items="tabItems" :content="false" size="xs" />
+        </div>
       </template>
     </UDashboardNavbar>
-    <SignalementsList v-model="selectedSignalement" :signalements="filteredSignalements" />
+    <div v-if="viewMode === 'table'" class="h-full">
+      <SignalementsList v-model="selectedSignalement" :signalements="filteredSignalements" />
+    </div>
+    <div v-else class="h-full">
+      <ClientOnly>
+        <SignalementsMap :signalements="filteredSignalements" @marker-click="handleMarkerClick" />
+        <template #fallback>
+          <div class="flex items-center justify-center h-full">
+            <UIcon name="i-lucide-loader-2" class="size-8 animate-spin text-dimmed" />
+          </div>
+        </template>
+      </ClientOnly>
+    </div>
   </UDashboardPanel>
 
-  <SignalementDetail
-    v-if="selectedSignalement"
-    :signalement="selectedSignalement"
-    @close="selectedSignalement = null"
-    @update="handleUpdate"
-  />
+  <SignalementDetail v-if="selectedSignalement" :signalement="selectedSignalement" @close="selectedSignalement = null"
+    @update="handleUpdate" />
   <div v-else class="hidden lg:flex flex-1 items-center justify-center">
     <UIcon name="i-lucide-alert-triangle" class="size-32 text-dimmed" />
   </div>
@@ -106,12 +125,8 @@ const handleUpdate = (updated: Signalement) => {
   <ClientOnly>
     <USlideover v-if="isMobile" v-model:open="isSignalementPanelOpen">
       <template #content>
-        <SignalementDetail
-          v-if="selectedSignalement"
-          :signalement="selectedSignalement"
-          @close="selectedSignalement = null"
-          @update="handleUpdate"
-        />
+        <SignalementDetail v-if="selectedSignalement" :signalement="selectedSignalement"
+          @close="selectedSignalement = null" @update="handleUpdate" />
       </template>
     </USlideover>
   </ClientOnly>
