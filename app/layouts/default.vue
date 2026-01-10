@@ -14,6 +14,13 @@ const links = [[{
     open.value = false
   }
 }, {
+  label: 'Tableau de bord',
+  icon: 'i-lucide-layout-dashboard',
+  to: '/dashboard',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Boîte de réception',
   icon: 'i-lucide-inbox',
   to: '/inbox',
@@ -25,6 +32,13 @@ const links = [[{
   label: 'Signalements',
   icon: 'i-lucide-alert-triangle',
   to: '/signalements',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
+  label: 'Informations',
+  icon: 'i-lucide-info',
+  to: '/informations',
   onSelect: () => {
     open.value = false
   }

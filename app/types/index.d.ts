@@ -79,3 +79,13 @@ export interface Signalement {
   updated_at: string
   city_id: string | null
 }
+
+export interface MunicipalInfo {
+  id: string
+  title: string
+  content: string
+  category: string | null
+  image_url: string | null
+  created_at: string
+  updated_at: string
+}

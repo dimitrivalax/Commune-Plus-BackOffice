@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 import VerificationEmailModal from '~/components/signup/VerificationEmailModal.vue'
 
 definePageMeta({
@@ -24,22 +23,8 @@ const errors = ref<Record<string, string>>({})
 
 // const emit = defineEmits<{ close: [boolean] }>()
 
-
-
-
-
-
 const overlay = useOverlay()
 const confirmEmailModal = overlay.create(VerificationEmailModal)
-
-
-confirmEmailModal.open({
-  email: form.value.email,
-  onConfirm: () => {
-    closeModalAndRedirect()
-  }
-})
-
 
 const closeModalAndRedirect = () => {
   confirmEmailModal.close()
@@ -92,8 +77,6 @@ const handleSubmit = async () => {
 
   loading.value = true
 
-
-
   try {
     await $fetch('/api/auth/signup', {
       method: 'POST',
@@ -110,7 +93,7 @@ const handleSubmit = async () => {
     confirmEmailModal.open({
       email: form.value.email,
       onConfirm: () => {
-        router.push('/login')
+        closeModalAndRedirect()
       }
     })
   } catch (error: unknown) {

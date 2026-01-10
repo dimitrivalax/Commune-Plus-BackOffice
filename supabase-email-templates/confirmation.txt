@@ -1,0 +1,16 @@
+Confirmation de votre compte Commune Plus
+
+Bonjour,
+
+Merci de vous être inscrit sur Commune Plus ! Pour finaliser la création de votre compte, veuillez confirmer votre adresse email en cliquant sur le lien suivant :
+
+{{ .ConfirmationURL }}
+
+Ce lien est valide pendant 24 heures.
+
+Si vous n'avez pas créé de compte sur Commune Plus, vous pouvez ignorer cet email en toute sécurité.
+
+---
+© {{ .Year }} Commune Plus. Tous droits réservés.
+Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+

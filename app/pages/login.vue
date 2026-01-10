@@ -91,38 +91,21 @@ onMounted(async () => {
       </div>
 
       <UCard>
-        <form class="space-y-6" @submit.prevent="handleSubmit">
-          <UFormField label="Email" name="email">
-            <UInput
-              v-model="form.email"
-              type="email"
-              placeholder="votre.email@exemple.com"
-              :disabled="loading"
-              autocomplete="email"
-              :error="!!errors.email"
-            />
+        <form class="space-y-6 flex flex-col items-center" @submit.prevent="handleSubmit">
+          <UFormField label="Email" name="email" class="w-[70%]">
+            <UInput v-model="form.email" type="email" placeholder="votre.email@exemple.com" :disabled="loading"
+              autocomplete="email" :error="!!errors.email" class="w-full" />
             <p v-if="errors.email" class="text-sm text-error mt-1">
               {{ errors.email }}
             </p>
           </UFormField>
 
-          <UFormField label="Mot de passe" name="password">
-            <UInput
-              v-model="form.password"
-              :type="showPassword ? 'text' : 'password'"
-              placeholder="••••••••"
-              :disabled="loading"
-              autocomplete="current-password"
-              :error="!!errors.password"
-            >
+          <UFormField label="Mot de passe" name="password" class="w-[70%]">
+            <UInput v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="••••••••"
+              :disabled="loading" autocomplete="current-password" :error="!!errors.password" class="w-full">
               <template #trailing>
-                <UButton
-                  :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                  color="neutral"
-                  variant="ghost"
-                  :padded="false"
-                  @click="showPassword = !showPassword"
-                />
+                <UButton :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'" color="neutral" variant="ghost"
+                  :padded="false" @click="showPassword = !showPassword" />
               </template>
             </UInput>
             <p v-if="errors.password" class="text-sm text-error mt-1">
@@ -131,19 +114,11 @@ onMounted(async () => {
           </UFormField>
 
           <div class="flex items-center justify-between pt-4">
-            <UButton
-              to="/signup"
-              variant="ghost"
-              :disabled="loading"
-            >
+            <UButton to="/signup" variant="ghost" :disabled="loading">
               Créer un compte
             </UButton>
 
-            <UButton
-              type="submit"
-              :loading="loading"
-              icon="i-lucide-log-in"
-            >
+            <UButton type="submit" :loading="loading" icon="i-lucide-log-in">
               Se connecter
             </UButton>
           </div>
