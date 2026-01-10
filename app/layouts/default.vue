@@ -43,6 +43,20 @@ const links = [[{
     open.value = false
   }
 }, {
+  label: 'Salles',
+  icon: 'i-lucide-building',
+  to: '/salles',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
+  label: 'Planning des réservations',
+  icon: 'i-lucide-calendar',
+  to: '/reservations-salles',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Clients',
   icon: 'i-lucide-users',
   to: '/customers',
@@ -137,37 +151,19 @@ onMounted(async () => {
 
 <template>
   <UDashboardGroup unit="rem">
-    <UDashboardSidebar
-      id="default"
-      v-model:open="open"
-      collapsible
-      resizable
-      class="bg-elevated/25"
-      :ui="{ footer: 'lg:border-t lg:border-default' }"
-    >
+    <UDashboardSidebar id="default" v-model:open="open" collapsible resizable class="bg-elevated/25"
+      :ui="{ footer: 'lg:border-t lg:border-default' }">
       <template #header>
         <!-- <TeamsMenu :collapsed="collapsed" /> -->
         <img src="/logo.png" alt="logo" class="w-20 h-20 mx-auto">
       </template>
 
       <template #default="{ collapsed }">
-        <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" label="Rechercher"/>
+        <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" label="Rechercher" />
 
-        <UNavigationMenu
-          :collapsed="collapsed"
-          :items="links[0]"
-          orientation="vertical"
-          tooltip
-          popover
-        />
+        <UNavigationMenu :collapsed="collapsed" :items="links[0]" orientation="vertical" tooltip popover />
 
-        <UNavigationMenu
-          :collapsed="collapsed"
-          :items="links[1]"
-          orientation="vertical"
-          tooltip
-          class="mt-auto"
-        />
+        <UNavigationMenu :collapsed="collapsed" :items="links[1]" orientation="vertical" tooltip class="mt-auto" />
       </template>
 
       <template #footer="{ collapsed }">
