@@ -6,6 +6,19 @@ const toast = useToast()
 
 const open = ref(false)
 
+const { currentCommune, userCommunes, setCurrentCommune } = useCurrentCommune()
+
+// Gérer la sélection de la commune courante
+const selectedCommuneId = computed({
+  get: () => currentCommune.value?.id || '',
+  set: (value: string) => {
+    const commune = userCommunes.value?.find(c => c.id === value)
+    if (commune) {
+      setCurrentCommune(commune)
+    }
+  }
+})
+
 const links = [[{
   label: 'Accueil',
   icon: 'i-lucide-house',
@@ -174,6 +187,14 @@ onMounted(async () => {
 
       <template #default="{ collapsed }">
         <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" label="Rechercher" />
+
+        <div v-if="userCommunes && userCommunes.length > 0" class="px-3 py-2">
+          <UFormField label="Commune courante" name="commune">
+            <USelect v-model="selectedCommuneId"
+              :items="userCommunes.map(c => ({ label: `${c.name} (${c.postal_code})`, value: c.id }))"
+              placeholder="Sélectionner une commune" :ui="{ wrapper: collapsed ? 'w-full' : 'w-full' }" />
+          </UFormField>
+        </div>
 
         <UNavigationMenu :collapsed="collapsed" :items="links[0]" orientation="vertical" tooltip popover />
 
