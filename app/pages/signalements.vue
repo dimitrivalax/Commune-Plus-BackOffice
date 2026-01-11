@@ -22,7 +22,19 @@ const tabItems = [{
 const selectedTab = ref('all')
 const viewMode = ref<'table' | 'map'>('table')
 
-const { data: signalements } = await useFetch<Signalement[]>('/api/signalements', { default: () => [] })
+const { currentCommune } = useCurrentCommune()
+
+const { data: signalements, refresh: refreshSignalements } = await useFetch<Signalement[]>('/api/signalements', {
+  default: () => [],
+  query: computed(() => ({
+    commune_id: currentCommune.value?.id
+  }))
+})
+
+// Rafraîchir quand la commune change
+watch(currentCommune, () => {
+  refreshSignalements()
+})
 
 // Filter signalements based on the selected tab
 const filteredSignalements = computed(() => {

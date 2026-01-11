@@ -16,6 +16,18 @@ const UCheckbox = resolveComponent('UCheckbox')
 const toast = useToast()
 const table = useTemplateRef('table')
 const { session } = useSupabase()
+const { currentCommune, userCommunes, setCurrentCommune } = useCurrentCommune()
+
+// Gérer la sélection de la commune courante
+const selectedCommuneId = computed({
+  get: () => currentCommune.value?.id || '',
+  set: (value: string) => {
+    const commune = userCommunes.value?.find(c => c.id === value)
+    if (commune) {
+      setCurrentCommune(commune)
+    }
+  }
+})
 
 const authHeaders = computed(() => {
   const currentSession = session.value
@@ -34,17 +46,37 @@ const columnFilters = ref([{
 const columnVisibility = ref()
 const rowSelection = ref({})
 
-const { data, status } = await useFetch<Utilisateur[]>('/api/utilisateurs', {
+const { data, status, refresh } = await useFetch<Utilisateur[]>('/api/utilisateurs', {
   lazy: true,
   default: () => [],
   headers: authHeaders
 })
+
+provide('refresh-utilisateurs', refresh)
+
+const selectedUtilisateur = ref<Utilisateur | null>(null)
+const editModal = useTemplateRef<{ openModal: () => void }>('editModal')
+const deleteModal = useTemplateRef<{ openModal: () => void }>('deleteModal')
 
 function getRowItems(row: Row<Utilisateur>) {
   return [
     {
       type: 'label',
       label: 'Actions'
+    },
+    {
+      label: 'Modifier',
+      icon: 'i-lucide-edit',
+      async onSelect() {
+        selectedUtilisateur.value = row.original
+        await nextTick()
+        if (editModal.value && typeof editModal.value.openModal === 'function') {
+          editModal.value.openModal()
+        }
+      }
+    },
+    {
+      type: 'separator'
     },
     {
       label: 'Copier l\'ID de l\'utilisateur',
@@ -61,21 +93,15 @@ function getRowItems(row: Row<Utilisateur>) {
       type: 'separator'
     },
     {
-      label: 'Voir les détails de l\'utilisateur',
-      icon: 'i-lucide-list'
-    },
-    {
-      type: 'separator'
-    },
-    {
-      label: 'Supprimer l\'utilisateur',
+      label: 'Supprimer',
       icon: 'i-lucide-trash',
       color: 'error',
-      onSelect() {
-        toast.add({
-          title: 'Utilisateur supprimé',
-          description: 'L\'utilisateur a été supprimé.'
-        })
+      async onSelect() {
+        selectedUtilisateur.value = row.original
+        await nextTick()
+        if (deleteModal.value && typeof deleteModal.value.openModal === 'function') {
+          deleteModal.value.openModal()
+        }
       }
     }
   ]
@@ -169,6 +195,16 @@ const columns: TableColumn<Utilisateur>[] = [
     }
   },
   {
+    accessorKey: 'role',
+    header: 'Rôle',
+    cell: ({ row }) => {
+      const role = row.original.role || 'utilisateur'
+      const color = role === 'administrateur' ? 'primary' : 'neutral'
+      const label = role === 'administrateur' ? 'Administrateur' : 'Utilisateur'
+      return h(UBadge, { variant: 'subtle', color }, () => label)
+    }
+  },
+  {
     accessorKey: 'adresse',
     header: 'Adresse',
     cell: ({ row }) => formatAddress(row.original)
@@ -181,7 +217,7 @@ const columns: TableColumn<Utilisateur>[] = [
       if (communes.length === 0) {
         return h('span', { class: 'text-muted' }, '-')
       }
-      return h('div', { class: 'flex flex-wrap gap-1' }, 
+      return h('div', { class: 'flex flex-wrap gap-1' },
         communes.map((commune) =>
           h(UBadge, { variant: 'subtle', color: 'primary' }, () => commune.name)
         )
@@ -241,7 +277,7 @@ const pagination = ref({
     </template>
 
     <template #body>
-      <div class="flex flex-wrap items-center justify-between gap-1.5">
+      <div class="flex flex-wrap items-center justify-between gap-1.5 mb-4">
         <UInput
           v-model="email"
           class="max-w-sm"
@@ -277,6 +313,17 @@ const pagination = ref({
             />
           </UDropdownMenu>
         </div>
+      </div>
+
+      <div v-if="userCommunes && userCommunes.length > 0" class="mb-4">
+        <UFormField label="Commune courante" name="commune">
+          <USelect
+            v-model="selectedCommuneId"
+            :items="userCommunes.map(c => ({ label: `${c.name} (${c.postal_code})`, value: c.id }))"
+            placeholder="Sélectionner une commune"
+            class="max-w-xs"
+          />
+        </UFormField>
       </div>
 
       <UTable
@@ -319,4 +366,14 @@ const pagination = ref({
       </div>
     </template>
   </UDashboardPanel>
+
+  <UtilisateursEditModal
+    ref="editModal"
+    :utilisateur="selectedUtilisateur"
+    @delete="(utilisateur) => {
+      selectedUtilisateur = utilisateur
+      deleteModal?.openModal()
+    }"
+  />
+  <UtilisateursDeleteModal ref="deleteModal" :utilisateur="selectedUtilisateur" />
 </template>

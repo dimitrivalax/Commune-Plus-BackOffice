@@ -26,10 +26,21 @@ type ViewType = 'day' | 'week' | 'month'
 const currentView = ref<ViewType>('week')
 const currentDate = ref(new Date())
 
+const { currentCommune } = useCurrentCommune()
+
 // Charger les salles
-const { data: salles } = await useFetch<Salle[]>('/api/salles', {
+const { data: salles, refresh: refreshSalles } = await useFetch<Salle[]>('/api/salles', {
   lazy: true,
-  headers: authHeaders
+  headers: authHeaders,
+  query: computed(() => ({
+    commune_id: currentCommune.value?.id
+  }))
+})
+
+// Rafraîchir quand la commune change
+watch(currentCommune, () => {
+  refreshSalles()
+  refreshReservations()
 })
 
 // Calculer la plage de dates selon la vue
@@ -54,16 +65,17 @@ const dateRange = computed(() => {
 })
 
 // Charger les réservations pour la période
-const { data: reservations, status, refresh } = await useFetch<ReservationSalle[]>('/api/reservations-salles', {
+const { data: reservations, status, refresh: refreshReservations } = await useFetch<ReservationSalle[]>('/api/reservations-salles', {
   lazy: true,
   headers: authHeaders,
   query: computed(() => ({
     date_debut: dateRange.value.start.toISOString(),
-    date_fin: dateRange.value.end.toISOString()
+    date_fin: dateRange.value.end.toISOString(),
+    commune_id: currentCommune.value?.id
   }))
 })
 
-provide('refresh-reservations-salles', refresh)
+provide('refresh-reservations-salles', refreshReservations)
 
 const selectedReservation = ref<ReservationSalle | null>(null)
 const editModal = useTemplateRef<{ openModal: () => void }>('editModal')

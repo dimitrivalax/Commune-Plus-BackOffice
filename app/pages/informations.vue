@@ -20,9 +20,19 @@ const authHeaders = computed(() => {
   }
 })
 
+const { currentCommune } = useCurrentCommune()
+
 const { data, status, refresh } = await useFetch<MunicipalInfo[]>('/api/municipal-info', {
   lazy: true,
-  headers: authHeaders
+  headers: authHeaders,
+  query: computed(() => ({
+    commune_id: currentCommune.value?.id
+  }))
+})
+
+// Rafraîchir quand la commune change
+watch(currentCommune, () => {
+  refresh()
 })
 
 provide('refresh-informations', refresh)

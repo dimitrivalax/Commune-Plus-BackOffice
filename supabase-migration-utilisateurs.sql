@@ -15,8 +15,8 @@ DO $$
 BEGIN
   -- Vérifier si city_info existe
   IF EXISTS (
-    SELECT 1 FROM information_schema.tables 
-    WHERE table_schema = 'public' 
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public'
     AND table_name = 'city_info'
   ) THEN
     -- Supprimer d'abord les anciennes politiques RLS
@@ -31,11 +31,11 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_city_info_name') THEN
       EXECUTE 'ALTER INDEX idx_city_info_name RENAME TO idx_commune_name';
     END IF;
-    
+
     IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_city_info_postal_code') THEN
       EXECUTE 'ALTER INDEX idx_city_info_postal_code RENAME TO idx_commune_postal_code';
     END IF;
-    
+
     IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_city_info_updated_at') THEN
       EXECUTE 'ALTER INDEX idx_city_info_updated_at RENAME TO idx_commune_updated_at';
     END IF;
@@ -99,20 +99,59 @@ CREATE TABLE IF NOT EXISTS utilisateur (
   code_postal TEXT,
   ville TEXT,
   email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'utilisateur' CHECK (role IN ('utilisateur', 'administrateur')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ajouter la colonne role si elle n'existe pas déjà (pour les migrations existantes)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'utilisateur'
+    AND column_name = 'role'
+  ) THEN
+    ALTER TABLE utilisateur ADD COLUMN role TEXT NOT NULL DEFAULT 'utilisateur';
+  END IF;
+  
+  -- Ajouter la contrainte CHECK si elle n'existe pas déjà
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_schema = 'public'
+    AND table_name = 'utilisateur'
+    AND constraint_name = 'utilisateur_role_check'
+  ) THEN
+    ALTER TABLE utilisateur ADD CONSTRAINT utilisateur_role_check CHECK (role IN ('utilisateur', 'administrateur'));
+  END IF;
+END $$;
 
 -- Index pour améliorer les performances
 CREATE INDEX IF NOT EXISTS idx_utilisateur_user_id ON utilisateur(user_id);
 CREATE INDEX IF NOT EXISTS idx_utilisateur_email ON utilisateur(email);
 CREATE INDEX IF NOT EXISTS idx_utilisateur_code_postal ON utilisateur(code_postal);
+CREATE INDEX IF NOT EXISTS idx_utilisateur_role ON utilisateur(role);
 CREATE INDEX IF NOT EXISTS idx_utilisateur_updated_at ON utilisateur(updated_at DESC);
 
 -- Trigger pour mettre à jour updated_at automatiquement
 DROP TRIGGER IF EXISTS update_utilisateur_updated_at ON utilisateur;
 CREATE TRIGGER update_utilisateur_updated_at BEFORE UPDATE ON utilisateur
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Créer une fonction pour vérifier si l'utilisateur connecté est administrateur
+CREATE OR REPLACE FUNCTION is_current_user_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.utilisateur
+    WHERE user_id = auth.uid()
+    AND role = 'administrateur'
+  );
+$$;
 
 -- RLS (Row Level Security) pour la table utilisateur
 ALTER TABLE utilisateur ENABLE ROW LEVEL SECURITY;
@@ -122,6 +161,7 @@ ALTER TABLE utilisateur ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Les utilisateurs authentifiés peuvent voir tous les utilisateurs" ON utilisateur;
 DROP POLICY IF EXISTS "Les utilisateurs peuvent créer leur propre profil" ON utilisateur;
 DROP POLICY IF EXISTS "Les utilisateurs peuvent mettre à jour leur propre profil" ON utilisateur;
+DROP POLICY IF EXISTS "Les administrateurs peuvent modifier tous les utilisateurs" ON utilisateur;
 
 -- Permettre à tous les utilisateurs authentifiés de voir tous les utilisateurs
 CREATE POLICY "Les utilisateurs authentifiés peuvent voir tous les utilisateurs"
@@ -136,6 +176,12 @@ CREATE POLICY "Les utilisateurs peuvent mettre à jour leur propre profil"
     ON utilisateur FOR UPDATE
     USING (auth.role() = 'authenticated')
     WITH CHECK (auth.role() = 'authenticated');
+
+-- Permettre aux administrateurs de modifier tous les utilisateurs
+CREATE POLICY "Les administrateurs peuvent modifier tous les utilisateurs"
+    ON utilisateur FOR UPDATE
+    USING (is_current_user_admin())
+    WITH CHECK (is_current_user_admin());
 
 -- Étape 4: Créer la table de liaison utilisateur_commune (many-to-many)
 CREATE TABLE IF NOT EXISTS utilisateur_commune (
@@ -163,8 +209,8 @@ CREATE POLICY "Les utilisateurs peuvent voir leurs communes"
     ON utilisateur_commune FOR SELECT
     USING (
       EXISTS (
-        SELECT 1 FROM utilisateur 
-        WHERE utilisateur.id = utilisateur_commune.utilisateur_id 
+        SELECT 1 FROM utilisateur
+        WHERE utilisateur.id = utilisateur_commune.utilisateur_id
         AND utilisateur.user_id = auth.uid()
       )
     );
@@ -173,19 +219,55 @@ CREATE POLICY "Les utilisateurs peuvent créer leurs associations"
     ON utilisateur_commune FOR INSERT
     WITH CHECK (
       EXISTS (
-        SELECT 1 FROM utilisateur 
-        WHERE utilisateur.id = utilisateur_commune.utilisateur_id 
+        SELECT 1 FROM utilisateur
+        WHERE utilisateur.id = utilisateur_commune.utilisateur_id
+        AND utilisateur.user_id = auth.uid()
+      )
+    );
+
+CREATE POLICY "Les utilisateurs peuvent mettre à jour leurs associations"
+    ON utilisateur_commune FOR UPDATE
+    USING (
+      EXISTS (
+        SELECT 1 FROM utilisateur
+        WHERE utilisateur.id = utilisateur_commune.utilisateur_id
+        AND utilisateur.user_id = auth.uid()
+      )
+    )
+    WITH CHECK (
+      EXISTS (
+        SELECT 1 FROM utilisateur
+        WHERE utilisateur.id = utilisateur_commune.utilisateur_id
+        AND utilisateur.user_id = auth.uid()
+      )
+    );
+
+CREATE POLICY "Les utilisateurs peuvent supprimer leurs associations"
+    ON utilisateur_commune FOR DELETE
+    USING (
+      EXISTS (
+        SELECT 1 FROM utilisateur
+        WHERE utilisateur.id = utilisateur_commune.utilisateur_id
         AND utilisateur.user_id = auth.uid()
       )
     );
 
 CREATE POLICY "Les administrateurs peuvent tout voir"
     ON utilisateur_commune FOR SELECT
-    USING (true);
+    USING (is_current_user_admin());
 
 CREATE POLICY "Les administrateurs peuvent tout créer"
     ON utilisateur_commune FOR INSERT
-    WITH CHECK (true);
+    WITH CHECK (is_current_user_admin());
+
+CREATE POLICY "Les administrateurs peuvent tout modifier"
+    ON utilisateur_commune FOR UPDATE
+    USING (is_current_user_admin())
+    WITH CHECK (is_current_user_admin());
+
+CREATE POLICY "Les administrateurs peuvent tout supprimer"
+    ON utilisateur_commune FOR DELETE
+    USING (is_current_user_admin());
 
 -- Étape 5: Créer une fonction pour créer automatiquement un utilisateur lors de la création d'un user Supabase
 CREATE OR REPLACE FUNCTION create_utilisateur_on_user_created()
@@ -196,15 +278,17 @@ BEGIN
     user_id,
     nom,
     prenom,
-    email
+    email,
+    role
   ) VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
-    COALESCE(NEW.email, '')
+    COALESCE(NEW.email, ''),
+    'utilisateur'
   )
   ON CONFLICT (user_id) DO NOTHING;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -218,7 +302,9 @@ CREATE TRIGGER on_auth_user_created
 
 -- Étape 6: Créer une fonction SECURITY DEFINER pour récupérer les utilisateurs avec leur dernière connexion
 -- Cette fonction permet d'accéder à auth.users qui est normalement inaccessible
-CREATE OR REPLACE FUNCTION get_utilisateurs_with_last_sign_in()
+-- Supprimer la fonction existante si elle existe (nécessaire si le type de retour change)
+DROP FUNCTION IF EXISTS get_utilisateurs_with_last_sign_in();
+CREATE FUNCTION get_utilisateurs_with_last_sign_in()
 RETURNS TABLE (
   id UUID,
   user_id UUID,
@@ -229,15 +315,16 @@ RETURNS TABLE (
   code_postal TEXT,
   ville TEXT,
   email TEXT,
+  role TEXT,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   last_sign_in_at TIMESTAMPTZ
-) 
+)
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
 AS $$
-  SELECT 
+  SELECT
     u.id,
     u.user_id,
     u.nom,
@@ -247,6 +334,7 @@ AS $$
     u.code_postal,
     u.ville,
     u.email,
+    u.role,
     u.created_at,
     u.updated_at,
     au.last_sign_in_at
@@ -258,8 +346,53 @@ $$;
 -- Donner les permissions nécessaires sur la fonction
 GRANT EXECUTE ON FUNCTION get_utilisateurs_with_last_sign_in() TO authenticated;
 
+-- Étape 7: Créer une fonction pour supprimer un utilisateur et son user Supabase associé
+-- Cette fonction utilise SECURITY DEFINER pour avoir les permissions nécessaires
+CREATE OR REPLACE FUNCTION delete_utilisateur_with_auth_user(p_utilisateur_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_user_id UUID;
+BEGIN
+  -- Récupérer le user_id avant de supprimer
+  SELECT user_id INTO v_user_id
+  FROM public.utilisateur
+  WHERE id = p_utilisateur_id;
+
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Utilisateur non trouvé';
+  END IF;
+
+  -- Supprimer l'utilisateur (cela supprimera aussi les associations grâce à ON DELETE CASCADE)
+  DELETE FROM public.utilisateur
+  WHERE id = p_utilisateur_id;
+
+  -- Supprimer le user Supabase associé depuis auth.users
+  -- Note: Cette opération nécessite des permissions élevées, d'où SECURITY DEFINER
+  -- Le search_path est défini à vide pour la sécurité
+  DELETE FROM auth.users
+  WHERE id = v_user_id;
+
+  RETURN TRUE;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- En cas d'erreur, on retourne FALSE mais on ne fait pas échouer la transaction
+    -- car la suppression de l'utilisateur a peut-être réussi même si la suppression du user auth a échoué
+    RAISE WARNING 'Erreur lors de la suppression du user auth: %', SQLERRM;
+    RETURN FALSE;
+END;
+$$;
+
+-- Donner les permissions nécessaires sur la fonction
+GRANT EXECUTE ON FUNCTION delete_utilisateur_with_auth_user(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION is_current_user_admin() TO authenticated;
+
 -- Commentaires sur les tables
 COMMENT ON TABLE utilisateur IS 'Table des utilisateurs liés aux users Supabase';
 COMMENT ON TABLE commune IS 'Table des communes (anciennement city_info)';
 COMMENT ON TABLE utilisateur_commune IS 'Table de liaison many-to-many entre utilisateurs et communes';
 COMMENT ON FUNCTION get_utilisateurs_with_last_sign_in() IS 'Fonction pour récupérer les utilisateurs avec leur dernière connexion depuis auth.users';
+COMMENT ON FUNCTION delete_utilisateur_with_auth_user(UUID) IS 'Fonction pour supprimer un utilisateur et son user Supabase associé';

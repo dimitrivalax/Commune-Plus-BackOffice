@@ -130,6 +130,7 @@ export interface Utilisateur {
   code_postal: string | null;
   ville: string | null;
   email: string;
+  role: 'utilisateur' | 'administrateur';
   created_at: string;
   updated_at: string;
   last_sign_in_at: string | null;
