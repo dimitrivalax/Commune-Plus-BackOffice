@@ -119,3 +119,28 @@ export interface ReservationSalle {
     adresse: string;
   };
 }
+
+export interface Utilisateur {
+  id: string;
+  user_id: string;
+  nom: string;
+  prenom: string;
+  numero_de_rue: string | null;
+  rue: string | null;
+  code_postal: string | null;
+  ville: string | null;
+  email: string;
+  created_at: string;
+  updated_at: string;
+  last_sign_in_at: string | null;
+  communes?: Commune[];
+}
+
+export interface Commune {
+  id: string;
+  name: string;
+  postal_code: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+}

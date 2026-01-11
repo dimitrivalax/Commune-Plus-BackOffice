@@ -83,20 +83,12 @@ const handleMarkerClick = (signalement: Signalement) => {
 
       <template #right>
         <div class="flex items-center gap-2">
-          <UButtonGroup>
-            <UButton
-              :variant="viewMode === 'table' ? 'solid' : 'outline'"
-              icon="i-lucide-list"
-              @click="viewMode = 'table'"
-              size="xs"
-            />
-            <UButton
-              :variant="viewMode === 'map' ? 'solid' : 'outline'"
-              icon="i-lucide-map"
-              @click="viewMode = 'map'"
-              size="xs"
-            />
-          </UButtonGroup>
+          <UFieldGroup>
+            <UButton :variant="viewMode === 'table' ? 'solid' : 'outline'" icon="i-lucide-list"
+              @click="viewMode = 'table'" size="xs" />
+            <UButton :variant="viewMode === 'map' ? 'solid' : 'outline'" icon="i-lucide-map" @click="viewMode = 'map'"
+              size="xs" />
+          </UFieldGroup>
           <UTabs v-model="selectedTab" :items="tabItems" :content="false" size="xs" />
         </div>
       </template>

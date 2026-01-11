@@ -14,21 +14,21 @@ const links = [[{
     open.value = false
   }
 }, {
-  label: 'Tableau de bord',
-  icon: 'i-lucide-layout-dashboard',
-  to: '/dashboard',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
-  label: 'Boîte de réception',
-  icon: 'i-lucide-inbox',
-  to: '/inbox',
-  badge: '4',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
+  //   label: 'Tableau de bord',
+  //   icon: 'i-lucide-layout-dashboard',
+  //   to: '/dashboard',
+  //   onSelect: () => {
+  //     open.value = false
+  //   }
+  // }, {
+  //   label: 'Boîte de réception',
+  //   icon: 'i-lucide-inbox',
+  //   to: '/inbox',
+  //   badge: '4',
+  //   onSelect: () => {
+  //     open.value = false
+  //   }
+  // }, {
   label: 'Signalements',
   icon: 'i-lucide-alert-triangle',
   to: '/signalements',
@@ -60,6 +60,13 @@ const links = [[{
   label: 'Clients',
   icon: 'i-lucide-users',
   to: '/customers',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
+  label: 'Utilisateurs',
+  icon: 'i-lucide-user-circle',
+  to: '/utilisateurs',
   onSelect: () => {
     open.value = false
   }
