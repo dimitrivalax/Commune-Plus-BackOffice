@@ -53,7 +53,7 @@ BEGIN
       -- Supprimer l'ancienne contrainte si elle référence city_info
       ALTER TABLE signalements DROP CONSTRAINT IF EXISTS signalements_city_id_fkey;
       -- Ajouter la nouvelle contrainte référençant commune
-      ALTER TABLE signalements ADD CONSTRAINT signalements_city_id_fkey 
+      ALTER TABLE signalements ADD CONSTRAINT signalements_city_id_fkey
         FOREIGN KEY (city_id) REFERENCES commune(id) ON DELETE SET NULL;
     END IF;
   END IF;

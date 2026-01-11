@@ -72,7 +72,7 @@ export default eventHandler(async (event) => {
           code_postal: body.code_postal || null,
           ville: body.ville || null,
           email: body.email,
-          role: body.role || 'utilisateur',
+          role: body.role || "utilisateur",
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)

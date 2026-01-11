@@ -66,6 +66,22 @@ DROP TRIGGER IF EXISTS update_commune_updated_at ON commune;
 CREATE TRIGGER update_commune_updated_at BEFORE UPDATE ON commune
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Créer une fonction pour vérifier si l'utilisateur connecté est administrateur
+-- (Doit être créée avant les politiques RLS qui l'utilisent)
+-- Note: Cette fonction sera recréée plus tard pour la table utilisateur, mais on la crée ici pour les politiques communes
+CREATE OR REPLACE FUNCTION is_current_user_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.utilisateur
+    WHERE user_id = auth.uid()
+    AND role = 'administrateur'
+  );
+$$;
+
 -- S'assurer que la table commune existe maintenant et configurer RLS
 ALTER TABLE IF EXISTS commune ENABLE ROW LEVEL SECURITY;
 
@@ -73,20 +89,31 @@ ALTER TABLE IF EXISTS commune ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Tout le monde peut lire les informations de la commune" ON commune;
 DROP POLICY IF EXISTS "Tout le monde peut créer les informations de la commune" ON commune;
 DROP POLICY IF EXISTS "Tout le monde peut mettre à jour les informations de la commune" ON commune;
+DROP POLICY IF EXISTS "Tout le monde peut supprimer les informations de la commune" ON commune;
+DROP POLICY IF EXISTS "Les utilisateurs authentifiés peuvent lire les communes" ON commune;
+DROP POLICY IF EXISTS "Les administrateurs peuvent créer des communes" ON commune;
+DROP POLICY IF EXISTS "Les administrateurs peuvent modifier les communes" ON commune;
+DROP POLICY IF EXISTS "Les administrateurs peuvent supprimer les communes" ON commune;
 
 -- Recréer les politiques RLS avec le nouveau nom
+-- Lecture publique (pour l'affichage aux citoyens)
 CREATE POLICY "Tout le monde peut lire les informations de la commune"
     ON commune FOR SELECT
     USING (true);
 
-CREATE POLICY "Tout le monde peut créer les informations de la commune"
+-- Les administrateurs peuvent créer, modifier et supprimer les communes
+CREATE POLICY "Les administrateurs peuvent créer des communes"
     ON commune FOR INSERT
-    WITH CHECK (true);
+    WITH CHECK (is_current_user_admin());
 
-CREATE POLICY "Tout le monde peut mettre à jour les informations de la commune"
+CREATE POLICY "Les administrateurs peuvent modifier les communes"
     ON commune FOR UPDATE
-    USING (true)
-    WITH CHECK (true);
+    USING (is_current_user_admin())
+    WITH CHECK (is_current_user_admin());
+
+CREATE POLICY "Les administrateurs peuvent supprimer les communes"
+    ON commune FOR DELETE
+    USING (is_current_user_admin());
 
 -- Étape 3: Créer la table utilisateur
 CREATE TABLE IF NOT EXISTS utilisateur (
@@ -115,7 +142,7 @@ BEGIN
   ) THEN
     ALTER TABLE utilisateur ADD COLUMN role TEXT NOT NULL DEFAULT 'utilisateur';
   END IF;
-  
+
   -- Ajouter la contrainte CHECK si elle n'existe pas déjà
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
@@ -139,21 +166,8 @@ DROP TRIGGER IF EXISTS update_utilisateur_updated_at ON utilisateur;
 CREATE TRIGGER update_utilisateur_updated_at BEFORE UPDATE ON utilisateur
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Créer une fonction pour vérifier si l'utilisateur connecté est administrateur
-CREATE OR REPLACE FUNCTION is_current_user_admin()
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.utilisateur
-    WHERE user_id = auth.uid()
-    AND role = 'administrateur'
-  );
-$$;
-
 -- RLS (Row Level Security) pour la table utilisateur
+-- Note: La fonction is_current_user_admin() a déjà été créée plus haut
 ALTER TABLE utilisateur ENABLE ROW LEVEL SECURITY;
 
 -- Politiques RLS pour utilisateur

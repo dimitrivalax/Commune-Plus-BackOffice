@@ -71,6 +71,13 @@ const links = [[{
     open.value = false
   }
 }, {
+  label: 'Communes',
+  icon: 'i-lucide-map-pin',
+  to: '/communes',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Paramètres',
   to: '/settings',
   icon: 'i-lucide-settings',
