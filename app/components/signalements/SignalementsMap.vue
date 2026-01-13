@@ -22,6 +22,8 @@ const getStatusLabel = (status: string) => {
       return 'En cours'
     case 'traite':
       return 'Traité'
+    case 'archive':
+      return 'Archivé'
     default:
       return status
   }
@@ -35,6 +37,8 @@ const getMarkerColor = (status: string) => {
       return '#3b82f6' // blue
     case 'traite':
       return '#22c55e' // green
+    case 'archive':
+      return '#6b7280' // gray
     default:
       return '#6b7280' // gray
   }

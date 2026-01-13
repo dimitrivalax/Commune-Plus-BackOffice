@@ -41,6 +41,8 @@ const getStatusColor = (status: string) => {
       return 'blue'
     case 'traite':
       return 'green'
+    case 'archive':
+      return 'neutral'
     default:
       return 'neutral'
   }
@@ -54,6 +56,8 @@ const getStatusLabel = (status: string) => {
       return 'En cours'
     case 'traite':
       return 'Traité'
+    case 'archive':
+      return 'Archivé'
     default:
       return status
   }
@@ -62,7 +66,8 @@ const getStatusLabel = (status: string) => {
 const statusOptions = computed(() => [
   { label: 'En Attente', value: 'en_attente' },
   { label: 'En cours', value: 'en_cours' },
-  { label: 'Traité', value: 'traite' }
+  { label: 'Traité', value: 'traite' },
+  { label: 'Archivé', value: 'archive' }
 ])
 
 const hasChanges = computed(() => {
@@ -132,6 +137,10 @@ const dropdownItems = computed(() => [[{
   label: 'Marquer comme Traité',
   icon: 'i-lucide-check-circle',
   onSelect: () => updateStatus('traite')
+}, {
+  label: 'Marquer comme Archivé',
+  icon: 'i-lucide-archive',
+  onSelect: () => updateStatus('archive')
 }]])
 </script>
 

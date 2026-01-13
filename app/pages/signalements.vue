@@ -18,6 +18,9 @@ const tabItems = [{
 }, {
   label: 'Traités',
   value: 'traite'
+}, {
+  label: 'Archivés',
+  value: 'archive'
 }]
 const selectedTab = ref('all')
 const viewMode = ref<'table' | 'map'>('table')
