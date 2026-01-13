@@ -80,7 +80,7 @@ const columns: TableColumn<MunicipalInfo>[] = [
     accessorKey: 'title',
     header: 'Titre',
     cell: ({ row }) => {
-      return h('div', { 
+      return h('div', {
         class: 'font-medium text-highlighted cursor-pointer',
         onClick: (e: Event) => {
           e.stopPropagation()
@@ -95,7 +95,7 @@ const columns: TableColumn<MunicipalInfo>[] = [
     cell: ({ row }) => {
       const content = row.original.content
       const preview = content.length > 100 ? content.substring(0, 100) + '...' : content
-      return h('p', { 
+      return h('p', {
         class: 'text-sm text-muted max-w-md cursor-pointer',
         onClick: (e: Event) => {
           e.stopPropagation()
@@ -109,7 +109,7 @@ const columns: TableColumn<MunicipalInfo>[] = [
     header: 'Catégorie',
     cell: ({ row }) => {
       if (!row.original.category) {
-        return h('span', { 
+        return h('span', {
           class: 'text-muted cursor-pointer',
           onClick: (e: Event) => {
             e.stopPropagation()
@@ -117,8 +117,8 @@ const columns: TableColumn<MunicipalInfo>[] = [
           }
         }, '-')
       }
-      return h(UBadge, { 
-        variant: 'subtle', 
+      return h(UBadge, {
+        variant: 'subtle',
         color: 'primary',
         class: 'cursor-pointer',
         onClick: (e: Event) => {
@@ -133,7 +133,7 @@ const columns: TableColumn<MunicipalInfo>[] = [
     header: 'Date de création',
     cell: ({ row }) => {
       const date = new Date(row.original.created_at)
-      return h('span', { 
+      return h('span', {
         class: 'text-sm cursor-pointer',
         onClick: (e: Event) => {
           e.stopPropagation()
@@ -147,7 +147,7 @@ const columns: TableColumn<MunicipalInfo>[] = [
     cell: ({ row }) => {
       return h(
         'div',
-        { 
+        {
           class: 'text-right',
           onClick: (e: Event) => {
             e.stopPropagation()
@@ -229,9 +229,9 @@ const pagination = ref({
     </template>
   </UDashboardPanel>
 
-  <InformationsEditModal 
-    ref="editModal" 
-    :info="selectedInfo" 
+  <InformationsEditModal
+    ref="editModal"
+    :info="selectedInfo"
     @delete="(info) => {
       selectedInfo = info
       deleteModal?.openModal()

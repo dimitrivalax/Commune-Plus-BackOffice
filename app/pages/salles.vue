@@ -80,7 +80,7 @@ const columns: TableColumn<Salle>[] = [
     accessorKey: 'nom',
     header: 'Nom',
     cell: ({ row }) => {
-      return h('div', { 
+      return h('div', {
         class: 'font-medium text-highlighted cursor-pointer',
         onClick: (e: Event) => {
           e.stopPropagation()
@@ -93,7 +93,7 @@ const columns: TableColumn<Salle>[] = [
     accessorKey: 'adresse',
     header: 'Adresse',
     cell: ({ row }) => {
-      return h('p', { 
+      return h('p', {
         class: 'text-sm text-muted max-w-md cursor-pointer',
         onClick: (e: Event) => {
           e.stopPropagation()
@@ -106,8 +106,8 @@ const columns: TableColumn<Salle>[] = [
     accessorKey: 'nombre_max_places',
     header: 'Places max',
     cell: ({ row }) => {
-      return h(UBadge, { 
-        variant: 'subtle', 
+      return h(UBadge, {
+        variant: 'subtle',
         color: 'primary',
         class: 'cursor-pointer',
         onClick: (e: Event) => {
@@ -123,7 +123,7 @@ const columns: TableColumn<Salle>[] = [
     cell: ({ row }) => {
       const description = row.original.description
       if (!description) {
-        return h('span', { 
+        return h('span', {
           class: 'text-muted cursor-pointer',
           onClick: (e: Event) => {
             e.stopPropagation()
@@ -132,7 +132,7 @@ const columns: TableColumn<Salle>[] = [
         }, '-')
       }
       const preview = description.length > 100 ? description.substring(0, 100) + '...' : description
-      return h('p', { 
+      return h('p', {
         class: 'text-sm text-muted max-w-md cursor-pointer',
         onClick: (e: Event) => {
           e.stopPropagation()
@@ -146,7 +146,7 @@ const columns: TableColumn<Salle>[] = [
     header: 'Photo',
     cell: ({ row }) => {
       if (!row.original.photo_url) {
-        return h('span', { 
+        return h('span', {
           class: 'text-muted cursor-pointer',
           onClick: (e: Event) => {
             e.stopPropagation()
@@ -173,7 +173,7 @@ const columns: TableColumn<Salle>[] = [
     header: 'Date de création',
     cell: ({ row }) => {
       const date = new Date(row.original.created_at)
-      return h('span', { 
+      return h('span', {
         class: 'text-sm cursor-pointer',
         onClick: (e: Event) => {
           e.stopPropagation()
@@ -187,7 +187,7 @@ const columns: TableColumn<Salle>[] = [
     cell: ({ row }) => {
       return h(
         'div',
-        { 
+        {
           class: 'text-right',
           onClick: (e: Event) => {
             e.stopPropagation()
@@ -269,9 +269,9 @@ const pagination = ref({
     </template>
   </UDashboardPanel>
 
-  <SallesEditModal 
-    ref="editModal" 
-    :salle="selectedSalle" 
+  <SallesEditModal
+    ref="editModal"
+    :salle="selectedSalle"
     @delete="(salle) => {
       selectedSalle = salle
       deleteModal?.openModal()

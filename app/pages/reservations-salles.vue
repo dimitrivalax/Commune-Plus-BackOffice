@@ -88,7 +88,7 @@ const filteredReservations = computed(() => {
   return reservations.value.filter(res => {
     const resStart = parseISO(res.date_debut)
     const resEnd = parseISO(res.date_fin)
-    return isWithinInterval(resStart, dateRange.value) || 
+    return isWithinInterval(resStart, dateRange.value) ||
            isWithinInterval(resEnd, dateRange.value) ||
            (resStart <= dateRange.value.start && resEnd >= dateRange.value.end)
   })
@@ -189,7 +189,7 @@ function getReservationsForSalleAndDay(salleId: string, day: Date): ReservationS
     if (res.salle_id !== salleId) return false
     const resStart = parseISO(res.date_debut)
     const resEnd = parseISO(res.date_fin)
-    return isSameDay(resStart, day) || isSameDay(resEnd, day) || 
+    return isSameDay(resStart, day) || isSameDay(resEnd, day) ||
            (resStart <= day && resEnd >= day)
   })
 }
@@ -198,7 +198,7 @@ function getReservationsForSalleAndDay(salleId: string, day: Date): ReservationS
 function getReservationStyle(reservation: ReservationSalle, day: Date) {
   const start = parseISO(reservation.date_debut)
   const end = parseISO(reservation.date_fin)
-  
+
   // Si la réservation ne concerne pas ce jour, ne pas l'afficher
   if (!isSameDay(start, day) && !isSameDay(end, day) && !(start <= day && end >= day)) {
     return { display: 'none' }
@@ -206,7 +206,7 @@ function getReservationStyle(reservation: ReservationSalle, day: Date) {
 
   const dayStart = setHours(day, 8)
   const dayEnd = setHours(day, 23)
-  
+
   const actualStart = start < dayStart ? dayStart : start
   const actualEnd = end > dayEnd ? dayEnd : end
 
@@ -280,8 +280,8 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
               label="Mois"
               @click="currentView = 'month'"
             />
-            <ReservationsSallesAddModal 
-              ref="addModal" 
+            <ReservationsSallesAddModal
+              ref="addModal"
               :salle-id="addModalProps.salleId"
               :date-debut="addModalProps.dateDebut"
               :date-fin="addModalProps.dateFin"
@@ -314,7 +314,7 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
             @click="goToNext"
           />
           <h2 class="text-lg font-semibold ml-4">
-            {{ currentView === 'day' 
+            {{ currentView === 'day'
               ? format(currentDate, 'EEEE d MMMM yyyy', { locale: fr })
               : currentView === 'week'
               ? `Semaine du ${format(dateRange.start, 'd MMMM', { locale: fr })}`
@@ -366,7 +366,7 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
                 >
                   <div class="font-medium">{{ reservation.prenom }} {{ reservation.nom }}</div>
                   <div class="text-xs text-muted">
-                    {{ format(parseISO(reservation.date_debut), 'HH:mm') }} - 
+                    {{ format(parseISO(reservation.date_debut), 'HH:mm') }} -
                     {{ format(parseISO(reservation.date_fin), 'HH:mm') }}
                   </div>
                 </div>
@@ -417,7 +417,7 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
                 >
                   <div class="font-medium">{{ reservation.prenom }} {{ reservation.nom }}</div>
                   <div class="text-xs text-muted">
-                    {{ format(parseISO(reservation.date_debut), 'HH:mm') }} - 
+                    {{ format(parseISO(reservation.date_debut), 'HH:mm') }} -
                     {{ format(parseISO(reservation.date_fin), 'HH:mm') }}
                   </div>
                 </div>
@@ -484,9 +484,9 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
     </template>
   </UDashboardPanel>
 
-  <ReservationsSallesEditModal 
-    ref="editModal" 
-    :reservation="selectedReservation" 
+  <ReservationsSallesEditModal
+    ref="editModal"
+    :reservation="selectedReservation"
     @delete="handleDelete"
   />
   <ReservationsSallesDeleteModal ref="deleteModal" :reservation="selectedReservation" />
