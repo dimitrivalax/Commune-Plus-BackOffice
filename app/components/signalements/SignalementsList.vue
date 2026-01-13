@@ -47,7 +47,7 @@ const getStatusColor = (status: string) => {
       return 'orange'
     case 'en_cours':
       return 'blue'
-    case 'traité':
+    case 'traite':
       return 'green'
     default:
       return 'neutral'
@@ -57,10 +57,10 @@ const getStatusColor = (status: string) => {
 const getStatusLabel = (status: string) => {
   switch (status) {
     case 'en_attente':
-      return 'En attente'
+      return 'En Attente'
     case 'en_cours':
       return 'En cours'
-    case 'traité':
+    case 'traite':
       return 'Traité'
     default:
       return status

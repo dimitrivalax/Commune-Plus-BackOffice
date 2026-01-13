@@ -12,6 +12,16 @@ export default defineNuxtConfig({
     "/api/**": {
       cors: true,
     },
+    "/_next/**": {
+      index: false,
+    },
+  },
+
+  // Ignorer les chemins webpack-hmr dans le routeur
+  router: {
+    options: {
+      strict: false,
+    },
   },
 
   compatibilityDate: "2024-07-11",

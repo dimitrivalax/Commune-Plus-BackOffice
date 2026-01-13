@@ -59,7 +59,7 @@ export interface Range {
   end: Date;
 }
 
-export type SignalementStatus = "en_attente" | "en_cours" | "traité";
+export type SignalementStatus = "en_attente" | "en_cours" | "traite";
 
 export interface Signalement {
   id: string;

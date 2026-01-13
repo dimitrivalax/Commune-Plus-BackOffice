@@ -17,10 +17,10 @@ const center = ref<[number, number]>([46.6034, 1.8883])
 const getStatusLabel = (status: string) => {
   switch (status) {
     case 'en_attente':
-      return 'En attente'
+      return 'En Attente'
     case 'en_cours':
       return 'En cours'
-    case 'traité':
+    case 'traite':
       return 'Traité'
     default:
       return status
@@ -33,7 +33,7 @@ const getMarkerColor = (status: string) => {
       return '#f97316' // orange
     case 'en_cours':
       return '#3b82f6' // blue
-    case 'traité':
+    case 'traite':
       return '#22c55e' // green
     default:
       return '#6b7280' // gray
@@ -43,8 +43,8 @@ const getMarkerColor = (status: string) => {
 // Filtrer les signalements avec des coordonnées valides
 const signalementsWithCoords = computed(() => {
   const filtered = props.signalements.filter(
-    s => s.latitude !== null && s.longitude !== null && 
-         !isNaN(s.latitude!) && !isNaN(s.longitude!)
+    s => s.latitude !== null && s.longitude !== null &&
+      !isNaN(s.latitude!) && !isNaN(s.longitude!)
   )
   // Debug: afficher dans la console
   if (import.meta.client) {
@@ -58,10 +58,10 @@ const mapBounds = computed(() => {
   if (signalementsWithCoords.value.length === 0) {
     return null
   }
-  
+
   const lats = signalementsWithCoords.value.map(s => s.latitude!)
   const lngs = signalementsWithCoords.value.map(s => s.longitude!)
-  
+
   return {
     north: Math.max(...lats),
     south: Math.min(...lats),
@@ -109,30 +109,14 @@ const createMarkerIcon = (status: string) => {
 <template>
   <div class="w-full h-full min-h-[600px]">
     <ClientOnly>
-      <LMap
-        :zoom="zoom"
-        :center="center"
-        :use-global-leaflet="false"
-        class="w-full h-full"
-      >
-        <LTileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; <a href='https://www.openstreetmap.org/'>OpenStreetMap</a> contributors"
-          layer-type="base"
-          name="OpenStreetMap"
-        />
-        
-        <LMarker
-          v-for="signalement in signalementsWithCoords"
-          :key="signalement.id"
-          :lat-lng="[signalement.latitude!, signalement.longitude!]"
-          @click="handleMarkerClick(signalement)"
-        >
-          <LIcon
-            :icon-url="createMarkerIcon(signalement.status)"
-            :icon-size="[24, 24]"
-            :icon-anchor="[12, 24]"
-          />
+      <LMap :zoom="zoom" :center="center" :use-global-leaflet="false" class="w-full h-full">
+        <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="&copy; <a href='https://www.openstreetmap.org/'>OpenStreetMap</a> contributors" layer-type="base"
+          name="OpenStreetMap" />
+
+        <LMarker v-for="signalement in signalementsWithCoords" :key="signalement.id"
+          :lat-lng="[signalement.latitude!, signalement.longitude!]" @click="handleMarkerClick(signalement)">
+          <LIcon :icon-url="createMarkerIcon(signalement.status)" :icon-size="[24, 24]" :icon-anchor="[12, 24]" />
           <LPopup>
             <div style="min-width: 200px; max-width: 300px;">
               <div style="margin-bottom: 8px;">
@@ -158,9 +142,7 @@ const createMarkerIcon = (status: string) => {
               <div v-if="signalement.address" style="font-size: 11px; color: #666; margin-top: 4px;">
                 📍 {{ signalement.address }}
               </div>
-              <button
-                @click="handleMarkerClick(signalement)"
-                style="
+              <button @click="handleMarkerClick(signalement)" style="
                   margin-top: 8px;
                   padding: 4px 12px;
                   background-color: #3b82f6;
@@ -170,8 +152,7 @@ const createMarkerIcon = (status: string) => {
                   cursor: pointer;
                   font-size: 12px;
                   width: 100%;
-                "
-              >
+                ">
                 Voir les détails
               </button>
             </div>
@@ -184,7 +165,8 @@ const createMarkerIcon = (status: string) => {
         </div>
       </template>
     </ClientOnly>
-    <div v-if="signalementsWithCoords.length === 0" class="absolute inset-0 flex items-center justify-center bg-elevated/50 z-10">
+    <div v-if="signalementsWithCoords.length === 0"
+      class="absolute inset-0 flex items-center justify-center bg-elevated/50 z-10">
       <div class="text-center p-4">
         <UIcon name="i-lucide-map-pin-off" class="size-12 text-dimmed mb-2 mx-auto" />
         <p class="text-dimmed">Aucun signalement avec coordonnées GPS</p>

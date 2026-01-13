@@ -10,14 +10,14 @@ const tabItems = [{
   label: 'Tous',
   value: 'all'
 }, {
-  label: 'En attente',
+  label: 'En Attente',
   value: 'en_attente'
 }, {
   label: 'En cours',
   value: 'en_cours'
 }, {
   label: 'Traités',
-  value: 'traité'
+  value: 'traite'
 }]
 const selectedTab = ref('all')
 const viewMode = ref<'table' | 'map'>('table')

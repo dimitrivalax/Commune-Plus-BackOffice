@@ -1,26 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
+import { requireAuth } from '../../utils/supabase-auth'
 import { z } from 'zod'
 
-const supabaseUrl = process.env.SUPABASE_URL || ''
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || ''
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials are missing. Please check your environment variables.')
-}
-
-const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
-
-const updateStatusSchema = z.object({
-  status: z.enum(['en_attente', 'en_cours', 'traité'])
+const updateSignalementSchema = z.object({
+  status: z.enum(['en_attente', 'en_cours', 'traite']).optional(),
+  comment: z.string().nullable().optional()
 })
 
 export default eventHandler(async (event) => {
-  if (!supabase) {
-    throw createError({
-      statusCode: 500,
-      message: 'Supabase configuration is missing'
-    })
-  }
+  // Vérifier l'authentification
+  const { supabase } = await requireAuth(event)
 
   const id = getRouterParam(event, 'id')
   if (!id) {
@@ -33,14 +21,40 @@ export default eventHandler(async (event) => {
   if (event.method === 'PUT') {
     try {
       const body = await readBody(event)
-      const { status } = updateStatusSchema.parse(body)
+      const validatedData = updateSignalementSchema.parse(body)
 
+      const updateData: { status?: string; comment?: string | null; updated_at: string } = {
+        updated_at: new Date().toISOString()
+      }
+
+      if (validatedData.status !== undefined) {
+        updateData.status = validatedData.status
+      }
+
+      if (validatedData.comment !== undefined) {
+        updateData.comment = validatedData.comment
+      }
+
+      // Vérifier d'abord si le signalement existe
+      const { data: existingData, error: checkError } = await supabase
+        .from('signalements')
+        .select('id')
+        .eq('id', id)
+        .single()
+
+      if (checkError || !existingData) {
+        throw createError({
+          statusCode: 404,
+          message: `Signalement not found: ${checkError?.message || 'No data returned'}`
+        })
+      }
+
+      // Mettre à jour le signalement
       const { data, error } = await supabase
         .from('signalements')
-        .update({ status, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', id)
         .select()
-        .single()
 
       if (error) {
         throw createError({
@@ -49,7 +63,21 @@ export default eventHandler(async (event) => {
         })
       }
 
-      return data
+      if (!data || data.length === 0) {
+        throw createError({
+          statusCode: 404,
+          message: 'Signalement not found after update'
+        })
+      }
+
+      if (data.length > 1) {
+        throw createError({
+          statusCode: 500,
+          message: 'Multiple signalements found with the same ID'
+        })
+      }
+
+      return data[0]
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         throw createError({
