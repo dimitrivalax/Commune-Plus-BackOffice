@@ -139,4 +139,3 @@ const _useSupabase = () => {
 }
 
 export const useSupabase = createSharedComposable(_useSupabase)
-

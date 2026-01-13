@@ -218,7 +218,7 @@ const columns: TableColumn<Utilisateur>[] = [
         return h('span', { class: 'text-muted' }, '-')
       }
       return h('div', { class: 'flex flex-wrap gap-1' },
-        communes.map((commune) =>
+        communes.map(commune =>
           h(UBadge, { variant: 'subtle', color: 'primary' }, () => commune.name)
         )
       )

@@ -111,4 +111,3 @@ const isUnread = (signalement: Signalement) => {
     </div>
   </div>
 </template>
-

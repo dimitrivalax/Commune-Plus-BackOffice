@@ -23,7 +23,7 @@ export default eventHandler(async (event) => {
       const body = await readBody(event)
       const validatedData = updateSignalementSchema.parse(body)
 
-      const updateData: { status?: string; comment?: string | null; updated_at: string } = {
+      const updateData: { status?: string, comment?: string | null, updated_at: string } = {
         updated_at: new Date().toISOString()
       }
 
@@ -97,4 +97,3 @@ export default eventHandler(async (event) => {
     message: 'Method not allowed'
   })
 })
-

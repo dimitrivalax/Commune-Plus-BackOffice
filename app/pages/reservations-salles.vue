@@ -85,19 +85,19 @@ const addModal = useTemplateRef<{ openModal: () => void }>('addModal')
 // Filtrer les réservations pour la période affichée
 const filteredReservations = computed(() => {
   if (!reservations.value) return []
-  return reservations.value.filter(res => {
+  return reservations.value.filter((res) => {
     const resStart = parseISO(res.date_debut)
     const resEnd = parseISO(res.date_fin)
-    return isWithinInterval(resStart, dateRange.value) ||
-           isWithinInterval(resEnd, dateRange.value) ||
-           (resStart <= dateRange.value.start && resEnd >= dateRange.value.end)
+    return isWithinInterval(resStart, dateRange.value)
+      || isWithinInterval(resEnd, dateRange.value)
+      || (resStart <= dateRange.value.start && resEnd >= dateRange.value.end)
   })
 })
 
 // Grouper les réservations par salle
 const reservationsBySalle = computed(() => {
   const grouped: Record<string, ReservationSalle[]> = {}
-  filteredReservations.value.forEach(res => {
+  filteredReservations.value.forEach((res) => {
     const salleId = res.salle_id
     if (!grouped[salleId]) {
       grouped[salleId] = []
@@ -185,12 +185,12 @@ function goToNext() {
 
 // Obtenir les réservations pour une salle et un jour donnés
 function getReservationsForSalleAndDay(salleId: string, day: Date): ReservationSalle[] {
-  return filteredReservations.value.filter(res => {
+  return filteredReservations.value.filter((res) => {
     if (res.salle_id !== salleId) return false
     const resStart = parseISO(res.date_debut)
     const resEnd = parseISO(res.date_fin)
-    return isSameDay(resStart, day) || isSameDay(resEnd, day) ||
-           (resStart <= day && resEnd >= day)
+    return isSameDay(resStart, day) || isSameDay(resEnd, day)
+      || (resStart <= day && resEnd >= day)
   })
 }
 
@@ -317,8 +317,8 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
             {{ currentView === 'day'
               ? format(currentDate, 'EEEE d MMMM yyyy', { locale: fr })
               : currentView === 'week'
-              ? `Semaine du ${format(dateRange.start, 'd MMMM', { locale: fr })}`
-              : format(currentDate, 'MMMM yyyy', { locale: fr })
+                ? `Semaine du ${format(dateRange.start, 'd MMMM', { locale: fr })}`
+                : format(currentDate, 'MMMM yyyy', { locale: fr })
             }}
           </h2>
         </div>
@@ -327,10 +327,14 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
       <!-- Vue Jour -->
       <div v-if="currentView === 'day'" class="overflow-x-auto">
         <div v-if="status === 'pending'" class="text-center py-8">
-          <p class="text-muted">Chargement...</p>
+          <p class="text-muted">
+            Chargement...
+          </p>
         </div>
         <div v-else-if="!salles || salles.length === 0" class="text-center py-8">
-          <p class="text-muted">Aucune salle disponible</p>
+          <p class="text-muted">
+            Aucune salle disponible
+          </p>
         </div>
         <div v-else class="border border-default rounded-lg">
           <div class="grid" :style="{ gridTemplateColumns: `200px repeat(${salles.length}, 1fr)` }">
@@ -364,7 +368,9 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
                   class="absolute left-0 right-0 mx-1 bg-primary/20 border border-primary rounded p-1 text-xs cursor-pointer hover:bg-primary/30 z-10"
                   @click.stop="handleReservationClick(reservation)"
                 >
-                  <div class="font-medium">{{ reservation.prenom }} {{ reservation.nom }}</div>
+                  <div class="font-medium">
+                    {{ reservation.prenom }} {{ reservation.nom }}
+                  </div>
                   <div class="text-xs text-muted">
                     {{ format(parseISO(reservation.date_debut), 'HH:mm') }} -
                     {{ format(parseISO(reservation.date_fin), 'HH:mm') }}
@@ -379,10 +385,14 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
       <!-- Vue Semaine -->
       <div v-if="currentView === 'week'" class="overflow-x-auto">
         <div v-if="status === 'pending'" class="text-center py-8">
-          <p class="text-muted">Chargement...</p>
+          <p class="text-muted">
+            Chargement...
+          </p>
         </div>
         <div v-else-if="!salles || salles.length === 0" class="text-center py-8">
-          <p class="text-muted">Aucune salle disponible</p>
+          <p class="text-muted">
+            Aucune salle disponible
+          </p>
         </div>
         <div v-else class="border border-default rounded-lg">
           <div class="grid" :style="{ gridTemplateColumns: `200px repeat(${daysToShow.length}, 1fr)` }">
@@ -396,7 +406,9 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
               class="border-b border-default p-2 bg-elevated/50 font-medium text-center"
             >
               <div>{{ format(day, 'EEEE', { locale: fr }) }}</div>
-              <div class="text-sm text-muted">{{ format(day, 'd MMM', { locale: fr }) }}</div>
+              <div class="text-sm text-muted">
+                {{ format(day, 'd MMM', { locale: fr }) }}
+              </div>
             </div>
 
             <!-- Lignes de salles -->
@@ -415,7 +427,9 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
                   class="mb-1 p-2 bg-primary/20 border border-primary rounded text-xs cursor-pointer hover:bg-primary/30"
                   @click="handleReservationClick(reservation)"
                 >
-                  <div class="font-medium">{{ reservation.prenom }} {{ reservation.nom }}</div>
+                  <div class="font-medium">
+                    {{ reservation.prenom }} {{ reservation.nom }}
+                  </div>
                   <div class="text-xs text-muted">
                     {{ format(parseISO(reservation.date_debut), 'HH:mm') }} -
                     {{ format(parseISO(reservation.date_fin), 'HH:mm') }}
@@ -430,10 +444,14 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
       <!-- Vue Mois -->
       <div v-if="currentView === 'month'" class="overflow-x-auto">
         <div v-if="status === 'pending'" class="text-center py-8">
-          <p class="text-muted">Chargement...</p>
+          <p class="text-muted">
+            Chargement...
+          </p>
         </div>
         <div v-else-if="!salles || salles.length === 0" class="text-center py-8">
-          <p class="text-muted">Aucune salle disponible</p>
+          <p class="text-muted">
+            Aucune salle disponible
+          </p>
         </div>
         <div v-else class="space-y-4">
           <template v-for="salle in salles" :key="salle.id">
@@ -469,7 +487,9 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
                       class="mb-1 p-1 bg-primary/20 border border-primary rounded text-xs cursor-pointer hover:bg-primary/30"
                       @click="handleReservationClick(reservation)"
                     >
-                      <div class="font-medium truncate">{{ reservation.prenom }} {{ reservation.nom }}</div>
+                      <div class="font-medium truncate">
+                        {{ reservation.prenom }} {{ reservation.nom }}
+                      </div>
                       <div class="text-xs text-muted">
                         {{ format(parseISO(reservation.date_debut), 'HH:mm') }}
                       </div>

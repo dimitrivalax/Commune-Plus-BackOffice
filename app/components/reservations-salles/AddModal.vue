@@ -77,7 +77,6 @@ function formatDateTimeLocal(date: Date): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
-
 watch(() => props.salleId, (newVal) => {
   if (newVal && open.value) state.salle_id = newVal
 })
@@ -174,19 +173,39 @@ defineExpose({
           <UInput v-model="state.date_fin" type="datetime-local" class="w-full" />
         </UFormField>
 
-        <UFormField label="Nom" placeholder="Dupont" name="nom" required>
+        <UFormField
+          label="Nom"
+          placeholder="Dupont"
+          name="nom"
+          required
+        >
           <UInput v-model="state.nom" class="w-full" />
         </UFormField>
 
-        <UFormField label="Prénom" placeholder="Jean" name="prenom" required>
+        <UFormField
+          label="Prénom"
+          placeholder="Jean"
+          name="prenom"
+          required
+        >
           <UInput v-model="state.prenom" class="w-full" />
         </UFormField>
 
-        <UFormField label="Email" placeholder="jean.dupont@exemple.com" name="email" required>
+        <UFormField
+          label="Email"
+          placeholder="jean.dupont@exemple.com"
+          name="email"
+          required
+        >
           <UInput v-model="state.email" type="email" class="w-full" />
         </UFormField>
 
-        <UFormField label="Téléphone" placeholder="06 12 34 56 78" name="telephone" required>
+        <UFormField
+          label="Téléphone"
+          placeholder="06 12 34 56 78"
+          name="telephone"
+          required
+        >
           <UInput v-model="state.telephone" type="tel" class="w-full" />
         </UFormField>
 

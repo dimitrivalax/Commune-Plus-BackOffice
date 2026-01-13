@@ -3,7 +3,7 @@ import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 }
 
 serve(async (req) => {
@@ -29,7 +29,7 @@ serve(async (req) => {
       const errorMessage = `SMTP credentials are not configured. Missing secrets: ${missingSecrets.join(', ')}. Please configure them in Supabase Dashboard > Settings > Edge Functions > Secrets.`
       console.error(errorMessage)
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: errorMessage,
           missingSecrets: missingSecrets,
           hint: 'Configure secrets in Supabase Dashboard > Settings > Edge Functions > Secrets'
@@ -100,12 +100,14 @@ serve(async (req) => {
         <td style="padding: 8px 0; font-weight: bold;">Horaires :</td>
         <td style="padding: 8px 0;">${heureDebut} - ${heureFin}</td>
       </tr>
-      ${reservationData.nom_association ? `
+      ${reservationData.nom_association
+        ? `
       <tr>
         <td style="padding: 8px 0; font-weight: bold;">Association :</td>
         <td style="padding: 8px 0;">${reservationData.nom_association}</td>
       </tr>
-      ` : ''}
+      `
+        : ''}
     </table>
   </div>
 
@@ -176,26 +178,26 @@ Pour toute question, veuillez contacter votre mairie.
     // Le port 465 utilise SSL direct (plus fiable avec Deno)
     // Le port 587 utilise STARTTLS (peut causer des problèmes avec InvalidContentType)
     const effectivePort = smtpPort === 465 ? 465 : (smtpPort === 587 ? 587 : smtpPort)
-    
+
     const connectionConfig = {
       hostname: smtpHost,
       port: effectivePort,
       auth: {
         username: smtpUser,
-        password: smtpPassword,
+        password: smtpPassword
       },
-      tls: true, // TLS activé pour les deux ports
+      tls: true // TLS activé pour les deux ports
     }
 
     console.log(`Connecting to SMTP server ${smtpHost}:${effectivePort} with TLS`)
 
     const client = new SMTPClient({
-      connection: connectionConfig,
+      connection: connectionConfig
     })
 
     // Préparer l'adresse d'expéditeur
     const fromEmail = smtpFromEmail
-    
+
     // Préparer les options d'envoi
     const sendOptions = {
       from: `Mairie <${fromEmail}>`,
@@ -203,7 +205,7 @@ Pour toute question, veuillez contacter votre mairie.
       subject: emailSubject,
       content: emailBody,
       html: emailBody,
-      text: emailText,
+      text: emailText
     }
 
     // Envoyer l'email

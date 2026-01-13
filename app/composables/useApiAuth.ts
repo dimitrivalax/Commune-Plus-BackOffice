@@ -2,20 +2,20 @@
  * Composable pour obtenir les headers d'authentification pour les appels API
  */
 export const useApiAuth = () => {
-  const { session } = useSupabase();
+  const { session } = useSupabase()
 
   const getAuthHeaders = (): Record<string, string> => {
-    const currentSession = session.value;
+    const currentSession = session.value
     if (!currentSession?.access_token) {
-      return {};
+      return {}
     }
 
     return {
-      Authorization: `Bearer ${currentSession.access_token}`,
-    };
-  };
+      Authorization: `Bearer ${currentSession.access_token}`
+    }
+  }
 
   return {
-    getAuthHeaders,
-  };
-};
+    getAuthHeaders
+  }
+}

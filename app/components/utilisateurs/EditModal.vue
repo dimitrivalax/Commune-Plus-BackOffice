@@ -136,7 +136,9 @@ defineExpose({
     <template #body>
       <div v-if="utilisateur" class="mb-4 p-3 bg-elevated rounded-lg space-y-2">
         <div>
-          <p class="text-sm text-muted">Dernière connexion :</p>
+          <p class="text-sm text-muted">
+            Dernière connexion :
+          </p>
           <p class="font-medium">
             <span v-if="utilisateur.last_sign_in_at">
               {{ new Date(utilisateur.last_sign_in_at).toLocaleString('fr-FR') }}
@@ -145,8 +147,12 @@ defineExpose({
           </p>
         </div>
         <div>
-          <p class="text-sm text-muted">Date de création :</p>
-          <p class="font-medium">{{ new Date(utilisateur.created_at).toLocaleString('fr-FR') }}</p>
+          <p class="text-sm text-muted">
+            Date de création :
+          </p>
+          <p class="font-medium">
+            {{ new Date(utilisateur.created_at).toLocaleString('fr-FR') }}
+          </p>
         </div>
       </div>
 
@@ -156,15 +162,30 @@ defineExpose({
         class="space-y-4"
         @submit="onSubmit"
       >
-        <UFormField label="Nom" placeholder="Dupont" name="nom" required>
+        <UFormField
+          label="Nom"
+          placeholder="Dupont"
+          name="nom"
+          required
+        >
           <UInput v-model="state.nom" class="w-full" />
         </UFormField>
 
-        <UFormField label="Prénom" placeholder="Jean" name="prenom" required>
+        <UFormField
+          label="Prénom"
+          placeholder="Jean"
+          name="prenom"
+          required
+        >
           <UInput v-model="state.prenom" class="w-full" />
         </UFormField>
 
-        <UFormField label="Email" placeholder="jean.dupont@exemple.com" name="email" required>
+        <UFormField
+          label="Email"
+          placeholder="jean.dupont@exemple.com"
+          name="email"
+          required
+        >
           <UInput v-model="state.email" type="email" class="w-full" />
         </UFormField>
 
@@ -212,11 +233,11 @@ defineExpose({
               class="flex items-center gap-2 p-2 hover:bg-elevated rounded cursor-pointer"
             >
               <input
+                v-model="selectedCommunes"
                 type="checkbox"
                 :value="commune.id"
-                v-model="selectedCommunes"
                 class="rounded border-default"
-              />
+              >
               <span class="text-sm">{{ commune.name }} ({{ commune.postal_code }})</span>
             </label>
           </div>

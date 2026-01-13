@@ -132,8 +132,12 @@ defineExpose({
   <UModal v-model:open="open" title="Modifier la réservation" description="Modifier une réservation de salle">
     <template #body>
       <div v-if="reservation" class="mb-4 p-3 bg-elevated rounded-lg">
-        <p class="text-sm text-muted">Salle :</p>
-        <p class="font-medium">{{ salles?.find(s => s.id === reservation.salle_id)?.nom || 'Salle inconnue' }}</p>
+        <p class="text-sm text-muted">
+          Salle :
+        </p>
+        <p class="font-medium">
+          {{ salles?.find(s => s.id === reservation.salle_id)?.nom || 'Salle inconnue' }}
+        </p>
       </div>
 
       <UForm
@@ -150,19 +154,39 @@ defineExpose({
           <UInput v-model="state.date_fin" type="datetime-local" class="w-full" />
         </UFormField>
 
-        <UFormField label="Nom" placeholder="Dupont" name="nom" required>
+        <UFormField
+          label="Nom"
+          placeholder="Dupont"
+          name="nom"
+          required
+        >
           <UInput v-model="state.nom" class="w-full" />
         </UFormField>
 
-        <UFormField label="Prénom" placeholder="Jean" name="prenom" required>
+        <UFormField
+          label="Prénom"
+          placeholder="Jean"
+          name="prenom"
+          required
+        >
           <UInput v-model="state.prenom" class="w-full" />
         </UFormField>
 
-        <UFormField label="Email" placeholder="jean.dupont@exemple.com" name="email" required>
+        <UFormField
+          label="Email"
+          placeholder="jean.dupont@exemple.com"
+          name="email"
+          required
+        >
           <UInput v-model="state.email" type="email" class="w-full" />
         </UFormField>
 
-        <UFormField label="Téléphone" placeholder="06 12 34 56 78" name="telephone" required>
+        <UFormField
+          label="Téléphone"
+          placeholder="06 12 34 56 78"
+          name="telephone"
+          required
+        >
           <UInput v-model="state.telephone" type="tel" class="w-full" />
         </UFormField>
 

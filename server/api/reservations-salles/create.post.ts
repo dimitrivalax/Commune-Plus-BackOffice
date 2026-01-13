@@ -29,7 +29,7 @@ export default eventHandler(async (event) => {
     // Un chevauchement existe si : (date_debut < date_fin_existante) ET (date_fin > date_debut_existante)
     const dateDebutISO = new Date(body.date_debut).toISOString()
     const dateFinISO = new Date(body.date_fin).toISOString()
-    
+
     const { data: overlappingReservations, error: checkError } = await supabase
       .from('reservations_salles')
       .select('id')

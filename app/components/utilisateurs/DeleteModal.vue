@@ -58,8 +58,19 @@ defineExpose({
   <UModal v-model:open="open" title="Supprimer l'utilisateur" :description="description">
     <template #body>
       <div class="flex justify-end gap-2">
-        <UButton label="Annuler" color="neutral" variant="subtle" @click="open = false" />
-        <UButton label="Supprimer" color="error" variant="solid" loading-auto @click="onSubmit" />
+        <UButton
+          label="Annuler"
+          color="neutral"
+          variant="subtle"
+          @click="open = false"
+        />
+        <UButton
+          label="Supprimer"
+          color="error"
+          variant="solid"
+          loading-auto
+          @click="onSubmit"
+        />
       </div>
     </template>
   </UModal>

@@ -99,7 +99,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 async function handleDelete() {
   if (!props.salle) return
-  
+
   open.value = false
   emit('delete', props.salle)
 }
@@ -129,15 +129,30 @@ defineExpose({
         class="space-y-4"
         @submit="onSubmit"
       >
-        <UFormField label="Nom" placeholder="Nom de la salle" name="nom" required>
+        <UFormField
+          label="Nom"
+          placeholder="Nom de la salle"
+          name="nom"
+          required
+        >
           <UInput v-model="state.nom" class="w-full" />
         </UFormField>
 
-        <UFormField label="Adresse" placeholder="Adresse de la salle" name="adresse" required>
+        <UFormField
+          label="Adresse"
+          placeholder="Adresse de la salle"
+          name="adresse"
+          required
+        >
           <UInput v-model="state.adresse" class="w-full" />
         </UFormField>
 
-        <UFormField label="Nombre maximum de places" placeholder="50" name="nombre_max_places" required>
+        <UFormField
+          label="Nombre maximum de places"
+          placeholder="50"
+          name="nombre_max_places"
+          required
+        >
           <UInput v-model.number="state.nombre_max_places" type="number" class="w-full" />
         </UFormField>
 
@@ -150,13 +165,15 @@ defineExpose({
         </UFormField>
 
         <div v-if="imagePreview" class="mt-2">
-          <p class="text-sm text-muted mb-2">Aperçu de la photo :</p>
-          <img 
-            :src="imagePreview" 
-            alt="Preview" 
+          <p class="text-sm text-muted mb-2">
+            Aperçu de la photo :
+          </p>
+          <img
+            :src="imagePreview"
+            alt="Preview"
             class="max-w-full max-h-64 rounded-lg border border-default object-contain"
             @error="(e: any) => e.target.style.display = 'none'"
-          />
+          >
         </div>
 
         <div class="flex justify-between gap-2 pt-2">

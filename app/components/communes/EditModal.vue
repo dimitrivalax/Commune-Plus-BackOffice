@@ -99,30 +99,69 @@ defineExpose({
     <template #body>
       <div v-if="commune" class="mb-4 p-3 bg-elevated rounded-lg space-y-2">
         <div>
-          <p class="text-sm text-muted">Date de création :</p>
-          <p class="font-medium">{{ commune.created_at ? new Date(commune.created_at).toLocaleString('fr-FR') : '-' }}
+          <p class="text-sm text-muted">
+            Date de création :
+          </p>
+          <p class="font-medium">
+            {{ commune.created_at ? new Date(commune.created_at).toLocaleString('fr-FR') : '-' }}
           </p>
         </div>
       </div>
 
-      <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-        <UFormField label="Nom" placeholder="Paris" name="name" required>
+      <UForm
+        :schema="schema"
+        :state="state"
+        class="space-y-4"
+        @submit="onSubmit"
+      >
+        <UFormField
+          label="Nom"
+          placeholder="Paris"
+          name="name"
+          required
+        >
           <UInput v-model="state.name" class="w-full" />
         </UFormField>
 
-        <UFormField label="Code postal" placeholder="75001" name="postal_code" required>
+        <UFormField
+          label="Code postal"
+          placeholder="75001"
+          name="postal_code"
+          required
+        >
           <UInput v-model="state.postal_code" class="w-full" />
         </UFormField>
 
-        <UFormField label="Email" placeholder="contact@commune.fr" name="email" required>
+        <UFormField
+          label="Email"
+          placeholder="contact@commune.fr"
+          name="email"
+          required
+        >
           <UInput v-model="state.email" type="email" class="w-full" />
         </UFormField>
 
         <div class="flex justify-between gap-2 pt-2">
-          <UButton label="Supprimer" color="error" variant="subtle" icon="i-lucide-trash" @click="handleDelete" />
+          <UButton
+            label="Supprimer"
+            color="error"
+            variant="subtle"
+            icon="i-lucide-trash"
+            @click="handleDelete"
+          />
           <div class="flex gap-2">
-            <UButton label="Annuler" color="neutral" variant="subtle" @click="open = false" />
-            <UButton label="Enregistrer" color="primary" variant="solid" type="submit" />
+            <UButton
+              label="Annuler"
+              color="neutral"
+              variant="subtle"
+              @click="open = false"
+            />
+            <UButton
+              label="Enregistrer"
+              color="primary"
+              variant="solid"
+              type="submit"
+            />
           </div>
         </div>
       </UForm>

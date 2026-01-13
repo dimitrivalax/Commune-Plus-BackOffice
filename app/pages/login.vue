@@ -93,19 +93,38 @@ onMounted(async () => {
       <UCard>
         <form class="space-y-6 flex flex-col items-center" @submit.prevent="handleSubmit">
           <UFormField label="Email" name="email" class="w-[70%]">
-            <UInput v-model="form.email" type="email" placeholder="votre.email@exemple.com" :disabled="loading"
-              autocomplete="email" :error="!!errors.email" class="w-full" />
+            <UInput
+              v-model="form.email"
+              type="email"
+              placeholder="votre.email@exemple.com"
+              :disabled="loading"
+              autocomplete="email"
+              :error="!!errors.email"
+              class="w-full"
+            />
             <p v-if="errors.email" class="text-sm text-error mt-1">
               {{ errors.email }}
             </p>
           </UFormField>
 
           <UFormField label="Mot de passe" name="password" class="w-[70%]">
-            <UInput v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="••••••••"
-              :disabled="loading" autocomplete="current-password" :error="!!errors.password" class="w-full">
+            <UInput
+              v-model="form.password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="••••••••"
+              :disabled="loading"
+              autocomplete="current-password"
+              :error="!!errors.password"
+              class="w-full"
+            >
               <template #trailing>
-                <UButton :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'" color="neutral" variant="ghost"
-                  :padded="false" @click="showPassword = !showPassword" />
+                <UButton
+                  :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                  color="neutral"
+                  variant="ghost"
+                  :padded="false"
+                  @click="showPassword = !showPassword"
+                />
               </template>
             </UInput>
             <p v-if="errors.password" class="text-sm text-error mt-1">

@@ -37,7 +37,7 @@ const confirm = () => {
         </p>
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Un email de confirmation vous a été envoyé à l'adresse <strong class="text-gray-900 dark:text-white">{{ email
-            }}</strong>.
+          }}</strong>.
         </p>
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Veuillez cliquer sur le lien dans cet email pour valider votre compte avant de pouvoir vous connecter.

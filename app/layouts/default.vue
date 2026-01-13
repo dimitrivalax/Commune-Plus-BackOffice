@@ -178,8 +178,14 @@ onMounted(async () => {
 
 <template>
   <UDashboardGroup unit="rem">
-    <UDashboardSidebar id="default" v-model:open="open" collapsible resizable class="bg-elevated/25"
-      :ui="{ footer: 'lg:border-t lg:border-default' }">
+    <UDashboardSidebar
+      id="default"
+      v-model:open="open"
+      collapsible
+      resizable
+      class="bg-elevated/25"
+      :ui="{ footer: 'lg:border-t lg:border-default' }"
+    >
       <template #header>
         <!-- <TeamsMenu :collapsed="collapsed" /> -->
         <img src="/logo.png" alt="logo" class="w-20 h-20 mx-auto">
@@ -190,15 +196,30 @@ onMounted(async () => {
 
         <div v-if="userCommunes && userCommunes.length > 0" class="px-3 py-2">
           <UFormField label="Commune courante" name="commune">
-            <USelect v-model="selectedCommuneId"
+            <USelect
+              v-model="selectedCommuneId"
               :items="userCommunes.map(c => ({ label: `${c.name} (${c.postal_code})`, value: c.id }))"
-              placeholder="Sélectionner une commune" :ui="{ wrapper: collapsed ? 'w-full' : 'w-full' }" />
+              placeholder="Sélectionner une commune"
+              :ui="{ wrapper: collapsed ? 'w-full' : 'w-full' }"
+            />
           </UFormField>
         </div>
 
-        <UNavigationMenu :collapsed="collapsed" :items="links[0]" orientation="vertical" tooltip popover />
+        <UNavigationMenu
+          :collapsed="collapsed"
+          :items="links[0]"
+          orientation="vertical"
+          tooltip
+          popover
+        />
 
-        <UNavigationMenu :collapsed="collapsed" :items="links[1]" orientation="vertical" tooltip class="mt-auto" />
+        <UNavigationMenu
+          :collapsed="collapsed"
+          :items="links[1]"
+          orientation="vertical"
+          tooltip
+          class="mt-auto"
+        />
       </template>
 
       <template #footer="{ collapsed }">

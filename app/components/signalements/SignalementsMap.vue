@@ -43,8 +43,8 @@ const getMarkerColor = (status: string) => {
 // Filtrer les signalements avec des coordonnées valides
 const signalementsWithCoords = computed(() => {
   const filtered = props.signalements.filter(
-    s => s.latitude !== null && s.longitude !== null &&
-      !isNaN(s.latitude!) && !isNaN(s.longitude!)
+    s => s.latitude !== null && s.longitude !== null
+      && !isNaN(s.latitude!) && !isNaN(s.longitude!)
   )
   // Debug: afficher dans la console
   if (import.meta.client) {
@@ -109,13 +109,25 @@ const createMarkerIcon = (status: string) => {
 <template>
   <div class="w-full h-full min-h-[600px]">
     <ClientOnly>
-      <LMap :zoom="zoom" :center="center" :use-global-leaflet="false" class="w-full h-full">
-        <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; <a href='https://www.openstreetmap.org/'>OpenStreetMap</a> contributors" layer-type="base"
-          name="OpenStreetMap" />
+      <LMap
+        :zoom="zoom"
+        :center="center"
+        :use-global-leaflet="false"
+        class="w-full h-full"
+      >
+        <LTileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="&copy; <a href='https://www.openstreetmap.org/'>OpenStreetMap</a> contributors"
+          layer-type="base"
+          name="OpenStreetMap"
+        />
 
-        <LMarker v-for="signalement in signalementsWithCoords" :key="signalement.id"
-          :lat-lng="[signalement.latitude!, signalement.longitude!]" @click="handleMarkerClick(signalement)">
+        <LMarker
+          v-for="signalement in signalementsWithCoords"
+          :key="signalement.id"
+          :lat-lng="[signalement.latitude!, signalement.longitude!]"
+          @click="handleMarkerClick(signalement)"
+        >
           <LIcon :icon-url="createMarkerIcon(signalement.status)" :icon-size="[24, 24]" :icon-anchor="[12, 24]" />
           <LPopup>
             <div style="min-width: 200px; max-width: 300px;">
@@ -126,15 +138,17 @@ const createMarkerIcon = (status: string) => {
                 {{ signalement.description || 'Aucune description' }}
               </div>
               <div style="margin-bottom: 8px;">
-                <span :style="{
-                  display: 'inline-block',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontSize: '11px',
-                  fontWeight: '500',
-                  backgroundColor: getMarkerColor(signalement.status) + '20',
-                  color: getMarkerColor(signalement.status)
-                }">{{ getStatusLabel(signalement.status) }}</span>
+                <span
+                  :style="{
+                    display: 'inline-block',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    fontWeight: '500',
+                    backgroundColor: getMarkerColor(signalement.status) + '20',
+                    color: getMarkerColor(signalement.status)
+                  }"
+                >{{ getStatusLabel(signalement.status) }}</span>
               </div>
               <div style="font-size: 11px; color: #999; margin-bottom: 8px;">
                 {{ format(new Date(signalement.created_at), 'dd MMM yyyy HH:mm') }}
@@ -142,7 +156,8 @@ const createMarkerIcon = (status: string) => {
               <div v-if="signalement.address" style="font-size: 11px; color: #666; margin-top: 4px;">
                 📍 {{ signalement.address }}
               </div>
-              <button @click="handleMarkerClick(signalement)" style="
+              <button
+                style="
                   margin-top: 8px;
                   padding: 4px 12px;
                   background-color: #3b82f6;
@@ -152,7 +167,9 @@ const createMarkerIcon = (status: string) => {
                   cursor: pointer;
                   font-size: 12px;
                   width: 100%;
-                ">
+                "
+                @click="handleMarkerClick(signalement)"
+              >
                 Voir les détails
               </button>
             </div>
@@ -165,11 +182,15 @@ const createMarkerIcon = (status: string) => {
         </div>
       </template>
     </ClientOnly>
-    <div v-if="signalementsWithCoords.length === 0"
-      class="absolute inset-0 flex items-center justify-center bg-elevated/50 z-10">
+    <div
+      v-if="signalementsWithCoords.length === 0"
+      class="absolute inset-0 flex items-center justify-center bg-elevated/50 z-10"
+    >
       <div class="text-center p-4">
         <UIcon name="i-lucide-map-pin-off" class="size-12 text-dimmed mb-2 mx-auto" />
-        <p class="text-dimmed">Aucun signalement avec coordonnées GPS</p>
+        <p class="text-dimmed">
+          Aucun signalement avec coordonnées GPS
+        </p>
       </div>
     </div>
   </div>

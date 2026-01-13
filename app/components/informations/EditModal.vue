@@ -95,7 +95,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 async function handleDelete() {
   if (!props.info) return
-  
+
   open.value = false
   emit('delete', props.info)
 }
@@ -124,11 +124,21 @@ defineExpose({
         class="space-y-4"
         @submit="onSubmit"
       >
-        <UFormField label="Titre" placeholder="Titre de l'information" name="title" required>
+        <UFormField
+          label="Titre"
+          placeholder="Titre de l'information"
+          name="title"
+          required
+        >
           <UInput v-model="state.title" class="w-full" />
         </UFormField>
 
-        <UFormField label="Contenu" placeholder="Contenu de l'information" name="content" required>
+        <UFormField
+          label="Contenu"
+          placeholder="Contenu de l'information"
+          name="content"
+          required
+        >
           <UTextarea v-model="state.content" class="w-full" :rows="5" />
         </UFormField>
 
@@ -141,13 +151,15 @@ defineExpose({
         </UFormField>
 
         <div v-if="imagePreview" class="mt-2">
-          <p class="text-sm text-muted mb-2">Aperçu de l'image :</p>
-          <img 
-            :src="imagePreview" 
-            alt="Preview" 
+          <p class="text-sm text-muted mb-2">
+            Aperçu de l'image :
+          </p>
+          <img
+            :src="imagePreview"
+            alt="Preview"
             class="max-w-full max-h-64 rounded-lg border border-default object-contain"
             @error="(e: any) => e.target.style.display = 'none'"
-          />
+          >
         </div>
 
         <div class="flex justify-between gap-2 pt-2">

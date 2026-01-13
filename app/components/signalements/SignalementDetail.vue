@@ -66,8 +66,8 @@ const statusOptions = computed(() => [
 ])
 
 const hasChanges = computed(() => {
-  return localStatus.value !== props.signalement.status ||
-    localComment.value !== props.signalement.comment
+  return localStatus.value !== props.signalement.status
+    || localComment.value !== props.signalement.comment
 })
 
 const updateSignalement = async () => {
@@ -78,7 +78,7 @@ const updateSignalement = async () => {
 
   isSaving.value = true
   try {
-    const updateBody: { status?: Signalement['status']; comment?: string | null } = {}
+    const updateBody: { status?: Signalement['status'], comment?: string | null } = {}
 
     if (localStatus.value !== props.signalement.status) {
       updateBody.status = localStatus.value
@@ -139,7 +139,13 @@ const dropdownItems = computed(() => [[{
   <UDashboardPanel id="signalement-2">
     <UDashboardNavbar :title="`Signalement #${signalement.id.slice(0, 8)}`" :toggle="false">
       <template #leading>
-        <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          class="-ms-1.5"
+          @click="emits('close')"
+        />
       </template>
 
       <template #right>
@@ -179,21 +185,33 @@ const dropdownItems = computed(() => [[{
     <div class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
       <!-- Section de gestion du signalement -->
       <div class="bg-default/50 rounded-lg p-4 space-y-4 border border-default">
-        <h3 class="font-semibold text-highlighted mb-3">Gestion du signalement</h3>
+        <h3 class="font-semibold text-highlighted mb-3">
+          Gestion du signalement
+        </h3>
 
         <!-- Sélecteur de statut -->
         <UFormField label="Statut" name="status">
           <div class="flex items-center gap-3">
-            <USelect v-model="localStatus" :items="statusOptions" placeholder="Sélectionner un statut"
-              :disabled="isSaving" class="flex-1" />
+            <USelect
+              v-model="localStatus"
+              :items="statusOptions"
+              placeholder="Sélectionner un statut"
+              :disabled="isSaving"
+              class="flex-1"
+            />
             <UBadge :label="getStatusLabel(localStatus)" :color="getStatusColor(localStatus)" />
           </div>
         </UFormField>
 
         <!-- Zone de réponse -->
         <UFormField label="Réponse au signalement" name="comment">
-          <UTextarea v-model="localComment" placeholder="Saisissez votre réponse au signalement..." :rows="4"
-            :disabled="isSaving" class="w-full" />
+          <UTextarea
+            v-model="localComment"
+            placeholder="Saisissez votre réponse au signalement..."
+            :rows="4"
+            :disabled="isSaving"
+            class="w-full"
+          />
           <template #description>
             Cette réponse sera visible par le citoyen qui a effectué le signalement.
           </template>
@@ -201,23 +219,39 @@ const dropdownItems = computed(() => [[{
 
         <!-- Bouton de sauvegarde -->
         <div class="flex justify-end pt-2">
-          <UButton label="Envoyer" icon="i-lucide-send" :disabled="!hasChanges || isSaving" :loading="isSaving"
-            @click="updateSignalement" color="primary" />
+          <UButton
+            label="Envoyer"
+            icon="i-lucide-send"
+            :disabled="!hasChanges || isSaving"
+            :loading="isSaving"
+            color="primary"
+            @click="updateSignalement"
+          />
         </div>
       </div>
 
       <div v-if="signalement.description">
-        <h3 class="font-semibold text-highlighted mb-2">Description</h3>
-        <p class="whitespace-pre-wrap">{{ signalement.description }}</p>
+        <h3 class="font-semibold text-highlighted mb-2">
+          Description
+        </h3>
+        <p class="whitespace-pre-wrap">
+          {{ signalement.description }}
+        </p>
       </div>
 
       <div v-if="signalement.comment">
-        <h3 class="font-semibold text-highlighted mb-2">Réponse</h3>
-        <p class="whitespace-pre-wrap">{{ signalement.comment }}</p>
+        <h3 class="font-semibold text-highlighted mb-2">
+          Réponse
+        </h3>
+        <p class="whitespace-pre-wrap">
+          {{ signalement.comment }}
+        </p>
       </div>
 
       <div v-if="signalement.address || (signalement.latitude && signalement.longitude)">
-        <h3 class="font-semibold text-highlighted mb-2">Localisation</h3>
+        <h3 class="font-semibold text-highlighted mb-2">
+          Localisation
+        </h3>
         <p v-if="signalement.address" class="mb-2">
           📍 {{ signalement.address }}
         </p>
@@ -225,17 +259,26 @@ const dropdownItems = computed(() => [[{
           Coordonnées: {{ signalement.latitude.toFixed(6) }}, {{ signalement.longitude.toFixed(6) }}
         </p>
         <div v-if="signalement.latitude && signalement.longitude" class="mt-2">
-          <a :href="`https://www.google.com/maps?q=${signalement.latitude},${signalement.longitude}`" target="_blank"
-            rel="noopener noreferrer" class="text-primary hover:underline">
+          <a
+            :href="`https://www.google.com/maps?q=${signalement.latitude},${signalement.longitude}`"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-primary hover:underline"
+          >
             Voir sur Google Maps
           </a>
         </div>
       </div>
 
       <div v-if="signalement.photo_url">
-        <h3 class="font-semibold text-highlighted mb-2">Photo</h3>
-        <img :src="signalement.photo_url" :alt="`Photo du signalement ${signalement.id}`"
-          class="max-w-full rounded-lg border border-default" />
+        <h3 class="font-semibold text-highlighted mb-2">
+          Photo
+        </h3>
+        <img
+          :src="signalement.photo_url"
+          :alt="`Photo du signalement ${signalement.id}`"
+          class="max-w-full rounded-lg border border-default"
+        >
       </div>
     </div>
   </UDashboardPanel>

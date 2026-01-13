@@ -132,14 +132,24 @@ const handleSubmit = async () => {
         <form class="space-y-6" @submit.prevent="handleSubmit">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <UFormField label="Prénom" name="firstName">
-              <UInput v-model="form.firstName" placeholder="Prénom" :disabled="loading" :error="!!errors.firstName" />
+              <UInput
+                v-model="form.firstName"
+                placeholder="Prénom"
+                :disabled="loading"
+                :error="!!errors.firstName"
+              />
               <p v-if="errors.firstName" class="text-sm text-error mt-1">
                 {{ errors.firstName }}
               </p>
             </UFormField>
 
             <UFormField label="Nom" name="lastName">
-              <UInput v-model="form.lastName" placeholder="Nom" :disabled="loading" :error="!!errors.lastName" />
+              <UInput
+                v-model="form.lastName"
+                placeholder="Nom"
+                :disabled="loading"
+                :error="!!errors.lastName"
+              />
               <p v-if="errors.lastName" class="text-sm text-error mt-1">
                 {{ errors.lastName }}
               </p>
@@ -147,16 +157,25 @@ const handleSubmit = async () => {
           </div>
 
           <UFormField label="Fonction" name="fonction">
-            <UInput v-model="form.fonction" placeholder="Ex: Maire, Secrétaire, etc." :disabled="loading"
-              :error="!!errors.fonction" />
+            <UInput
+              v-model="form.fonction"
+              placeholder="Ex: Maire, Secrétaire, etc."
+              :disabled="loading"
+              :error="!!errors.fonction"
+            />
             <p v-if="errors.fonction" class="text-sm text-error mt-1">
               {{ errors.fonction }}
             </p>
           </UFormField>
 
           <UFormField label="Email" name="email">
-            <UInput v-model="form.email" type="email" placeholder="votre.email@exemple.com" :disabled="loading"
-              :error="!!errors.email" />
+            <UInput
+              v-model="form.email"
+              type="email"
+              placeholder="votre.email@exemple.com"
+              :disabled="loading"
+              :error="!!errors.email"
+            />
             <p v-if="errors.email" class="text-sm text-error mt-1">
               {{ errors.email }}
             </p>
@@ -164,16 +183,26 @@ const handleSubmit = async () => {
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <UFormField label="Mot de passe" name="password">
-              <UInput v-model="form.password" type="password" placeholder="••••••••" :disabled="loading"
-                :error="!!errors.password" />
+              <UInput
+                v-model="form.password"
+                type="password"
+                placeholder="••••••••"
+                :disabled="loading"
+                :error="!!errors.password"
+              />
               <p v-if="errors.password" class="text-sm text-error mt-1">
                 {{ errors.password }}
               </p>
             </UFormField>
 
             <UFormField label="Confirmer le mot de passe" name="confirmPassword">
-              <UInput v-model="form.confirmPassword" type="password" placeholder="••••••••" :disabled="loading"
-                :error="!!errors.confirmPassword" />
+              <UInput
+                v-model="form.confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                :disabled="loading"
+                :error="!!errors.confirmPassword"
+              />
               <p v-if="errors.confirmPassword" class="text-sm text-error mt-1">
                 {{ errors.confirmPassword }}
               </p>

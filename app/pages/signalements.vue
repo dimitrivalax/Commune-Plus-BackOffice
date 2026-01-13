@@ -84,7 +84,13 @@ const handleMarkerClick = (signalement: Signalement) => {
 </script>
 
 <template>
-  <UDashboardPanel id="signalements-1" :default-size="25" :min-size="20" :max-size="30" resizable>
+  <UDashboardPanel
+    id="signalements-1"
+    :default-size="25"
+    :min-size="20"
+    :max-size="30"
+    resizable
+  >
     <UDashboardNavbar title="Signalements">
       <template #leading>
         <UDashboardSidebarCollapse />
@@ -96,12 +102,25 @@ const handleMarkerClick = (signalement: Signalement) => {
       <template #right>
         <div class="flex items-center gap-2">
           <UFieldGroup>
-            <UButton :variant="viewMode === 'table' ? 'solid' : 'outline'" icon="i-lucide-list"
-              @click="viewMode = 'table'" size="xs" />
-            <UButton :variant="viewMode === 'map' ? 'solid' : 'outline'" icon="i-lucide-map" @click="viewMode = 'map'"
-              size="xs" />
+            <UButton
+              :variant="viewMode === 'table' ? 'solid' : 'outline'"
+              icon="i-lucide-list"
+              size="xs"
+              @click="viewMode = 'table'"
+            />
+            <UButton
+              :variant="viewMode === 'map' ? 'solid' : 'outline'"
+              icon="i-lucide-map"
+              size="xs"
+              @click="viewMode = 'map'"
+            />
           </UFieldGroup>
-          <UTabs v-model="selectedTab" :items="tabItems" :content="false" size="xs" />
+          <UTabs
+            v-model="selectedTab"
+            :items="tabItems"
+            :content="false"
+            size="xs"
+          />
         </div>
       </template>
     </UDashboardNavbar>
@@ -120,8 +139,12 @@ const handleMarkerClick = (signalement: Signalement) => {
     </div>
   </UDashboardPanel>
 
-  <SignalementDetail v-if="selectedSignalement" :signalement="selectedSignalement" @close="selectedSignalement = null"
-    @update="handleUpdate" />
+  <SignalementDetail
+    v-if="selectedSignalement"
+    :signalement="selectedSignalement"
+    @close="selectedSignalement = null"
+    @update="handleUpdate"
+  />
   <div v-else class="hidden lg:flex flex-1 items-center justify-center">
     <UIcon name="i-lucide-alert-triangle" class="size-32 text-dimmed" />
   </div>
@@ -129,8 +152,12 @@ const handleMarkerClick = (signalement: Signalement) => {
   <ClientOnly>
     <USlideover v-if="isMobile" v-model:open="isSignalementPanelOpen">
       <template #content>
-        <SignalementDetail v-if="selectedSignalement" :signalement="selectedSignalement"
-          @close="selectedSignalement = null" @update="handleUpdate" />
+        <SignalementDetail
+          v-if="selectedSignalement"
+          :signalement="selectedSignalement"
+          @close="selectedSignalement = null"
+          @update="handleUpdate"
+        />
       </template>
     </USlideover>
   </ClientOnly>
