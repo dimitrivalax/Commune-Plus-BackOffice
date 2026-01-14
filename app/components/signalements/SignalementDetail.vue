@@ -15,7 +15,7 @@ const toast = useToast()
 const { session } = useSupabase()
 
 const localStatus = ref<Signalement['status']>(props.signalement.status)
-const localComment = ref<string | null>(props.signalement.comment)
+const localReponse = ref<string | null>(props.signalement.reponse)
 const isSaving = ref(false)
 
 const authHeaders = computed(() => {
@@ -30,7 +30,7 @@ const authHeaders = computed(() => {
 
 watch(() => props.signalement, (newSignalement) => {
   localStatus.value = newSignalement.status
-  localComment.value = newSignalement.comment
+  localReponse.value = newSignalement.reponse
 }, { immediate: true })
 
 const getStatusColor = (status: string) => {
@@ -72,7 +72,7 @@ const statusOptions = computed(() => [
 
 const hasChanges = computed(() => {
   return localStatus.value !== props.signalement.status
-    || localComment.value !== props.signalement.comment
+    || localReponse.value !== props.signalement.reponse
 })
 
 const updateSignalement = async () => {
@@ -83,14 +83,14 @@ const updateSignalement = async () => {
 
   isSaving.value = true
   try {
-    const updateBody: { status?: Signalement['status'], comment?: string | null } = {}
+    const updateBody: { status?: Signalement['status'], reponse?: string | null } = {}
 
     if (localStatus.value !== props.signalement.status) {
       updateBody.status = localStatus.value
     }
 
-    if (localComment.value !== props.signalement.comment) {
-      updateBody.comment = localComment.value || null
+    if (localReponse.value !== props.signalement.reponse) {
+      updateBody.reponse = localReponse.value || null
     }
 
     const updated = await $fetch<Signalement>(`/api/signalements/${props.signalement.id}`, {
@@ -213,9 +213,9 @@ const dropdownItems = computed(() => [[{
         </UFormField>
 
         <!-- Zone de réponse -->
-        <UFormField label="Réponse au signalement" name="comment">
+        <UFormField label="Réponse au signalement" name="reponse">
           <UTextarea
-            v-model="localComment"
+            v-model="localReponse"
             placeholder="Saisissez votre réponse au signalement..."
             :rows="4"
             :disabled="isSaving"
@@ -248,12 +248,12 @@ const dropdownItems = computed(() => [[{
         </p>
       </div>
 
-      <div v-if="signalement.comment">
+      <div v-if="signalement.reponse">
         <h3 class="font-semibold text-highlighted mb-2">
           Réponse
         </h3>
         <p class="whitespace-pre-wrap">
-          {{ signalement.comment }}
+          {{ signalement.reponse }}
         </p>
       </div>
 
@@ -288,6 +288,9 @@ const dropdownItems = computed(() => [[{
           :alt="`Photo du signalement ${signalement.id}`"
           class="max-w-full rounded-lg border border-default"
         >
+        <p v-if="signalement.comment" class="mt-3 text-muted italic whitespace-pre-wrap">
+          {{ signalement.comment }}
+        </p>
       </div>
     </div>
   </UDashboardPanel>

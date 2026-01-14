@@ -73,6 +73,7 @@ export interface Signalement {
   location_accuracy: number | null;
   address: string | null;
   comment: string | null;
+  reponse: string | null;
   photo_url: string | null;
   last_name: string;
   first_name: string;

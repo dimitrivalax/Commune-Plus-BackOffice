@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient, User } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.SUPABASE_URL || ''
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || ''
@@ -18,7 +18,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
  */
 export async function getAuthenticatedSupabaseClient(event: H3Event): Promise<{
   supabase: SupabaseClient
-  user: any
+  user: User | null
 } | null> {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw createError({
@@ -68,7 +68,7 @@ export async function getAuthenticatedSupabaseClient(event: H3Event): Promise<{
  */
 export async function requireAuth(event: H3Event): Promise<{
   supabase: SupabaseClient
-  user: any
+  user: User | null
 }> {
   const auth = await getAuthenticatedSupabaseClient(event)
 

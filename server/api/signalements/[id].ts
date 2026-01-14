@@ -3,7 +3,9 @@ import { z } from "zod";
 
 const updateSignalementSchema = z.object({
   status: z.enum(["en_attente", "en_cours", "traite", "archive"]).optional(),
+  description: z.string().nullable().optional(),
   comment: z.string().nullable().optional(),
+  reponse: z.string().nullable().optional(),
 });
 
 export default eventHandler(async (event) => {
@@ -25,7 +27,9 @@ export default eventHandler(async (event) => {
 
       const updateData: {
         status?: string;
+        description?: string | null;
         comment?: string | null;
+        reponse?: string | null;
         updated_at: string;
       } = {
         updated_at: new Date().toISOString(),
@@ -35,8 +39,16 @@ export default eventHandler(async (event) => {
         updateData.status = validatedData.status;
       }
 
+      if (validatedData.description !== undefined) {
+        updateData.description = validatedData.description;
+      }
+
       if (validatedData.comment !== undefined) {
         updateData.comment = validatedData.comment;
+      }
+
+      if (validatedData.reponse !== undefined) {
+        updateData.reponse = validatedData.reponse;
       }
 
       // Vérifier d'abord si le signalement existe
