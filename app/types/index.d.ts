@@ -116,6 +116,7 @@ export interface ReservationSalle {
   email: string;
   telephone: string;
   nom_association: string | null;
+  status?: 'en_attente' | 'confirmée' | 'refusée';
   created_at: string;
   updated_at: string;
   salles?: {

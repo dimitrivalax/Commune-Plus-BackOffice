@@ -19,6 +19,15 @@ export default eventHandler(async (event) => {
         })
       }
 
+      // Valider le statut si fourni
+      const validStatuses = ['en_attente', 'confirmée', 'refusée']
+      if (body.status && !validStatuses.includes(body.status)) {
+        throw createError({
+          statusCode: 400,
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+        })
+      }
+
       // Vérifier que date_fin > date_debut
       const dateDebut = new Date(body.date_debut)
       const dateFin = new Date(body.date_fin)
@@ -29,10 +38,10 @@ export default eventHandler(async (event) => {
         })
       }
 
-      // Récupérer la réservation existante pour obtenir le salle_id
+      // Récupérer la réservation existante
       const { data: existingReservation, error: fetchError } = await supabase
         .from('reservations_salles')
-        .select('salle_id')
+        .select('*')
         .eq('id', id)
         .single()
 
@@ -43,18 +52,45 @@ export default eventHandler(async (event) => {
         })
       }
 
-      // Vérifier qu'il n'y a pas de chevauchement avec d'autres réservations
-      // Un chevauchement existe si : (date_debut < date_fin_existante) ET (date_fin > date_debut_existante)
-      const dateDebutISO = new Date(body.date_debut).toISOString()
-      const dateFinISO = new Date(body.date_fin).toISOString()
+      // Déterminer le salle_id à utiliser (celui fourni dans le body ou celui existant)
+      const salleIdToUse = body.salle_id || existingReservation.salle_id
 
-      const { data: overlappingReservations, error: checkError } = await supabase
+      if (!salleIdToUse) {
+        throw createError({
+          statusCode: 400,
+          message: 'salle_id is required'
+        })
+      }
+
+      // Vérifier que la salle existe
+      const { data: salleData, error: salleError } = await supabase
+        .from('salles')
+        .select('id, nom, adresse')
+        .eq('id', salleIdToUse)
+        .single()
+
+      if (salleError || !salleData) {
+        throw createError({
+          statusCode: 404,
+          message: 'Salle not found'
+        })
+      }
+
+      // Convertir date_debut et date_fin en date, start_time et end_time
+      const dateDebutDate = new Date(body.date_debut)
+      const dateFinDate = new Date(body.date_fin)
+
+      const date = dateDebutDate.toISOString().split('T')[0] // YYYY-MM-DD
+      const startTime = dateDebutDate.toTimeString().substring(0, 5) // HH:mm
+      const endTime = dateFinDate.toTimeString().substring(0, 5) // HH:mm
+
+      // Vérifier qu'il n'y a pas de chevauchement avec d'autres réservations
+      const { data: allReservations, error: checkError } = await supabase
         .from('reservations_salles')
-        .select('id')
-        .eq('salle_id', existingReservation.salle_id)
+        .select('id, start_time, end_time')
+        .eq('salle_id', salleIdToUse)
+        .eq('date', date)
         .neq('id', id)
-        .lt('date_debut', dateFinISO)
-        .gt('date_fin', dateDebutISO)
 
       if (checkError) {
         throw createError({
@@ -63,50 +99,70 @@ export default eventHandler(async (event) => {
         })
       }
 
-      if (overlappingReservations && overlappingReservations.length > 0) {
+      const overlappingReservations = (allReservations || []).filter((res: any) => {
+        const resStart = res.start_time?.substring(0, 5) || '00:00'
+        const resEnd = res.end_time?.substring(0, 5) || '23:59'
+        // Chevauchement si: start_time < endTime ET end_time > startTime
+        return resStart < endTime && resEnd > startTime
+      })
+
+      if (overlappingReservations.length > 0) {
         throw createError({
           statusCode: 409,
           message: 'Une réservation existe déjà pour cette salle à cet horaire'
         })
       }
 
+      // Combiner nom et prenom
+      const name = `${body.prenom} ${body.nom}`.trim()
+
+      const updateData: any = {
+        salle_id: salleIdToUse,
+        date: date,
+        start_time: startTime,
+        end_time: endTime,
+        reason: body.nom_association || null,
+        name: name,
+        email: body.email,
+        phone: body.telephone,
+        updated_at: new Date().toISOString()
+      }
+
+      // Ajouter le statut si fourni
+      if (body.status) {
+        updateData.status = body.status
+      }
+
       const { data, error } = await supabase
         .from('reservations_salles')
-        .update({
-          date_debut: body.date_debut,
-          date_fin: body.date_fin,
-          nom: body.nom,
-          prenom: body.prenom,
-          email: body.email,
-          telephone: body.telephone,
-          nom_association: body.nom_association || null,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', id)
-        .select(`
-          *,
-          salles (
-            id,
-            nom,
-            adresse
-          )
-        `)
+        .select()
         .single()
 
       if (error) {
-        if (error.message.includes('réservation existe déjà')) {
-          throw createError({
-            statusCode: 409,
-            message: 'Une réservation existe déjà pour cette salle à cet horaire'
-          })
-        }
         throw createError({
           statusCode: 500,
           message: `Error updating reservation: ${error.message}`
         })
       }
 
-      return data
+      // Retourner au format attendu par le frontend
+      return {
+        id: data.id,
+        salle_id: salleIdToUse,
+        date_debut: body.date_debut,
+        date_fin: body.date_fin,
+        nom: body.nom,
+        prenom: body.prenom,
+        email: body.email,
+        telephone: body.telephone,
+        nom_association: body.nom_association || null,
+        status: data.status || 'en_attente',
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        salles: salleData
+      }
     } else if (method === 'DELETE') {
       const { error } = await supabase
         .from('reservations_salles')

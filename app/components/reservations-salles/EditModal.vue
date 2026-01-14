@@ -18,7 +18,8 @@ const schema = z.object({
   prenom: z.string().min(1, 'Le prénom est requis'),
   email: z.string().email('Email invalide'),
   telephone: z.string().min(1, 'Le téléphone est requis'),
-  nom_association: z.string().optional()
+  nom_association: z.string().optional(),
+  status: z.enum(['en_attente', 'confirmée', 'refusée']).optional()
 }).refine((data) => {
   const debut = new Date(data.date_debut)
   const fin = new Date(data.date_fin)
@@ -39,7 +40,8 @@ const state = reactive<Partial<Schema>>({
   prenom: undefined,
   email: undefined,
   telephone: undefined,
-  nom_association: undefined
+  nom_association: undefined,
+  status: undefined
 })
 
 const toast = useToast()
@@ -51,6 +53,12 @@ const { data: salles } = await useFetch<Salle[]>('/api/salles', {
   lazy: true,
   headers: getAuthHeaders()
 })
+
+const statusOptions = computed(() => [
+  { label: 'En attente', value: 'en_attente' },
+  { label: 'Confirmée', value: 'confirmée' },
+  { label: 'Refusée', value: 'refusée' }
+])
 
 function formatDateTimeLocal(dateString: string): string {
   const date = new Date(dateString)
@@ -71,6 +79,7 @@ watch(() => props.reservation, (newVal) => {
     state.email = newVal.email
     state.telephone = newVal.telephone
     state.nom_association = newVal.nom_association || undefined
+    state.status = (newVal as any).status || 'en_attente'
   }
 }, { immediate: true })
 
@@ -88,7 +97,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         prenom: event.data.prenom,
         email: event.data.email,
         telephone: event.data.telephone,
-        nom_association: event.data.nom_association || null
+        nom_association: event.data.nom_association || null,
+        status: event.data.status || 'en_attente'
       }
     })
 
@@ -192,6 +202,15 @@ defineExpose({
 
         <UFormField label="Nom de l'association" placeholder="Association XYZ (optionnel)" name="nom_association">
           <UInput v-model="state.nom_association" class="w-full" />
+        </UFormField>
+
+        <UFormField label="Statut" name="status" required>
+          <USelect
+            v-model="state.status"
+            :items="statusOptions"
+            placeholder="Sélectionner un statut"
+            class="w-full"
+          />
         </UFormField>
 
         <div class="flex justify-between gap-2 pt-2">

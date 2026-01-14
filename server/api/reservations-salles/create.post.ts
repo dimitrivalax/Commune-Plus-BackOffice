@@ -25,17 +25,50 @@ export default eventHandler(async (event) => {
       })
     }
 
-    // Vérifier qu'il n'y a pas de chevauchement (la contrainte DB le fera aussi, mais on peut donner un message plus clair)
-    // Un chevauchement existe si : (date_debut < date_fin_existante) ET (date_fin > date_debut_existante)
-    const dateDebutISO = new Date(body.date_debut).toISOString()
-    const dateFinISO = new Date(body.date_fin).toISOString()
+    // Récupérer le nom de la salle depuis salle_id
+    const { data: salleData, error: salleError } = await supabase
+      .from('salles')
+      .select('nom, adresse')
+      .eq('id', body.salle_id)
+      .single()
 
-    const { data: overlappingReservations, error: checkError } = await supabase
+    if (salleError || !salleData) {
+      throw createError({
+        statusCode: 404,
+        message: 'Salle not found'
+      })
+    }
+
+    // Convertir date_debut et date_fin en date, start_time et end_time
+    const dateDebutDate = new Date(body.date_debut)
+    const dateFinDate = new Date(body.date_fin)
+
+    const date = dateDebutDate.toISOString().split('T')[0] // YYYY-MM-DD
+    const startTime = dateDebutDate.toTimeString().substring(0, 5) // HH:mm
+    const endTime = dateFinDate.toTimeString().substring(0, 5) // HH:mm
+
+    // Vérifier qu'il n'y a pas de chevauchement
+    // Un chevauchement existe si : même salle, même date, et les heures se chevauchent
+    // Chevauchement: (start_time < endTime_existante) ET (end_time > startTime_existante)
+    const { data: allReservations, error: checkError } = await supabase
       .from('reservations_salles')
-      .select('id')
+      .select('id, start_time, end_time')
       .eq('salle_id', body.salle_id)
-      .lt('date_debut', dateFinISO)
-      .gt('date_fin', dateDebutISO)
+      .eq('date', date)
+
+    if (checkError) {
+      throw createError({
+        statusCode: 500,
+        message: `Error checking for overlapping reservations: ${checkError.message}`
+      })
+    }
+
+    const overlappingReservations = (allReservations || []).filter((res: any) => {
+      const resStart = res.start_time?.substring(0, 5) || '00:00'
+      const resEnd = res.end_time?.substring(0, 5) || '23:59'
+      // Chevauchement si: start_time < endTime ET end_time > startTime
+      return resStart < endTime && resEnd > startTime
+    })
 
     if (checkError) {
       throw createError({
@@ -51,36 +84,26 @@ export default eventHandler(async (event) => {
       })
     }
 
+    // Combiner nom et prenom
+    const name = `${body.prenom} ${body.nom}`.trim()
+
     const { data, error } = await supabase
       .from('reservations_salles')
       .insert({
         salle_id: body.salle_id,
-        date_debut: body.date_debut,
-        date_fin: body.date_fin,
-        nom: body.nom,
-        prenom: body.prenom,
+        date: date,
+        start_time: startTime,
+        end_time: endTime,
+        reason: body.nom_association || null,
+        name: name,
         email: body.email,
-        telephone: body.telephone,
-        nom_association: body.nom_association || null
+        phone: body.telephone,
+        status: body.status || 'en_attente'
       })
-      .select(`
-        *,
-        salles (
-          id,
-          nom,
-          adresse
-        )
-      `)
+      .select()
       .single()
 
     if (error) {
-      // Si l'erreur vient de la contrainte de chevauchement
-      if (error.message.includes('réservation existe déjà')) {
-        throw createError({
-          statusCode: 409,
-          message: 'Une réservation existe déjà pour cette salle à cet horaire'
-        })
-      }
       throw createError({
         statusCode: 500,
         message: `Error creating reservation: ${error.message}`
@@ -98,17 +121,35 @@ export default eventHandler(async (event) => {
           nom_association: body.nom_association || null,
           date_debut: body.date_debut,
           date_fin: body.date_fin,
-          salle_nom: data.salles?.nom || 'Salle municipale',
-          salle_adresse: data.salles?.adresse || ''
+          salle_nom: salleData.nom,
+          salle_adresse: salleData.adresse
         }
       })
     } catch (emailError: any) {
       // Logger l'erreur mais ne pas faire échouer la création de la réservation
       console.error('Error sending confirmation email:', emailError)
-      // On continue même si l'email n'a pas pu être envoyé
     }
 
-    return data
+    // Retourner au format attendu par le frontend
+    return {
+      id: data.id,
+      salle_id: body.salle_id,
+      date_debut: body.date_debut,
+      date_fin: body.date_fin,
+      nom: body.nom,
+      prenom: body.prenom,
+      email: body.email,
+      telephone: body.telephone,
+      nom_association: body.nom_association || null,
+      status: data.status || 'en_attente',
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      salles: {
+        id: body.salle_id,
+        nom: salleData.nom,
+        adresse: salleData.adresse
+      }
+    }
   } catch (error: any) {
     throw createError({
       statusCode: error.statusCode || 500,
