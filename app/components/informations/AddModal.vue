@@ -26,6 +26,7 @@ const state = reactive<Partial<Schema>>({
 const toast = useToast()
 const refresh = inject<() => void>('refresh-informations')
 const { getAuthHeaders } = useApiAuth()
+const { currentCommune } = useCurrentCommune()
 
 const imagePreview = computed(() => {
   if (!state.image_url || state.image_url.trim() === '') {
@@ -40,6 +41,18 @@ const imagePreview = computed(() => {
 })
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
+  // Utiliser la commune courante si disponible
+  const communeId = currentCommune.value?.id
+
+  if (!communeId) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Veuillez sélectionner une commune dans le menu avant de créer une information',
+      color: 'error'
+    })
+    return
+  }
+
   try {
     await $fetch('/api/municipal-info/create', {
       method: 'POST',
@@ -48,7 +61,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         title: event.data.title,
         content: event.data.content,
         category: event.data.category || null,
-        image_url: event.data.image_url || null
+        image_url: event.data.image_url || null,
+        commune_id: communeId
       }
     })
 

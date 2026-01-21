@@ -41,10 +41,13 @@ watch(() => props.info, (newInfo) => {
 const toast = useToast()
 const refresh = inject<() => void>('refresh-informations')
 const { getAuthHeaders } = useApiAuth()
+const { currentCommune } = useCurrentCommune()
 
 const emit = defineEmits<{
   delete: [info: MunicipalInfo]
 }>()
+
+const isPublishing = ref(false)
 
 const imagePreview = computed(() => {
   if (!state.image_url || state.image_url.trim() === '') {
@@ -98,6 +101,48 @@ async function handleDelete() {
 
   open.value = false
   emit('delete', props.info)
+}
+
+async function handlePublish() {
+  if (!props.info) return
+
+  // Utiliser la commune_id de l'information si disponible, sinon la commune courante
+  const communeId = props.info.commune_id || currentCommune.value?.id
+
+  if (!communeId) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Aucune commune associée à cette information. Veuillez sélectionner une commune dans le menu ou associer cette information à une commune.',
+      color: 'error'
+    })
+    return
+  }
+
+  isPublishing.value = true
+
+  try {
+    await $fetch(`/api/municipal-info/${props.info.id}/publish`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: {
+        commune_id: communeId
+      }
+    })
+
+    toast.add({
+      title: 'Succès',
+      description: 'La notification a été envoyée aux utilisateurs',
+      color: 'success'
+    })
+  } catch (error: any) {
+    toast.add({
+      title: 'Erreur',
+      description: error.message || 'Une erreur est survenue lors de l\'envoi de la notification',
+      color: 'error'
+    })
+  } finally {
+    isPublishing.value = false
+  }
 }
 
 function openModal() {
@@ -182,6 +227,15 @@ defineExpose({
               color="primary"
               variant="solid"
               type="submit"
+            />
+            <UButton
+              label="Publier"
+              color="success"
+              variant="solid"
+              icon="i-lucide-send"
+              :loading="isPublishing"
+              :disabled="isPublishing"
+              @click="handlePublish"
             />
           </div>
         </div>

@@ -91,6 +91,7 @@ export interface MunicipalInfo {
   content: string;
   category: string | null;
   image_url: string | null;
+  commune_id: string | null;
   created_at: string;
   updated_at: string;
 }

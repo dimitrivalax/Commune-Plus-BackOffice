@@ -12,7 +12,8 @@ export default eventHandler(async (event) => {
         title: body.title,
         content: body.content,
         category: body.category || null,
-        image_url: body.image_url || null
+        image_url: body.image_url || null,
+        commune_id: body.commune_id || null
       })
       .select()
       .single()
