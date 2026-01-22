@@ -6,6 +6,7 @@ import SignalementsList from '~/components/signalements/SignalementsList.vue'
 import SignalementsMap from '~/components/signalements/SignalementsMap.vue'
 import SignalementDetail from '~/components/signalements/SignalementDetail.vue'
 
+
 const tabItems = [{
   label: 'Tous',
   value: 'all'
@@ -124,6 +125,8 @@ const handleMarkerClick = (signalement: Signalement) => {
             :content="false"
             size="xs"
           />
+
+          <NotificationBell />
         </div>
       </template>
     </UDashboardNavbar>

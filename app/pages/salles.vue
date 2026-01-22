@@ -229,28 +229,25 @@ const pagination = ref({
         </template>
 
         <template #right>
-          <SallesAddModal />
+          <div class="flex items-center gap-2">
+            <SallesAddModal />
+            <NotificationBell />
+
+          </div>
         </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
-      <UTable
-        ref="table"
-        v-model:pagination="pagination"
-        class="shrink-0"
-        :data="data"
-        :columns="columns"
-        :loading="status === 'pending'"
-        :ui="{
+      <UTable ref="table" v-model:pagination="pagination" class="shrink-0" :data="data" :columns="columns"
+        :loading="status === 'pending'" :ui="{
           base: 'table-fixed border-separate border-spacing-0',
           thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
           tbody: '[&>tr]:last:[&>td]:border-b-0 [&>tr]:cursor-pointer [&>tr]:hover:bg-elevated/50',
           th: 'py-2 first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
           td: 'border-b border-default',
           separator: 'h-0'
-        }"
-      />
+        }" />
 
       <div class="flex items-center justify-between gap-3 border-t border-default pt-4 mt-auto">
         <div class="text-sm text-muted">
@@ -258,24 +255,17 @@ const pagination = ref({
         </div>
 
         <div class="flex items-center gap-1.5">
-          <UPagination
-            :default-page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
-            :items-per-page="table?.tableApi?.getState().pagination.pageSize"
-            :total="data?.length || 0"
-            @update:page="(p: number) => table?.tableApi?.setPageIndex(p - 1)"
-          />
+          <UPagination :default-page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
+            :items-per-page="table?.tableApi?.getState().pagination.pageSize" :total="data?.length || 0"
+            @update:page="(p: number) => table?.tableApi?.setPageIndex(p - 1)" />
         </div>
       </div>
     </template>
   </UDashboardPanel>
 
-  <SallesEditModal
-    ref="editModal"
-    :salle="selectedSalle"
-    @delete="(salle) => {
-      selectedSalle = salle
-      deleteModal?.openModal()
-    }"
-  />
+  <SallesEditModal ref="editModal" :salle="selectedSalle" @delete="(salle) => {
+    selectedSalle = salle
+    deleteModal?.openModal()
+  }" />
   <SallesDeleteModal ref="deleteModal" :salle="selectedSalle" />
 </template>

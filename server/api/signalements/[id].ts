@@ -1,5 +1,6 @@
 import { requireAuth } from "../../utils/supabase-auth";
 import { z } from "zod";
+import { sendSignalementNotification } from "../../utils/send-signalement-notification";
 
 const updateSignalementSchema = z.object({
   status: z.enum(["en_attente", "en_cours", "traite", "archive"]).optional(),
@@ -25,6 +26,26 @@ export default eventHandler(async (event) => {
       const body = await readBody(event);
       const validatedData = updateSignalementSchema.parse(body);
 
+      // Récupérer le signalement existant AVANT la mise à jour pour comparer les valeurs
+      const { data: existingSignalement, error: fetchError } = await supabase
+        .from("signalements")
+        .select("id, status, reponse, user_id, first_name, last_name")
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !existingSignalement) {
+        throw createError({
+          statusCode: 404,
+          message: `Signalement not found: ${
+            fetchError?.message || "No data returned"
+          }`,
+        });
+      }
+
+      const oldStatus = existingSignalement.status;
+      const oldReponse = existingSignalement.reponse || null;
+      const userId = existingSignalement.user_id;
+
       const updateData: {
         status?: string;
         description?: string | null;
@@ -49,22 +70,6 @@ export default eventHandler(async (event) => {
 
       if (validatedData.reponse !== undefined) {
         updateData.reponse = validatedData.reponse;
-      }
-
-      // Vérifier d'abord si le signalement existe
-      const { data: existingData, error: checkError } = await supabase
-        .from("signalements")
-        .select("id")
-        .eq("id", id)
-        .single();
-
-      if (checkError || !existingData) {
-        throw createError({
-          statusCode: 404,
-          message: `Signalement not found: ${
-            checkError?.message || "No data returned"
-          }`,
-        });
       }
 
       // Mettre à jour le signalement
@@ -95,7 +100,57 @@ export default eventHandler(async (event) => {
         });
       }
 
-      return data[0];
+      const updatedSignalement = data[0];
+      const newStatus = updatedSignalement.status;
+      const newReponse = updatedSignalement.reponse || null;
+
+      // Envoyer une notification si nécessaire
+      // Ne pas bloquer la réponse si l'envoi de notification échoue
+      try {
+        const statusChanged = validatedData.status !== undefined && newStatus !== oldStatus;
+        const responseAdded = validatedData.reponse !== undefined &&
+                              newReponse !== null &&
+                              (oldReponse === null || oldReponse.trim() === '');
+
+        if (statusChanged || responseAdded) {
+          let notificationTitle = '';
+          let notificationBody = '';
+          let notificationType: 'status_change' | 'response_added' = 'status_change';
+
+          if (responseAdded) {
+            notificationTitle = 'Réponse à votre signalement';
+            notificationBody = `Votre signalement a reçu une réponse de la mairie.`;
+            notificationType = 'response_added';
+          } else if (statusChanged) {
+            const statusLabels: Record<string, string> = {
+              'en_attente': 'En Attente',
+              'en_cours': 'En Cours',
+              'traite': 'Traité',
+              'archive': 'Archivé'
+            };
+            notificationTitle = 'Mise à jour de votre signalement';
+            notificationBody = `Le statut de votre signalement a été mis à jour : ${statusLabels[newStatus] || newStatus}`;
+            notificationType = 'status_change';
+          }
+
+          if (notificationTitle && notificationBody) {
+            await sendSignalementNotification({
+              supabase,
+              signalementId: id,
+              userId: userId,
+              title: notificationTitle,
+              body: notificationBody,
+              type: notificationType,
+              newStatus: statusChanged ? newStatus : undefined
+            });
+          }
+        }
+      } catch (notificationError: any) {
+        // Logger l'erreur mais ne pas faire échouer la requête
+        console.error('Error sending notification for signalement:', notificationError);
+      }
+
+      return updatedSignalement;
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         throw createError({

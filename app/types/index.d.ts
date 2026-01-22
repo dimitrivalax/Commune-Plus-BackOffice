@@ -45,11 +45,14 @@ export interface Sale {
 }
 
 export interface Notification {
-  id: number;
+  id: string | number;
   unread?: boolean;
   sender: User;
   body: string;
   date: string;
+  type?: 'signalement' | 'reservation';
+  entity_id?: string;
+  title?: string;
 }
 
 export type Period = "daily" | "weekly" | "monthly";

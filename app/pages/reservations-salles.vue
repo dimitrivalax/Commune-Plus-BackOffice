@@ -262,6 +262,7 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
 
         <template #right>
           <div class="flex items-center gap-2">
+
             <UButton
               :variant="currentView === 'day' ? 'solid' : 'subtle'"
               color="primary"
@@ -286,6 +287,7 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
               :date-debut="addModalProps.dateDebut"
               :date-fin="addModalProps.dateFin"
             />
+            <NotificationBell />
           </div>
         </template>
       </UDashboardNavbar>
