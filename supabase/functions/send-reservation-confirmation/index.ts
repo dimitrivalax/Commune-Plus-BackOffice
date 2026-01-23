@@ -1,5 +1,4 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,25 +13,18 @@ serve(async (req) => {
 
   try {
     // Récupérer les variables d'environnement (secrets Supabase)
-    const smtpHost = Deno.env.get('SMTP_HOST') || 'mail.infomaniak.com'
-    const smtpPort = parseInt(Deno.env.get('SMTP_PORT') || '587')
-    const smtpUser = Deno.env.get('SMTP_USER')
-    const smtpPassword = Deno.env.get('SMTP_PASSWORD')
-    const smtpFromEmail = Deno.env.get('SMTP_FROM_EMAIL') || smtpUser
+    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@commune-plus.fr'
 
     // Vérifier que les secrets sont configurés
-    const missingSecrets = []
-    if (!smtpUser) missingSecrets.push('SMTP_USER')
-    if (!smtpPassword) missingSecrets.push('SMTP_PASSWORD')
-
-    if (missingSecrets.length > 0) {
-      const errorMessage = `SMTP credentials are not configured. Missing secrets: ${missingSecrets.join(', ')}. Please configure them in Supabase Dashboard > Settings > Edge Functions > Secrets.`
+    if (!resendApiKey) {
+      const errorMessage = 'RESEND_API_KEY is not configured. Please configure it in Supabase Dashboard > Settings > Edge Functions > Secrets.'
       console.error(errorMessage)
       return new Response(
         JSON.stringify({
           error: errorMessage,
-          missingSecrets: missingSecrets,
-          hint: 'Configure secrets in Supabase Dashboard > Settings > Edge Functions > Secrets'
+          missingSecrets: ['RESEND_API_KEY'],
+          hint: 'Configure RESEND_API_KEY in Supabase Dashboard > Settings > Edge Functions > Secrets'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -82,7 +74,7 @@ serve(async (req) => {
 
   <div style="background-color: #ffffff; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
     <h2 style="color: #374151; margin-top: 0; border-bottom: 2px solid #10b981; padding-bottom: 10px;">Détails de la réservation</h2>
-    
+
     <table style="width: 100%; border-collapse: collapse;">
       <tr>
         <td style="padding: 8px 0; font-weight: bold; width: 40%;">Salle :</td>
@@ -174,45 +166,29 @@ Cet email a été envoyé automatiquement, merci de ne pas y répondre directeme
 Pour toute question, veuillez contacter votre mairie.
     `.trim()
 
-    // Configuration de la connexion SMTP
-    // Le port 465 utilise SSL direct (plus fiable avec Deno)
-    // Le port 587 utilise STARTTLS (peut causer des problèmes avec InvalidContentType)
-    const effectivePort = smtpPort === 465 ? 465 : (smtpPort === 587 ? 587 : smtpPort)
-
-    const connectionConfig = {
-      hostname: smtpHost,
-      port: effectivePort,
-      auth: {
-        username: smtpUser,
-        password: smtpPassword
+    // Envoyer l'email via Resend API
+    const resendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json'
       },
-      tls: true // TLS activé pour les deux ports
-    }
-
-    console.log(`Connecting to SMTP server ${smtpHost}:${effectivePort} with TLS`)
-
-    const client = new SMTPClient({
-      connection: connectionConfig
+      body: JSON.stringify({
+        from: `Mairie <${resendFromEmail}>`,
+        to: [reservationData.email],
+        subject: emailSubject,
+        html: emailBody,
+        text: emailText
+      })
     })
 
-    // Préparer l'adresse d'expéditeur
-    const fromEmail = smtpFromEmail
-
-    // Préparer les options d'envoi
-    const sendOptions = {
-      from: `Mairie <${fromEmail}>`,
-      to: reservationData.email,
-      subject: emailSubject,
-      content: emailBody,
-      html: emailBody,
-      text: emailText
+    if (!resendResponse.ok) {
+      const errorData = await resendResponse.json().catch(() => ({}))
+      throw new Error(`Resend API error: ${resendResponse.status} ${resendResponse.statusText} - ${JSON.stringify(errorData)}`)
     }
 
-    // Envoyer l'email
-    await client.send(sendOptions)
-
-    // Fermer la connexion SMTP
-    await client.close()
+    const resendData = await resendResponse.json()
+    console.log('Email sent successfully via Resend:', resendData.id)
 
     return new Response(
       JSON.stringify({ success: true, message: 'Confirmation email sent successfully' }),
