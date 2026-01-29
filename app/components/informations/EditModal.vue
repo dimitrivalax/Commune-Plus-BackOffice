@@ -30,6 +30,7 @@ const props = defineProps<{
 const schema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
   content: z.string().min(1, 'Le contenu est requis'),
+  event_date: z.string().optional(),
   category: z.string().optional(),
   image_url: z
     .union([z.string().url('URL invalide'), z.literal(''), z.undefined()])
@@ -40,9 +41,15 @@ const open = ref(false)
 
 type Schema = z.output<typeof schema>
 
+function toDateOnly(isoOrDate: string | null | undefined): string | undefined {
+  if (!isoOrDate) return undefined
+  return isoOrDate.split('T')[0]
+}
+
 const state = reactive<Partial<Schema>>({
   title: undefined,
   content: '',
+  event_date: undefined,
   category: undefined,
   image_url: undefined
 })
@@ -53,6 +60,7 @@ watch(
     if (newInfo) {
       state.title = newInfo.title
       state.content = newInfo.content
+      state.event_date = toDateOnly(newInfo.event_date ?? null) ?? undefined
       state.category = newInfo.category || undefined
       state.image_url = newInfo.image_url || undefined
     }
@@ -93,6 +101,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       body: {
         title: event.data.title,
         content: event.data.content,
+        event_date: event.data.event_date || null,
         category: event.data.category || null,
         image_url: event.data.image_url || null
       }
@@ -207,6 +216,13 @@ defineExpose({
           required
         >
           <UInput v-model="state.title" class="w-full" />
+        </UFormField>
+
+        <UFormField
+          label="Date de l'événement"
+          name="event_date"
+        >
+          <UInput v-model="state.event_date" type="date" class="w-full" />
         </UFormField>
 
         <UFormField

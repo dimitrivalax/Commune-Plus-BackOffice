@@ -95,6 +95,7 @@ export interface MunicipalInfo {
   category: string | null
   image_url: string | null
   commune_id: string | null
+  event_date: string | null
   created_at: string
   updated_at: string
 }

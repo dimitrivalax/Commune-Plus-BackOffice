@@ -15,6 +15,7 @@ export default eventHandler(async (event) => {
         .update({
           title: body.title,
           content: body.content,
+          ...(body.event_date !== undefined && { event_date: body.event_date }),
           category: body.category || null,
           image_url: body.image_url || null,
           updated_at: new Date().toISOString()

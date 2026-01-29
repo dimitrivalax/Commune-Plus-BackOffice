@@ -11,6 +11,7 @@ export default eventHandler(async (event) => {
       .insert({
         title: body.title,
         content: body.content,
+        event_date: body.event_date || new Date().toISOString().split('T')[0],
         category: body.category || null,
         image_url: body.image_url || null,
         commune_id: body.commune_id || null

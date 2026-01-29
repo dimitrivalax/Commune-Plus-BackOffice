@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { FormSubmitEvent, EditorToolbarItem } from '@nuxt/ui'
-import { ref, reactive, inject, computed } from 'vue'
+import { ref, reactive, inject, computed, watch } from 'vue'
 
 const editorToolbarItems: EditorToolbarItem[] = [
   {
@@ -23,9 +23,14 @@ const editorToolbarItems: EditorToolbarItem[] = [
   { kind: 'image', icon: 'i-lucide-image', tooltip: { text: 'Image' } }
 ]
 
+function todayISODate(): string {
+  return new Date().toISOString().split('T')[0] ?? ''
+}
+
 const schema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
   content: z.string().min(1, 'Le contenu est requis'),
+  event_date: z.string().min(1, 'La date de l\'événement est requise'),
   category: z.string().optional(),
   image_url: z
     .union([z.string().url('URL invalide'), z.literal(''), z.undefined()])
@@ -33,11 +38,18 @@ const schema = z.object({
 })
 const open = ref(false)
 
+watch(open, (isOpen) => {
+  if (isOpen) {
+    state.event_date = todayISODate()
+  }
+})
+
 type Schema = z.output<typeof schema>
 
-const state = reactive<Partial<Schema>>({
+const state = reactive<Omit<Partial<Schema>, 'event_date'> & { event_date: string }>({
   title: undefined,
   content: '',
+  event_date: todayISODate(),
   category: undefined,
   image_url: undefined
 })
@@ -80,6 +92,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       body: {
         title: event.data.title,
         content: event.data.content,
+        event_date: event.data.event_date || todayISODate(),
         category: event.data.category || null,
         image_url: event.data.image_url || null,
         commune_id: communeId
@@ -94,6 +107,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
     state.title = undefined
     state.content = ''
+    state.event_date = todayISODate()
     state.category = undefined
     state.image_url = undefined
 
@@ -102,10 +116,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: error.message || 'Une erreur est survenue lors de l\'ajout',
+      description: (error instanceof Error ? error.message : undefined) || 'Une erreur est survenue lors de l\'ajout',
       color: 'error'
     })
   }
@@ -134,6 +148,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           required
         >
           <UInput v-model="state.title" class="w-full" />
+        </UFormField>
+
+        <UFormField
+          label="Date de l'événement"
+          name="event_date"
+          required
+        >
+          <UInput v-model="state.event_date" type="date" class="w-full" />
         </UFormField>
 
         <UFormField
