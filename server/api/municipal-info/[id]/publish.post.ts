@@ -173,9 +173,9 @@ export default eventHandler(async (event) => {
           const errorMessage = errorData.error?.message || `HTTP ${response.status}`
 
           // Vérifier si le token est invalide
-          if (errorMessage.includes('NOT_FOUND') ||
-              errorMessage.includes('INVALID_ARGUMENT') ||
-              errorMessage.includes('UNREGISTERED')) {
+          if (errorMessage.includes('NOT_FOUND')
+            || errorMessage.includes('INVALID_ARGUMENT')
+            || errorMessage.includes('UNREGISTERED')) {
             // Désactiver le token invalide
             await supabase
               .from('push_tokens')

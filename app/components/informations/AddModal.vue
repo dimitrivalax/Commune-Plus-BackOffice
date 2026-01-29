@@ -1,16 +1,35 @@
 <script setup lang="ts">
 import * as z from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
+import type { FormSubmitEvent, EditorToolbarItem } from '@nuxt/ui'
+import { ref, reactive, inject, computed } from 'vue'
+
+const editorToolbarItems: EditorToolbarItem[] = [
+  {
+    icon: 'i-lucide-heading',
+    tooltip: { text: 'Titres' },
+    content: { align: 'start' },
+    items: [
+      { kind: 'heading', level: 1, icon: 'i-lucide-heading-1', label: 'Titre 1' },
+      { kind: 'heading', level: 2, icon: 'i-lucide-heading-2', label: 'Titre 2' },
+      { kind: 'heading', level: 3, icon: 'i-lucide-heading-3', label: 'Titre 3' }
+    ]
+  },
+  { kind: 'mark', mark: 'bold', icon: 'i-lucide-bold', tooltip: { text: 'Gras' } },
+  { kind: 'mark', mark: 'italic', icon: 'i-lucide-italic', tooltip: { text: 'Italique' } },
+  { kind: 'mark', mark: 'strike', icon: 'i-lucide-strikethrough', tooltip: { text: 'Barré' } },
+  { kind: 'bulletList', icon: 'i-lucide-list', tooltip: { text: 'Liste à puces' } },
+  { kind: 'orderedList', icon: 'i-lucide-list-ordered', tooltip: { text: 'Liste numérotée' } },
+  { kind: 'link', icon: 'i-lucide-link', tooltip: { text: 'Lien' } },
+  { kind: 'image', icon: 'i-lucide-image', tooltip: { text: 'Image' } }
+]
 
 const schema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
   content: z.string().min(1, 'Le contenu est requis'),
   category: z.string().optional(),
-  image_url: z.union([
-    z.string().url('URL invalide'),
-    z.literal(''),
-    z.undefined()
-  ]).optional()
+  image_url: z
+    .union([z.string().url('URL invalide'), z.literal(''), z.undefined()])
+    .optional()
 })
 const open = ref(false)
 
@@ -18,7 +37,7 @@ type Schema = z.output<typeof schema>
 
 const state = reactive<Partial<Schema>>({
   title: undefined,
-  content: undefined,
+  content: '',
   category: undefined,
   image_url: undefined
 })
@@ -47,7 +66,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!communeId) {
     toast.add({
       title: 'Erreur',
-      description: 'Veuillez sélectionner une commune dans le menu avant de créer une information',
+      description:
+        'Veuillez sélectionner une commune dans le menu avant de créer une information',
       color: 'error'
     })
     return
@@ -73,7 +93,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     })
 
     state.title = undefined
-    state.content = undefined
+    state.content = ''
     state.category = undefined
     state.image_url = undefined
 
@@ -93,7 +113,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-  <UModal v-model:open="open" title="Nouvelle information" description="Ajouter une nouvelle information municipale">
+  <UModal
+    v-model:open="open"
+    title="Nouvelle information"
+    description="Ajouter une nouvelle information municipale"
+  >
     <UButton label="Nouvelle information" icon="i-lucide-plus" />
 
     <template #body>
@@ -118,14 +142,40 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           name="content"
           required
         >
-          <UTextarea v-model="state.content" class="w-full" :rows="5" />
+          <ClientOnly>
+            <UEditor
+              v-if="open"
+              v-slot="{ editor }"
+              v-model="state.content"
+              content-type="html"
+              placeholder="Contenu de l'information"
+              class="w-full min-h-[200px] rounded-lg border border-default overflow-hidden"
+            >
+              <UEditorToolbar
+                :editor="editor"
+                :items="editorToolbarItems"
+                class="border-b border-default"
+              />
+            </UEditor>
+            <template #fallback>
+              <div class="h-[250px] w-full rounded-lg border border-default bg-ui-bg-elevated animate-pulse" />
+            </template>
+          </ClientOnly>
         </UFormField>
 
-        <UFormField label="Catégorie" placeholder="Catégorie (optionnel)" name="category">
+        <UFormField
+          label="Catégorie"
+          placeholder="Catégorie (optionnel)"
+          name="category"
+        >
           <UInput v-model="state.category" class="w-full" />
         </UFormField>
 
-        <UFormField label="URL de l'image" placeholder="https://exemple.com/image.jpg" name="image_url">
+        <UFormField
+          label="URL de l'image"
+          placeholder="https://exemple.com/image.jpg"
+          name="image_url"
+        >
           <UInput v-model="state.image_url" class="w-full" />
         </UFormField>
 
@@ -137,7 +187,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             :src="imagePreview"
             alt="Preview"
             class="max-w-full max-h-64 rounded-lg border border-default object-contain"
-            @error="(e: any) => e.target.style.display = 'none'"
+            @error="(e: any) => (e.target.style.display = 'none')"
           >
         </div>
 

@@ -1,6 +1,8 @@
 @import "tailwindcss" theme(static);
 @import "@nuxt/ui";
 
+/* Quill editor theme – chargement global pour icônes et zone d’édition dans les modales */
+
 @theme static {
   --font-sans: 'Public Sans', sans-serif;
 

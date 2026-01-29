@@ -3,7 +3,6 @@ import { sub } from 'date-fns'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Period, Range } from '~/types'
 
-
 const items = [[{
   label: 'Nouveau message',
   icon: 'i-lucide-send',

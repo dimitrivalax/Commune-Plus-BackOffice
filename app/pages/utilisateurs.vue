@@ -16,7 +16,7 @@ const UCheckbox = resolveComponent('UCheckbox')
 const toast = useToast()
 const table = useTemplateRef('table')
 const { session } = useSupabase()
-const { currentCommune, userCommunes, setCurrentCommune } = useCurrentCommune()
+const { currentCommune, userCommunes, userCommunesPending, setCurrentCommune } = useCurrentCommune()
 
 // Gérer la sélection de la commune courante
 const selectedCommuneId = computed({
@@ -28,6 +28,9 @@ const selectedCommuneId = computed({
     }
   }
 })
+
+const communeSelectItems = computed(() =>
+  (userCommunes.value || []).map(c => ({ label: `${c.name} (${c.postal_code})`, value: c.id })))
 
 const authHeaders = computed(() => {
   const currentSession = session.value
@@ -315,14 +318,20 @@ const pagination = ref({
         </div>
       </div>
 
-      <div v-if="userCommunes && userCommunes.length > 0" class="mb-4">
+      <div class="mb-4">
         <UFormField label="Commune courante" name="commune">
           <USelect
+            v-if="!userCommunesPending && communeSelectItems.length > 0"
             v-model="selectedCommuneId"
-            :items="userCommunes.map(c => ({ label: `${c.name} (${c.postal_code})`, value: c.id }))"
+            :items="communeSelectItems"
             placeholder="Sélectionner une commune"
             class="max-w-xs"
           />
+          <div v-else-if="userCommunesPending" class="flex items-center gap-2 py-2 text-sm text-muted">
+            <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
+            <span>Chargement des communes…</span>
+          </div>
+          <div v-else class="py-2 text-sm text-muted">Aucune commune</div>
         </UFormField>
       </div>
 

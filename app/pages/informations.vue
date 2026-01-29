@@ -1,209 +1,213 @@
 <script setup lang="ts">
-import type { TableColumn } from "@nuxt/ui";
-import type { MunicipalInfo } from "~/types";
+import type { TableColumn } from '@nuxt/ui'
+import type { MunicipalInfo } from '~/types'
 
-const UButton = resolveComponent("UButton");
-const UDropdownMenu = resolveComponent("UDropdownMenu");
-const UBadge = resolveComponent("UBadge");
+const UButton = resolveComponent('UButton')
+const UDropdownMenu = resolveComponent('UDropdownMenu')
+const UBadge = resolveComponent('UBadge')
 
-const toast = useToast();
-const table = useTemplateRef("table");
-const { session } = useSupabase();
+const toast = useToast()
+const table = useTemplateRef('table')
+const { session } = useSupabase()
 
 const authHeaders = computed(() => {
-  const currentSession = session.value;
+  const currentSession = session.value
   if (!currentSession?.access_token) {
-    return {};
+    return {}
   }
   return {
-    Authorization: `Bearer ${currentSession.access_token}`,
-  };
-});
+    Authorization: `Bearer ${currentSession.access_token}`
+  }
+})
 
-const { currentCommune } = useCurrentCommune();
+const { currentCommune } = useCurrentCommune()
 
 const { data, status, refresh } = await useFetch<MunicipalInfo[]>(
-  "/api/municipal-info",
+  '/api/municipal-info',
   {
     lazy: true,
     headers: authHeaders as any,
     query: computed(() => ({
-      commune_id: currentCommune.value?.id,
-    })),
-  },
-);
+      commune_id: currentCommune.value?.id
+    }))
+  }
+)
 
 // Rafraîchir quand la commune change
 watch(currentCommune, () => {
-  refresh();
-});
+  refresh()
+})
 
-provide("refresh-informations", refresh);
+provide('refresh-informations', refresh)
 
-const selectedInfo = ref<MunicipalInfo | null>(null);
+const selectedInfo = ref<MunicipalInfo | null>(null)
 const editModal = useTemplateRef<{ openModal: (info?: MunicipalInfo) => void }>(
-  "editModal",
-);
-const deleteModal = useTemplateRef<{ openModal: () => void }>("deleteModal");
+  'editModal'
+)
+const deleteModal = useTemplateRef<{ openModal: () => void }>('deleteModal')
 
 function getRowItems(row: MunicipalInfo) {
   return [
     {
-      type: "label",
-      label: "Actions",
+      type: 'label',
+      label: 'Actions'
     },
     {
-      label: "Modifier",
-      icon: "i-lucide-edit",
+      label: 'Modifier',
+      icon: 'i-lucide-edit',
       onSelect() {
-        selectedInfo.value = row;
-        editModal.value?.openModal(row);
-      },
+        selectedInfo.value = row
+        editModal.value?.openModal(row)
+      }
     },
     {
-      type: "separator",
+      type: 'separator'
     },
     {
-      label: "Supprimer",
-      icon: "i-lucide-trash",
-      color: "error",
+      label: 'Supprimer',
+      icon: 'i-lucide-trash',
+      color: 'error',
       onSelect() {
-        selectedInfo.value = row;
-        deleteModal.value?.openModal();
-      },
-    },
-  ];
+        selectedInfo.value = row
+        deleteModal.value?.openModal()
+      }
+    }
+  ]
 }
 
 function handleRowClick(row: MunicipalInfo) {
-  selectedInfo.value = row;
-  editModal.value?.openModal(row);
+  selectedInfo.value = row
+  editModal.value?.openModal(row)
 }
 
 const columns: TableColumn<MunicipalInfo>[] = [
   {
-    accessorKey: "title",
-    header: "Titre",
+    accessorKey: 'title',
+    header: 'Titre',
     cell: ({ row }) => {
       return h(
-        "div",
+        'div',
         {
-          class: "font-medium text-highlighted cursor-pointer",
+          class: 'font-medium text-highlighted cursor-pointer',
           onClick: (e: Event) => {
-            e.stopPropagation();
-            handleRowClick(row.original);
-          },
+            e.stopPropagation()
+            handleRowClick(row.original)
+          }
         },
-        row.original.title,
-      );
-    },
+        row.original.title
+      )
+    }
   },
   {
-    accessorKey: "content",
-    header: "Contenu",
+    accessorKey: 'content',
+    header: 'Contenu',
     cell: ({ row }) => {
-      const content = row.original.content;
-      const preview =
-        content.length > 100 ? content.substring(0, 100) + "..." : content;
+      const content = row.original.content
+      // Strip HTML tags for preview
+      const textContent = content.replace(/<[^>]*>/g, '').trim()
+      const preview
+        = textContent.length > 100
+          ? textContent.substring(0, 100) + '...'
+          : textContent
       return h(
-        "p",
+        'p',
         {
-          class: "text-sm text-muted max-w-md cursor-pointer",
+          class: 'text-sm text-muted max-w-md cursor-pointer',
           onClick: (e: Event) => {
-            e.stopPropagation();
-            handleRowClick(row.original);
-          },
+            e.stopPropagation()
+            handleRowClick(row.original)
+          }
         },
-        preview,
-      );
-    },
+        preview
+      )
+    }
   },
   {
-    accessorKey: "category",
-    header: "Catégorie",
+    accessorKey: 'category',
+    header: 'Catégorie',
     cell: ({ row }) => {
       if (!row.original.category) {
         return h(
-          "span",
+          'span',
           {
-            class: "text-muted cursor-pointer",
+            class: 'text-muted cursor-pointer',
             onClick: (e: Event) => {
-              e.stopPropagation();
-              handleRowClick(row.original);
-            },
+              e.stopPropagation()
+              handleRowClick(row.original)
+            }
           },
-          "-",
-        );
+          '-'
+        )
       }
       return h(
         UBadge,
         {
-          variant: "subtle",
-          color: "primary",
-          class: "cursor-pointer",
+          variant: 'subtle',
+          color: 'primary',
+          class: 'cursor-pointer',
           onClick: (e: Event) => {
-            e.stopPropagation();
-            handleRowClick(row.original);
-          },
+            e.stopPropagation()
+            handleRowClick(row.original)
+          }
         },
-        () => row.original.category,
-      );
-    },
+        () => row.original.category
+      )
+    }
   },
   {
-    accessorKey: "created_at",
-    header: "Date de création",
+    accessorKey: 'created_at',
+    header: 'Date de création',
     cell: ({ row }) => {
-      const date = new Date(row.original.created_at);
+      const date = new Date(row.original.created_at)
       return h(
-        "span",
+        'span',
         {
-          class: "text-sm cursor-pointer",
+          class: 'text-sm cursor-pointer',
           onClick: (e: Event) => {
-            e.stopPropagation();
-            handleRowClick(row.original);
-          },
+            e.stopPropagation()
+            handleRowClick(row.original)
+          }
         },
-        date.toLocaleDateString("fr-FR"),
-      );
-    },
+        date.toLocaleDateString('fr-FR')
+      )
+    }
   },
   {
-    id: "actions",
+    id: 'actions',
     cell: ({ row }) => {
       return h(
-        "div",
+        'div',
         {
-          class: "text-right",
+          class: 'text-right',
           onClick: (e: Event) => {
-            e.stopPropagation();
-          },
+            e.stopPropagation()
+          }
         },
         h(
           UDropdownMenu,
           {
             content: {
-              align: "end",
+              align: 'end'
             },
-            items: getRowItems(row.original),
+            items: getRowItems(row.original)
           },
           () =>
             h(UButton, {
-              icon: "i-lucide-ellipsis-vertical",
-              color: "neutral",
-              variant: "ghost",
-              class: "ml-auto",
-            }),
-        ),
-      );
-    },
-  },
-];
+              icon: 'i-lucide-ellipsis-vertical',
+              color: 'neutral',
+              variant: 'ghost',
+              class: 'ml-auto'
+            })
+        )
+      )
+    }
+  }
+]
 
 const pagination = ref({
   pageIndex: 0,
-  pageSize: 10,
-});
+  pageSize: 10
+})
 </script>
 
 <template>
@@ -238,7 +242,7 @@ const pagination = ref({
             '[&>tr]:last:[&>td]:border-b-0 [&>tr]:cursor-pointer [&>tr]:hover:bg-elevated/50',
           th: 'py-2 first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
           td: 'border-b border-default',
-          separator: 'h-0',
+          separator: 'h-0'
         }"
       />
 

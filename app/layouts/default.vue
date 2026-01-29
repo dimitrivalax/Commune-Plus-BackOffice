@@ -6,7 +6,7 @@ const toast = useToast()
 
 const open = ref(false)
 
-const { currentCommune, userCommunes, setCurrentCommune } = useCurrentCommune()
+const { currentCommune, userCommunes, userCommunesPending, setCurrentCommune } = useCurrentCommune()
 
 // Gérer la sélection de la commune courante
 const selectedCommuneId = computed({
@@ -18,6 +18,11 @@ const selectedCommuneId = computed({
     }
   }
 })
+
+// Items du select (computed pour éviter recalculs et s'assurer que la liste est stable)
+const communeSelectItems = computed(() =>
+  (userCommunes.value || []).map(c => ({ label: `${c.name} (${c.postal_code})`, value: c.id }))
+)
 
 const links = [[{
   label: 'Accueil',
@@ -194,14 +199,20 @@ onMounted(async () => {
       <template #default="{ collapsed }">
         <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" label="Rechercher" />
 
-        <div v-if="userCommunes && userCommunes.length > 0" class="px-3 py-2">
+        <div class="px-3 py-2">
           <UFormField label="Commune courante" name="commune">
             <USelect
+              v-if="!userCommunesPending && communeSelectItems.length > 0"
               v-model="selectedCommuneId"
-              :items="userCommunes.map(c => ({ label: `${c.name} (${c.postal_code})`, value: c.id }))"
+              :items="communeSelectItems"
               placeholder="Sélectionner une commune"
               :ui="{ wrapper: collapsed ? 'w-full' : 'w-full' }"
             />
+            <div v-else-if="userCommunesPending" class="flex items-center gap-2 py-2 text-sm text-muted">
+              <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
+              <span>Chargement des communes…</span>
+            </div>
+            <div v-else class="py-2 text-sm text-muted">Aucune commune</div>
           </UFormField>
         </div>
 

@@ -7,11 +7,17 @@ export const useCurrentCommune = () => {
   const currentCommune = useState<Commune | null>('current_commune', () => null)
   const { getAuthHeaders } = useApiAuth()
 
+  // Re-fetch quand la session est prête (changement de key = nouveau fetch avec les bons headers)
+  const sessionToken = computed(() => useSupabase().session.value?.access_token ?? '')
+  const fetchKey = computed(() => `user-communes-${sessionToken.value || 'anon'}`)
+
   // Charger les communes de l'utilisateur connecté
-  const { data: userCommunes, refresh: refreshUserCommunes } = useFetch<Commune[]>('/api/user/communes', {
+  const authHeaders = computed(() => getAuthHeaders())
+  const { data: userCommunes, pending: userCommunesPending, refresh: refreshUserCommunes } = useFetch<Commune[]>('/api/user/communes', {
+    key: fetchKey,
     lazy: true,
     default: () => [],
-    headers: getAuthHeaders()
+    headers: authHeaders
   })
 
   // Initialiser la commune courante avec la première commune si aucune n'est sélectionnée
@@ -48,6 +54,7 @@ export const useCurrentCommune = () => {
   return {
     currentCommune: readonly(currentCommune),
     userCommunes: readonly(userCommunes),
+    userCommunesPending: readonly(userCommunesPending),
     setCurrentCommune,
     refreshUserCommunes
   }
