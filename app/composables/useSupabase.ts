@@ -14,7 +14,6 @@ const getSupabaseClient = (): SupabaseClient | null => {
     const supabaseUrl = config.public.supabaseUrl || ''
     const supabaseAnonKey = config.public.supabaseAnonKey || ''
 
-    console.log('process.env ::::::::::::::::::::::::: ', process.env)
     if (!supabaseUrl || !supabaseAnonKey) {
       console.warn(
         'Supabase credentials are missing. Please check your environment variables.'

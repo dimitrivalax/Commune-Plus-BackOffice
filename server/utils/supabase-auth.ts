@@ -2,13 +2,20 @@ import { createClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.SUPABASE_URL || ''
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || ''
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    'Supabase credentials are missing. Please check your environment variables.'
-  )
+/** Lit les credentials Supabase depuis process.env ou runtimeConfig (ex. NUXT_PUBLIC_SUPABASE_* sur Koyeb). */
+function getSupabaseCredentials(): { url: string, anonKey: string } {
+  const url = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL || ''
+  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  if (url && anonKey) return { url, anonKey }
+  try {
+    const config = useRuntimeConfig()
+    return {
+      url: config.public?.supabaseUrl || '',
+      anonKey: config.public?.supabaseAnonKey || ''
+    }
+  } catch {
+    return { url: '', anonKey: '' }
+  }
 }
 
 /**
@@ -20,6 +27,7 @@ export async function getAuthenticatedSupabaseClient(event: H3Event): Promise<{
   supabase: SupabaseClient
   user: User | null
 } | null> {
+  const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseCredentials()
   if (!supabaseUrl || !supabaseAnonKey) {
     throw createError({
       statusCode: 500,
@@ -99,6 +107,7 @@ export async function getCurrentUserProfile(event: H3Event): Promise<CurrentUser
   if (!auth) return null
 
   const { supabase, user } = auth
+  if (!user) return null
 
   const { data: utilisateurData, error: utilisateurError } = await supabase
     .from('utilisateur')
