@@ -81,3 +81,82 @@ export async function requireAuth(event: H3Event): Promise<{
 
   return auth
 }
+
+export type UserProfileRole = 'utilisateur' | 'administrateur'
+
+export interface CurrentUserProfile {
+  utilisateurId: string
+  role: UserProfileRole
+  communeIds: string[]
+}
+
+/**
+ * Récupère le profil de l'utilisateur connecté (role + communes).
+ * À utiliser après requireAuth(). Lance 404 si l'utilisateur n'existe pas dans la table utilisateur.
+ */
+export async function getCurrentUserProfile(event: H3Event): Promise<CurrentUserProfile | null> {
+  const auth = await getAuthenticatedSupabaseClient(event)
+  if (!auth) return null
+
+  const { supabase, user } = auth
+
+  const { data: utilisateurData, error: utilisateurError } = await supabase
+    .from('utilisateur')
+    .select('id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (utilisateurError || !utilisateurData) {
+    return null
+  }
+
+  const { data: associationsData, error: associationsError } = await supabase
+    .from('utilisateur_commune')
+    .select('commune_id')
+    .eq('utilisateur_id', utilisateurData.id)
+
+  if (associationsError) {
+    return null
+  }
+
+  const communeIds = (associationsData || []).map((a: { commune_id: string }) => a.commune_id)
+
+  return {
+    utilisateurId: utilisateurData.id,
+    role: utilisateurData.role as UserProfileRole,
+    communeIds
+  }
+}
+
+/**
+ * Récupère le profil de l'utilisateur connecté ou lance une erreur si non authentifié / non trouvé.
+ */
+export async function requireCurrentUserProfile(event: H3Event): Promise<CurrentUserProfile> {
+  const profile = await getCurrentUserProfile(event)
+  if (!profile) {
+    throw createError({
+      statusCode: 404,
+      message: 'Profil utilisateur non trouvé'
+    })
+  }
+  return profile
+}
+
+/**
+ * Retourne l'identifiant de commune à utiliser pour une requête listant des données.
+ * - Administrateur : utilise le commune_id de la query (ou undefined = pas de filtre).
+ * - Utilisateur : uniquement sa commune (première de la liste) ; ignore le paramètre query pour la sécurité.
+ */
+export function getEffectiveCommuneIdForRequest(
+  profile: CurrentUserProfile | null,
+  queryCommuneId: string | undefined
+): string | undefined {
+  if (!profile) {
+    return queryCommuneId
+  }
+  if (profile.role === 'administrateur') {
+    return queryCommuneId
+  }
+  // Utilisateur : une seule commune, on impose sa commune
+  return profile.communeIds.length > 0 ? profile.communeIds[0] : undefined
+}

@@ -1,21 +1,24 @@
 import { requireAuth } from '../utils/supabase-auth'
+import { getCurrentUserProfile, getEffectiveCommuneIdForRequest } from '../utils/supabase-auth'
 
 export default eventHandler(async (event) => {
-  // Vérifier l'authentification
   const { supabase } = await requireAuth(event)
 
   try {
+    const profile = await getCurrentUserProfile(event)
     const query = getQuery(event)
-    const communeId = query.commune_id as string | undefined
+    const queryCommuneId = query.commune_id as string | undefined
+    const communeId = getEffectiveCommuneIdForRequest(profile, queryCommuneId)
 
     let queryBuilder = supabase
       .from('salles')
       .select('*')
       .order('created_at', { ascending: false })
 
-    // Filtrer par commune si fournie
     if (communeId) {
       queryBuilder = queryBuilder.eq('commune_id', communeId)
+    } else if (profile?.role === 'utilisateur') {
+      return []
     }
 
     const { data, error } = await queryBuilder

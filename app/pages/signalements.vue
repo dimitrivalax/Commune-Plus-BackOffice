@@ -26,18 +26,33 @@ const selectedTab = ref('all')
 const viewMode = ref<'table' | 'map'>('table')
 
 const { currentCommune } = useCurrentCommune()
+const { session } = useSupabase()
 
-const { data: signalements, refresh: refreshSignalements } = await useFetch<Signalement[]>('/api/signalements', {
-  default: () => [],
-  query: computed(() => ({
-    commune_id: currentCommune.value?.id
-  }))
-})
+const signalements = ref<Signalement[]>([])
+const signalementsPending = ref(false)
 
-// Rafraîchir quand la commune change
-watch(currentCommune, () => {
-  refreshSignalements()
-})
+async function fetchSignalements() {
+  const token = session.value?.access_token
+  if (!token) return
+  signalementsPending.value = true
+  try {
+    const data = await $fetch<Signalement[]>('/api/signalements', {
+      query: { commune_id: currentCommune.value?.id },
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    signalements.value = data ?? []
+  } catch (e) {
+    signalements.value = []
+  } finally {
+    signalementsPending.value = false
+  }
+}
+
+watch([() => session.value?.access_token, currentCommune], () => {
+  if (import.meta.client && session.value?.access_token) {
+    fetchSignalements()
+  }
+}, { immediate: true })
 
 // Filter signalements based on the selected tab
 const filteredSignalements = computed(() => {

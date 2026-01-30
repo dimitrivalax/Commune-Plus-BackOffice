@@ -4,54 +4,29 @@ import type { Notification } from '~/types'
 
 const { isNotificationsSlideoverOpen } = useDashboard()
 const router = useRouter()
-const { session } = useSupabase()
 
-// Utiliser le composable pour les notifications
-const { notifications, refreshNotifications, notificationsError, unreadCount } = useNotifications()
+const { notifications, refreshNotifications, markAsRead, notificationsError, unreadCount } = useNotifications()
 
-// Fonction pour obtenir l'URL de navigation selon le type de notification
-const getNotificationUrl = (notification: Notification) => {
+function getNotificationUrl(notification: Notification) {
   if (notification.type === 'signalement') {
     return '/signalements'
-  } else if (notification.type === 'reservation') {
+  }
+  if (notification.type === 'reservation') {
     return '/reservations-salles'
   }
   return '/'
 }
 
-// Fonction pour marquer une notification comme lue et naviguer
-const handleNotificationClick = async (notification: Notification) => {
-  // Si la notification n'est pas encore lue, la marquer comme lue
+function handleNotificationClick(notification: Notification) {
   if (notification.unread) {
-    try {
-      const authHeaders: Record<string, string> = {}
-      if (session.value?.access_token) {
-        authHeaders.Authorization = `Bearer ${session.value.access_token}`
-      }
-
-      await $fetch(`/api/notifications/${notification.id}/read`, {
-        method: 'PUT',
-        headers: authHeaders
-      })
-
-      // Rafraîchir la liste des notifications
-      await refreshNotifications()
-    } catch (error) {
-      console.error('Error marking notification as read:', error)
-    }
+    markAsRead(notification.id)
   }
-
-  // Naviguer vers la page appropriée
-  const url = getNotificationUrl(notification)
-  router.push(url)
-
-  // Fermer le slideover
+  router.push(getNotificationUrl(notification))
   isNotificationsSlideoverOpen.value = false
 }
 
-// Charger les notifications quand le slideover s'ouvre
 watch(isNotificationsSlideoverOpen, (isOpen) => {
-  if (isOpen && session.value?.access_token) {
+  if (isOpen) {
     refreshNotifications()
   }
 })
@@ -77,9 +52,7 @@ watch(isNotificationsSlideoverOpen, (isOpen) => {
           Erreur lors du chargement des notifications
         </p>
         <p class="text-sm text-muted mt-2">
-          {{
-            notificationsError.message || 'Veuillez réessayer'
-          }}
+          {{ notificationsError?.message || 'Veuillez réessayer' }}
         </p>
       </div>
       <div v-else-if="!notifications || notifications.length === 0" class="px-3 py-8 text-center text-muted">

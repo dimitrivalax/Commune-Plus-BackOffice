@@ -1,72 +1,92 @@
 import type { Notification } from '~/types'
 
+const STORAGE_KEY = 'backoffice-notifications'
+const MAX_ITEMS = 50
+
+function loadFromStorage(): Notification[] {
+  if (import.meta.server) return []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as Notification[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function saveToStorage(items: Notification[]) {
+  if (import.meta.server) return
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, MAX_ITEMS)))
+  } catch {
+    // ignore
+  }
+}
+
 /**
- * Composable pour gérer les notifications du BackOffice
+ * Composable pour gérer les notifications du BackOffice en localStorage (pas de base de données).
  */
 export const useNotifications = () => {
-  // S'assurer que nous sommes côté client
-  if (import.meta.server) {
-    return {
-      notifications: ref<Notification[]>([]),
-      unreadCount: computed(() => 0),
-      refreshNotifications: () => {},
-      notificationsError: ref(null)
+  const notifications = ref<Notification[]>([])
+
+  function init() {
+    if (import.meta.client) {
+      notifications.value = loadFromStorage()
     }
   }
-  const { session } = useSupabase()
 
-  // Headers d'authentification pour les appels API
-  const authHeaders = computed((): Record<string, string> => {
-    const currentSession = session.value
-    if (!currentSession?.access_token) {
-      return {}
+  function refreshNotifications() {
+    init()
+  }
+
+  function markAsRead(id: string | number) {
+    const list = notifications.value
+    const index = list.findIndex((n) => String(n.id) === String(id))
+    if (index !== -1 && list[index].unread) {
+      list[index] = { ...list[index], unread: false }
+      notifications.value = [...list]
+      saveToStorage(notifications.value)
     }
-    return {
-      Authorization: `Bearer ${currentSession.access_token}`
+  }
+
+  function addNotification(notification: Omit<Notification, 'id' | 'date'> & { id?: string | number; date?: string }) {
+    if (import.meta.server) return
+    const item: Notification = {
+      ...notification,
+      id: notification.id ?? crypto.randomUUID(),
+      date: notification.date ?? new Date().toISOString(),
+      unread: notification.unread ?? true
     }
-  })
+    const list = [item, ...notifications.value].slice(0, MAX_ITEMS)
+    notifications.value = list
+    saveToStorage(list)
+  }
 
-  // Récupérer les notifications
-  const { data: notifications, refresh: refreshNotifications, error: notificationsError } = useFetch<Notification[]>('/api/notifications', {
-    server: false, // Désactiver le SSR (la session n'est disponible que côté client)
-    lazy: true, // Charger de manière paresseuse
-    headers: authHeaders,
-    default: () => []
-  })
-
-  // Compteur de notifications non lues
-  const unreadCount = computed(() => {
-    if (!notifications.value || !Array.isArray(notifications.value)) {
-      return 0
+  function clearAll() {
+    notifications.value = []
+    if (import.meta.client) {
+      localStorage.removeItem(STORAGE_KEY)
     }
-    return notifications.value.filter((n: Notification) => n.unread).length
-  })
+  }
 
-  // Charger les notifications quand la session est disponible
-  watch(() => session.value?.access_token, (token) => {
-    if (token) {
-      // Attendre un peu pour que la session soit complètement initialisée
-      nextTick(() => {
-        refreshNotifications()
-      })
-    }
-  }, { immediate: true })
+  const unreadCount = computed(() =>
+    notifications.value.filter((n) => n.unread).length
+  )
 
-  // Charger les notifications au montage du composant si la session est déjà disponible
+  const notificationsError = ref<Error | null>(null)
+
   if (import.meta.client) {
-    onMounted(() => {
-      if (session.value?.access_token) {
-        nextTick(() => {
-          refreshNotifications()
-        })
-      }
-    })
+    init()
   }
 
   return {
     notifications: readonly(notifications),
     unreadCount,
     refreshNotifications,
+    markAsRead,
+    addNotification,
+    clearAll,
     notificationsError
   }
 }

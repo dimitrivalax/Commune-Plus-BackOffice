@@ -1,17 +1,23 @@
 import { requireAuth } from '../utils/supabase-auth'
+import { getCurrentUserProfile, getEffectiveCommuneIdForRequest } from '../utils/supabase-auth'
 
 export default eventHandler(async (event) => {
-  // Vérifier l'authentification
   const { supabase } = await requireAuth(event)
 
   try {
+    const profile = await getCurrentUserProfile(event)
     const query = getQuery(event)
     const salleId = query.salle_id as string | undefined
     const dateDebut = query.date_debut as string | undefined
     const dateFin = query.date_fin as string | undefined
-    const communeId = query.commune_id as string | undefined
+    const queryCommuneId = query.commune_id as string | undefined
+    const communeId = getEffectiveCommuneIdForRequest(profile, queryCommuneId)
 
-    // Si une commune est spécifiée, récupérer d'abord les IDs des salles de cette commune
+    if (profile?.role === 'utilisateur' && !communeId) {
+      return []
+    }
+
+    // Si une commune est spécifiée (ou imposée pour un utilisateur), récupérer les IDs des salles
     let salleIds: string[] | undefined
     if (communeId) {
       const { data: sallesData, error: sallesError } = await supabase

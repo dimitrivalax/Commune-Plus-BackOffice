@@ -7,8 +7,9 @@ const toast = useToast()
 const open = ref(false)
 
 const { currentCommune, userCommunes, userCommunesPending, setCurrentCommune } = useCurrentCommune()
+const { isAdministrator } = useCurrentUser()
 
-// Gérer la sélection de la commune courante
+// Gérer la sélection de la commune courante (réservé aux administrateurs)
 const selectedCommuneId = computed({
   get: () => currentCommune.value?.id || '',
   set: (value: string) => {
@@ -24,7 +25,8 @@ const communeSelectItems = computed(() =>
   (userCommunes.value || []).map(c => ({ label: `${c.name} (${c.postal_code})`, value: c.id }))
 )
 
-const links = [[{
+// Liens de navigation : Utilisateurs et Communes uniquement pour les administrateurs
+const baseNavItems: NavigationMenuItem[] = [{
   label: 'Accueil',
   icon: 'i-lucide-house',
   to: '/',
@@ -32,21 +34,6 @@ const links = [[{
     open.value = false
   }
 }, {
-  //   label: 'Tableau de bord',
-  //   icon: 'i-lucide-layout-dashboard',
-  //   to: '/dashboard',
-  //   onSelect: () => {
-  //     open.value = false
-  //   }
-  // }, {
-  //   label: 'Boîte de réception',
-  //   icon: 'i-lucide-inbox',
-  //   to: '/inbox',
-  //   badge: '4',
-  //   onSelect: () => {
-  //     open.value = false
-  //   }
-  // }, {
   label: 'Signalements',
   icon: 'i-lucide-alert-triangle',
   to: '/signalements',
@@ -74,14 +61,9 @@ const links = [[{
   onSelect: () => {
     open.value = false
   }
-}, {
-  label: 'Clients',
-  icon: 'i-lucide-users',
-  to: '/customers',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
+}]
+
+const adminOnlyNavItems: NavigationMenuItem[] = [{
   label: 'Utilisateurs',
   icon: 'i-lucide-user-circle',
   to: '/utilisateurs',
@@ -95,7 +77,15 @@ const links = [[{
   onSelect: () => {
     open.value = false
   }
-}, {
+}]
+
+const mainNavItems = computed(() =>
+  isAdministrator.value
+    ? [...baseNavItems, ...adminOnlyNavItems]
+    : baseNavItems
+)
+
+const links = computed<NavigationMenuItem[][]>(() => [[...mainNavItems.value, {
   label: 'Paramètres',
   to: '/settings',
   icon: 'i-lucide-settings',
@@ -137,12 +127,12 @@ const links = [[{
   icon: 'i-lucide-info',
   to: 'https://github.com/nuxt-ui-templates/dashboard',
   target: '_blank'
-}]] satisfies NavigationMenuItem[][]
+}]])
 
 const groups = computed(() => [{
   id: 'links',
   label: 'Aller à',
-  items: links.flat()
+  items: links.value.flat()
 }, {
   id: 'code',
   label: 'Code',
@@ -199,20 +189,14 @@ onMounted(async () => {
       <template #default="{ collapsed }">
         <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" label="Rechercher" />
 
-        <div class="px-3 py-2">
+
+        <div v-if="!isAdministrator && !userCommunesPending && communeSelectItems.length > 0" class="px-3 py-2">
           <UFormField label="Commune courante" name="commune">
             <USelect
-              v-if="!userCommunesPending && communeSelectItems.length > 0"
               v-model="selectedCommuneId"
               :items="communeSelectItems"
               placeholder="Sélectionner une commune"
-              :ui="{ wrapper: collapsed ? 'w-full' : 'w-full' }"
             />
-            <div v-else-if="userCommunesPending" class="flex items-center gap-2 py-2 text-sm text-muted">
-              <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
-              <span>Chargement des communes…</span>
-            </div>
-            <div v-else class="py-2 text-sm text-muted">Aucune commune</div>
           </UFormField>
         </div>
 

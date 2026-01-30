@@ -1,9 +1,17 @@
 import type { Utilisateur } from '~/types'
 import { requireAuth } from '../utils/supabase-auth'
+import { requireCurrentUserProfile } from '../utils/supabase-auth'
 
 export default eventHandler(async (event) => {
-  // Vérifier l'authentification
   const { supabase, user } = await requireAuth(event)
+  const profile = await requireCurrentUserProfile(event)
+
+  if (profile.role !== 'administrateur') {
+    throw createError({
+      statusCode: 403,
+      message: 'Accès réservé aux administrateurs'
+    })
+  }
 
   try {
     console.log('Fetching utilisateurs for user:', user.id)

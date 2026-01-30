@@ -30,7 +30,10 @@ const selectedCommuneId = computed({
 })
 
 const communeSelectItems = computed(() =>
-  (userCommunes.value || []).map(c => ({ label: `${c.name} (${c.postal_code})`, value: c.id })))
+  (userCommunes.value || []).map(c => ({
+    label: c.name + ' (' + c.postal_code + ')',
+    value: c.id
+  })))
 
 const authHeaders = computed(() => {
   const currentSession = session.value

@@ -1,8 +1,16 @@
 import { requireAuth } from '../../utils/supabase-auth'
+import { requireCurrentUserProfile } from '../../utils/supabase-auth'
 
 export default eventHandler(async (event) => {
-  // Vérifier l'authentification
   const { supabase } = await requireAuth(event)
+  const profile = await requireCurrentUserProfile(event)
+
+  if (profile.role !== 'administrateur') {
+    throw createError({
+      statusCode: 403,
+      message: 'Accès réservé aux administrateurs'
+    })
+  }
 
   const id = getRouterParam(event, 'id')
   const method = getMethod(event)

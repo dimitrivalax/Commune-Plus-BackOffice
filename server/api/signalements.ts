@@ -1,41 +1,25 @@
-import { createClient } from '@supabase/supabase-js'
 import type { Signalement } from '~/types'
-
-const supabaseUrl = process.env.SUPABASE_URL || ''
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || ''
-
-console.log('process.env ::::::::::::::::::::::::: ', process.env)
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    'Supabase credentials are missing. Please check your environment variables.'
-  )
-}
-
-const supabase
-  = supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
-    : null
+import { requireAuth } from '../utils/supabase-auth'
+import { getCurrentUserProfile, getEffectiveCommuneIdForRequest } from '../utils/supabase-auth'
 
 export default eventHandler(async (event) => {
-  if (!supabase) {
-    throw createError({
-      statusCode: 500,
-      message: 'Supabase configuration is missing'
-    })
-  }
+  const { supabase } = await requireAuth(event)
 
   try {
+    const profile = await getCurrentUserProfile(event)
     const query = getQuery(event)
-    const communeId = query.commune_id as string | undefined
+    const queryCommuneId = query.commune_id as string | undefined
+    const communeId = getEffectiveCommuneIdForRequest(profile, queryCommuneId)
 
     let queryBuilder = supabase
       .from('signalements')
       .select('*')
       .order('created_at', { ascending: false })
 
-    // Filtrer par commune si fournie
     if (communeId) {
       queryBuilder = queryBuilder.eq('city_id', communeId)
+    } else if (profile?.role === 'utilisateur') {
+      return [] as Signalement[]
     }
 
     const { data, error } = await queryBuilder

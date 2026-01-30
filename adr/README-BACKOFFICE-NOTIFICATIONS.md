@@ -1,6 +1,8 @@
 # Système de Notifications BackOffice
 
-Ce guide explique le système de notifications pour le BackOffice qui alerte les administrateurs des nouveaux signalements et réservations.
+> **Note (mise à jour)** : Les notifications affichées dans le BackOffice sont désormais gérées **uniquement en localStorage** (pas de sauvegarde en base). Le composable `useNotifications` lit/écrit dans `localStorage` ; les API `/api/notifications` ont été supprimées. La table et les triggers SQL ci-dessous peuvent rester en place pour d’autres usages ou être retirés.
+
+Ce guide explique l’historique du système de notifications pour le BackOffice (nouveaux signalements et réservations).
 
 ## Prérequis
 
