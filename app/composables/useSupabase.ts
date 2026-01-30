@@ -84,7 +84,9 @@ const _useSupabase = () => {
       throw new Error('Supabase is not configured')
     }
 
-    const { error } = await client.auth.signOut()
+    // scope: 'local' évite l'appel POST /auth/v1/logout qui peut renvoyer 403
+    // si le token est expiré ; la session est quand même effacée côté client.
+    const { error } = await client.auth.signOut({ scope: 'local' })
 
     if (error) {
       throw error
