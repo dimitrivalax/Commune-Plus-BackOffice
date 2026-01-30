@@ -190,7 +190,7 @@ onMounted(async () => {
         <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" label="Rechercher" />
 
 
-        <div v-if="!isAdministrator && !userCommunesPending && communeSelectItems.length > 0" class="px-3 py-2">
+        <div v-if="isAdministrator && !userCommunesPending && communeSelectItems.length > 0" class="px-3 py-2">
           <UFormField label="Commune courante" name="commune">
             <USelect
               v-model="selectedCommuneId"
