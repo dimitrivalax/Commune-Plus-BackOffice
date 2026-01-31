@@ -1,88 +1,89 @@
-import { requireAuth } from '../../utils/supabase-auth'
-import { requireCurrentUserProfile } from '../../utils/supabase-auth'
+import { requireAuth } from "../../utils/supabase-auth";
+import { requireCurrentUserProfile } from "../../utils/supabase-auth";
 
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event)
-  const profile = await requireCurrentUserProfile(event)
+  const { supabase } = await requireAuth(event);
+  const profile = await requireCurrentUserProfile(event);
 
-  if (profile.role !== 'administrateur') {
+  if (profile.role !== "administrateur") {
     throw createError({
       statusCode: 403,
-      message: 'Accès réservé aux administrateurs'
-    })
+      message: "Accès réservé aux administrateurs",
+    });
   }
 
-  const id = getRouterParam(event, 'id')
-  const method = getMethod(event)
+  const id = getRouterParam(event, "id");
+  const method = getMethod(event);
 
   try {
-    if (method === 'GET') {
+    if (method === "GET") {
       // Récupérer la commune
       const { data, error } = await supabase
-        .from('commune')
-        .select('*')
-        .eq('id', id)
-        .single()
+        .from("commune")
+        .select("*")
+        .eq("id", id)
+        .single();
 
       if (error) {
         throw createError({
           statusCode: 404,
-          message: 'Commune not found'
-        })
+          message: "Commune not found",
+        });
       }
 
-      return data
-    } else if (method === 'PUT') {
-      const body = await readBody(event)
+      return data;
+    } else if (method === "PUT") {
+      const body = await readBody(event);
 
       // Mettre à jour la commune
       const { data, error } = await supabase
-        .from('commune')
+        .from("commune")
         .update({
           name: body.name,
           postal_code: body.postal_code,
           email: body.email,
-          updated_at: new Date().toISOString()
+          logo_url: body.logo_url,
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
+        .eq("id", id)
         .select()
-        .single()
+        .single();
 
       if (error) {
         throw createError({
           statusCode: 500,
-          message: `Error updating commune: ${error.message}`
-        })
+          message: `Error updating commune: ${error.message}`,
+        });
       }
 
-      return data
-    } else if (method === 'DELETE') {
+      return data;
+    } else if (method === "DELETE") {
       // Supprimer la commune
       const { data, error } = await supabase
-        .from('commune')
+        .from("commune")
         .delete()
-        .eq('id', id)
+        .eq("id", id)
         .select()
-        .single()
+        .single();
 
       if (error) {
         throw createError({
           statusCode: 500,
-          message: `Error deleting commune: ${error.message}`
-        })
+          message: `Error deleting commune: ${error.message}`,
+        });
       }
 
-      return { success: true, data }
+      return { success: true, data };
     } else {
       throw createError({
         statusCode: 405,
-        message: 'Method not allowed'
-      })
+        message: "Method not allowed",
+      });
     }
   } catch (error: any) {
     throw createError({
       statusCode: error.statusCode || 500,
-      message: error.message || 'An error occurred'
-    })
+      message: error.message || "An error occurred",
+    });
   }
-})
+});
