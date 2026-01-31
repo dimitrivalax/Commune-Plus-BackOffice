@@ -18,6 +18,21 @@ function getSupabaseCredentials(): { url: string, anonKey: string } {
   }
 }
 
+/** Client Supabase avec service role (admin), pour créer des utilisateurs Auth, etc. */
+let adminClient: SupabaseClient | null = null
+
+export function getSupabaseAdminClient(): SupabaseClient | null {
+  const url = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL || ''
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  if (!url || !serviceRoleKey) return null
+  if (!adminClient) {
+    adminClient = createClient(url, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    })
+  }
+  return adminClient
+}
+
 /**
  * Crée un client Supabase authentifié à partir du token dans les headers de la requête
  * @param event L'événement H3 de la requête

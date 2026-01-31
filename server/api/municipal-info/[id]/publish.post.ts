@@ -77,11 +77,8 @@ export default eventHandler(async (event) => {
     }
 
     // Préparer le message de notification
-    const notificationTitle = info.title
-    // Limiter le contenu à 100 caractères pour la notification
-    const notificationBody = info.content.length > 100
-      ? info.content.substring(0, 100) + '...'
-      : info.content
+    const notificationTitle = info.category
+    const notificationBody = info.title
 
     // Séparer les tokens par plateforme
     const androidTokens = pushTokens

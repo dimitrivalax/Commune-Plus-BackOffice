@@ -61,6 +61,7 @@ const { data, status, refresh } = await useFetch<Utilisateur[]>('/api/utilisateu
 provide('refresh-utilisateurs', refresh)
 
 const selectedUtilisateur = ref<Utilisateur | null>(null)
+const addModal = useTemplateRef<{ openModal: () => void }>('addModal')
 const editModal = useTemplateRef<{ openModal: () => void }>('editModal')
 const deleteModal = useTemplateRef<{ openModal: () => void }>('deleteModal')
 
@@ -292,6 +293,12 @@ const pagination = ref({
         />
 
         <div class="flex flex-wrap items-center gap-1.5">
+          <UButton
+            label="Ajouter un utilisateur"
+            color="primary"
+            icon="i-lucide-plus"
+            @click="addModal?.openModal?.()"
+          />
           <UDropdownMenu
             :items="
               table?.tableApi
@@ -379,6 +386,7 @@ const pagination = ref({
     </template>
   </UDashboardPanel>
 
+  <UtilisateursAddModal ref="addModal" />
   <UtilisateursEditModal
     ref="editModal"
     :utilisateur="selectedUtilisateur"

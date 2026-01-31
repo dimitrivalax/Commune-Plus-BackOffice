@@ -42,6 +42,7 @@ const { data, status, refresh } = await useFetch<Commune[]>('/api/communes', {
 provide('refresh-communes', refresh)
 
 const selectedCommune = ref<Commune | null>(null)
+const addModal = useTemplateRef<{ openModal: () => void }>('addModal')
 const editModal = useTemplateRef<{ openModal: () => void }>('editModal')
 const deleteModal = useTemplateRef<{ openModal: () => void }>('deleteModal')
 
@@ -235,6 +236,12 @@ const pagination = ref({
         />
 
         <div class="flex flex-wrap items-center gap-1.5">
+          <UButton
+            label="Ajouter une commune"
+            color="primary"
+            icon="i-lucide-plus"
+            @click="addModal?.openModal?.()"
+          />
           <UDropdownMenu
             :items="table?.tableApi
               ?.getAllColumns()
@@ -304,6 +311,7 @@ const pagination = ref({
     </template>
   </UDashboardPanel>
 
+  <CommunesAddModal ref="addModal" />
   <CommunesEditModal
     ref="editModal"
     :commune="selectedCommune"

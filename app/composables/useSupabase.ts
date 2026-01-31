@@ -1,142 +1,170 @@
-import { createClient } from '@supabase/supabase-js'
-import type { User, SupabaseClient } from '@supabase/supabase-js'
-import { createSharedComposable } from '@vueuse/core'
+import { createClient } from "@supabase/supabase-js";
+import type { User, SupabaseClient } from "@supabase/supabase-js";
+import { createSharedComposable } from "@vueuse/core";
 
-let supabase: SupabaseClient | null = null
+let supabase: SupabaseClient | null = null;
 
 const getSupabaseClient = (): SupabaseClient | null => {
   if (supabase) {
-    return supabase
+    return supabase;
   }
 
   try {
-    const config = useRuntimeConfig()
-    const supabaseUrl = config.public.supabaseUrl || ''
-    const supabaseAnonKey = config.public.supabaseAnonKey || ''
+    const config = useRuntimeConfig();
+    const supabaseUrl = config.public.supabaseUrl || "";
+    const supabaseAnonKey = config.public.supabaseAnonKey || "";
 
     if (!supabaseUrl || !supabaseAnonKey) {
       console.warn(
-        'Supabase credentials are missing. Please check your environment variables.'
-      )
-      return null
+        "Supabase credentials are missing. Please check your environment variables.",
+      );
+      return null;
     }
 
-    supabase = createClient(supabaseUrl, supabaseAnonKey)
-    return supabase
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    return supabase;
   } catch (error) {
-    console.error('Error initializing Supabase client:', error)
-    return null
+    console.error("Error initializing Supabase client:", error);
+    return null;
   }
-}
+};
 
 const _useSupabase = () => {
-  const user = useState<User | null>('supabase_user', () => null)
-  const session = useState<any>('supabase_session', () => null)
+  const user = useState<User | null>("supabase_user", () => null);
+  const session = useState<any>("supabase_session", () => null);
 
-  const client = getSupabaseClient()
+  const client = getSupabaseClient();
 
   const signUp = async (
     email: string,
     password: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ) => {
     if (!client) {
-      throw new Error('Supabase is not configured')
+      throw new Error("Supabase is not configured");
     }
 
     const { data, error } = await client.auth.signUp({
       email,
       password,
       options: {
-        data: metadata
-      }
-    })
+        data: metadata,
+      },
+    });
 
     if (error) {
-      throw error
+      throw error;
     }
 
-    return data
-  }
+    return data;
+  };
 
   const signIn = async (email: string, password: string) => {
     if (!client) {
-      throw new Error('Supabase is not configured')
+      throw new Error("Supabase is not configured");
     }
 
     const { data, error } = await client.auth.signInWithPassword({
       email,
-      password
-    })
+      password,
+    });
 
     if (error) {
-      throw error
+      throw error;
     }
 
-    user.value = data.user
-    session.value = data.session
+    user.value = data.user;
+    session.value = data.session;
 
-    return data
-  }
+    return data;
+  };
 
   const signOut = async () => {
     if (!client) {
-      throw new Error('Supabase is not configured')
+      throw new Error("Supabase is not configured");
     }
 
     // scope: 'local' évite l'appel POST /auth/v1/logout qui peut renvoyer 403
     // si le token est expiré ; la session est quand même effacée côté client.
-    const { error } = await client.auth.signOut({ scope: 'local' })
+    const { error } = await client.auth.signOut({ scope: "local" });
 
     if (error) {
-      throw error
+      throw error;
     }
 
-    user.value = null
-    session.value = null
-  }
+    user.value = null;
+    session.value = null;
+  };
 
   const getCurrentUser = async () => {
     if (!client) {
-      return null
+      return null;
     }
 
     const {
-      data: { user: currentUser }
-    } = await client.auth.getUser()
-    user.value = currentUser
-    return currentUser
-  }
+      data: { user: currentUser },
+    } = await client.auth.getUser();
+    user.value = currentUser;
+    return currentUser;
+  };
 
   const getSession = async () => {
     if (!client) {
-      return null
+      return null;
     }
 
     const {
-      data: { session: currentSession }
-    } = await client.auth.getSession()
-    session.value = currentSession
+      data: { session: currentSession },
+    } = await client.auth.getSession();
+    session.value = currentSession;
     if (currentSession) {
-      user.value = currentSession.user
+      user.value = currentSession.user;
     }
-    return currentSession
-  }
+    return currentSession;
+  };
 
   // Initialiser la session si on est côté client
   if (import.meta.client) {
     getSession().catch(() => {
       // Ignorer les erreurs silencieusement
-    })
+    });
 
     // Écouter les changements d'authentification
     if (client) {
       client.auth.onAuthStateChange((_event, newSession) => {
-        session.value = newSession
-        user.value = newSession?.user ?? null
-      })
+        session.value = newSession;
+        user.value = newSession?.user ?? null;
+      });
     }
   }
+
+  const resetPassword = async (email: string) => {
+    if (!client) {
+      throw new Error("Supabase is not configured");
+    }
+
+    const { error } = await client.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login?type=recovery`,
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const updatePassword = async (password: string) => {
+    if (!client) {
+      throw new Error("Supabase is not configured");
+    }
+
+    const { error } = await client.auth.updateUser({
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
 
   return {
     supabase: client,
@@ -146,8 +174,10 @@ const _useSupabase = () => {
     signIn,
     signOut,
     getCurrentUser,
-    getSession
-  }
-}
+    getSession,
+    resetPassword,
+    updatePassword,
+  };
+};
 
-export const useSupabase = createSharedComposable(_useSupabase)
+export const useSupabase = createSharedComposable(_useSupabase);
