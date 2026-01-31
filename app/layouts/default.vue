@@ -6,9 +6,20 @@ const toast = useToast();
 
 const open = ref(false);
 
-const { currentCommune, userCommunes, userCommunesPending, setCurrentCommune } =
-  useCurrentCommune();
+const {
+  currentCommune,
+  userCommunes,
+  userCommunesPending,
+  setCurrentCommune,
+  refreshUserCommunes,
+} = useCurrentCommune();
 const { isAdministrator } = useCurrentUser();
+
+const editCommuneModal = useTemplateRef<{ openModal: () => void }>(
+  "editCommuneModal",
+);
+
+provide("refresh-communes", refreshUserCommunes);
 
 // Gérer la sélection de la commune courante (réservé aux administrateurs)
 const selectedCommuneId = computed({
@@ -162,16 +173,45 @@ onMounted(async () => {
       :ui="{ footer: 'lg:border-t lg:border-default' }"
     >
       <template #header>
-        <!-- <TeamsMenu :collapsed="collapsed" /> -->
         <img src="/logo.png" alt="logo" class="w-20 h-20 mx-auto" />
       </template>
 
       <template #default="{ collapsed }">
-        <UDashboardSearchButton
-          :collapsed="collapsed"
-          class="bg-transparent ring-default"
-          label="Rechercher"
-        />
+        <div
+          class="flex flex-col items-center gap-2 px-1.5 py-4 min-w-0 mb-4 border-b border-default mx-2 transition-colors rounded-lg cursor-pointer hover:bg-elevated"
+          @click="editCommuneModal?.openModal()"
+        >
+          <UAvatar
+            v-if="currentCommune?.logo_url"
+            :src="currentCommune.logo_url"
+            :alt="currentCommune.name"
+            size="2xl"
+            class="shrink-0 ring-1 ring-default bg-elevated"
+          />
+          <UAvatar
+            v-else
+            icon="i-lucide-map-pin"
+            size="2xl"
+            class="shrink-0 ring-1 ring-default bg-elevated"
+          />
+
+          <div
+            v-if="!collapsed"
+            class="flex flex-col items-center min-w-0 overflow-hidden mt-2"
+          >
+            <span
+              class="text-sm font-bold truncate text-foreground text-center"
+            >
+              {{ currentCommune?.name || "Commune Plus" }}
+            </span>
+            <span
+              v-if="currentCommune?.postal_code"
+              class="text-xs text-muted truncate text-center"
+            >
+              {{ currentCommune.postal_code }}
+            </span>
+          </div>
+        </div>
 
         <div
           v-if="
@@ -217,5 +257,7 @@ onMounted(async () => {
     <slot />
 
     <NotificationsSlideover />
+
+    <CommunesEditModal ref="editCommuneModal" :commune="currentCommune" />
   </UDashboardGroup>
 </template>

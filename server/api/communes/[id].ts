@@ -5,15 +5,28 @@ export default eventHandler(async (event) => {
   const { supabase } = await requireAuth(event);
   const profile = await requireCurrentUserProfile(event);
 
-  if (profile.role !== "administrateur") {
-    throw createError({
-      statusCode: 403,
-      message: "Accès réservé aux administrateurs",
-    });
-  }
-
   const id = getRouterParam(event, "id");
   const method = getMethod(event);
+
+  // Vérifier les permissions
+  const isGlobalAdmin = profile.role === "administrateur";
+  const isAssociated = profile.communeIds.includes(id || "");
+
+  if (method === "DELETE") {
+    if (!isGlobalAdmin) {
+      throw createError({
+        statusCode: 403,
+        message: "La suppression est réservée aux administrateurs globaux",
+      });
+    }
+  } else if (method === "GET" || method === "PUT") {
+    if (!isGlobalAdmin && !isAssociated) {
+      throw createError({
+        statusCode: 403,
+        message: "Vous n'avez pas la permission d'accéder à cette commune",
+      });
+    }
+  }
 
   try {
     if (method === "GET") {

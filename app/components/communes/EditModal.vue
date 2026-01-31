@@ -28,6 +28,7 @@ const state = reactive<Partial<Schema>>({
 const toast = useToast();
 const refresh = inject<() => void>("refresh-communes");
 const { getAuthHeaders } = useApiAuth();
+const { isAdministrator } = useCurrentUser();
 
 watch(
   () => props.commune,
@@ -181,6 +182,7 @@ defineExpose({
 
         <div class="flex justify-between gap-2 pt-2">
           <UButton
+            v-if="isAdministrator"
             label="Supprimer"
             color="error"
             variant="subtle"
