@@ -181,20 +181,6 @@ onMounted(async () => {
           class="flex flex-col items-center gap-2 px-1.5 py-4 min-w-0 mb-4 border-b border-default mx-2 transition-colors rounded-lg cursor-pointer hover:bg-elevated"
           @click="editCommuneModal?.openModal()"
         >
-          <UAvatar
-            v-if="currentCommune?.logo_url"
-            :src="currentCommune.logo_url"
-            :alt="currentCommune.name"
-            size="2xl"
-            class="shrink-0 ring-1 ring-default bg-elevated"
-          />
-          <UAvatar
-            v-else
-            icon="i-lucide-map-pin"
-            size="2xl"
-            class="shrink-0 ring-1 ring-default bg-elevated"
-          />
-
           <div
             v-if="!collapsed"
             class="flex flex-col items-center min-w-0 overflow-hidden mt-2"
@@ -211,6 +197,20 @@ onMounted(async () => {
               {{ currentCommune.postal_code }}
             </span>
           </div>
+
+          <UAvatar
+            v-if="currentCommune?.logo_url"
+            :src="currentCommune.logo_url"
+            :alt="currentCommune.name"
+            size="2xl"
+            class="shrink-0 ring-1 ring-default bg-elevated"
+          />
+          <UAvatar
+            v-else
+            icon="i-lucide-map-pin"
+            size="2xl"
+            class="shrink-0 ring-1 ring-default bg-elevated"
+          />
         </div>
 
         <div
