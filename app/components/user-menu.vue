@@ -87,6 +87,7 @@ const handleSignOut = async () => {
 };
 
 const editProfileModal = ref<any>(null);
+const contactModalOpen = ref(false);
 
 const items = computed<DropdownMenuItem[][]>(() => [
   [
@@ -241,6 +242,15 @@ const items = computed<DropdownMenuItem[][]>(() => [
   // ],
   [
     {
+      label: "Contact",
+      icon: "i-lucide-mail",
+      onSelect: (e: Event) => {
+        e.preventDefault();
+        contactModalOpen.value = true;
+      },
+    },
+
+    {
       //   label: 'Documentation',
       //   icon: 'i-lucide-book-open',
       //   to: 'https://ui.nuxt.com/docs/getting-started/installation/nuxt',
@@ -298,5 +308,39 @@ const items = computed<DropdownMenuItem[][]>(() => [
     </UDropdownMenu>
 
     <SettingsProfileEditModal ref="editProfileModal" />
+
+    <UModal
+      v-model:open="contactModalOpen"
+      title="Nous contacter"
+      description="Une question ou un besoin d'assistance ?"
+      :ui="{ content: 'sm:max-w-md' }"
+    >
+      <template #body>
+        <div class="space-y-4 py-2">
+          <p class="text-sm text-neutral-600 dark:text-neutral-400">
+            Pour nous contacter, envoyez-nous un mail à l'adresse suivante :
+          </p>
+          <div
+            class="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-center gap-2 group"
+          >
+            <UIcon name="i-lucide-mail" class="text-primary size-5" />
+            <a
+              href="mailto:contact@commune-plus.fr"
+              class="text-primary font-semibold hover:underline decoration-2 underline-offset-4 transition-all"
+            >
+              contact@commune-plus.fr
+            </a>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <UButton
+          label="Fermer"
+          color="neutral"
+          variant="subtle"
+          @click="contactModalOpen = false"
+        />
+      </template>
+    </UModal>
   </div>
 </template>
