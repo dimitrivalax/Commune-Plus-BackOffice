@@ -133,13 +133,13 @@ defineExpose({
         class="space-y-4"
         @submit="onSubmit"
       >
-        <UFormField label="Nom" placeholder="Paris" name="name" required>
+        <UFormField label="Nom" placeholder="Venerque" name="name" required>
           <UInput v-model="state.name" class="w-full" />
         </UFormField>
 
         <UFormField
           label="Code postal"
-          placeholder="75001"
+          placeholder="31810"
           name="postal_code"
           required
         >
