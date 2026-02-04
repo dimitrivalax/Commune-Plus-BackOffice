@@ -82,6 +82,14 @@ const baseNavItems: NavigationMenuItem[] = [
       open.value = false;
     },
   },
+  {
+    label: "Doléances",
+    icon: "i-lucide-book",
+    to: "/propositions",
+    onSelect: () => {
+      open.value = false;
+    },
+  },
 ];
 
 const adminOnlyNavItems: NavigationMenuItem[] = [

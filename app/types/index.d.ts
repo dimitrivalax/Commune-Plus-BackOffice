@@ -157,3 +157,30 @@ export interface Commune {
   created_at: string;
   updated_at: string;
 }
+
+export interface Proposition {
+  id: string;
+  commune_id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  photo_url: string | null;
+  user_firstname: string;
+  user_lastname: string;
+  user_email: string;
+  votes_count: number;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+  comments?: PropositionComment[];
+}
+
+export interface PropositionComment {
+  id: string;
+  proposition_id: string;
+  user_firstname: string;
+  user_lastname: string;
+  user_email: string;
+  content: string;
+  created_at: string;
+}
