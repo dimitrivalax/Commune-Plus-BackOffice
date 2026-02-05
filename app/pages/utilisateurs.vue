@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { upperFirst } from 'scule'
-import { getPaginationRowModel } from '@tanstack/table-core'
 import type { Row } from '@tanstack/table-core'
 import type { Utilisateur } from '~/types'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -45,6 +44,7 @@ const authHeaders = computed(() => {
   }
 })
 
+const emailFilter = ref('')
 const columnFilters = ref([{
   id: 'email',
   value: ''
@@ -258,18 +258,30 @@ const columns: TableColumn<Utilisateur>[] = [
   }
 ]
 
-const email = computed({
-  get: (): string => {
-    return (table.value?.tableApi?.getColumn('email')?.getFilterValue() as string) || ''
-  },
-  set: (value: string) => {
-    table.value?.tableApi?.getColumn('email')?.setFilterValue(value || undefined)
-  }
-})
-
 const pagination = ref({
   pageIndex: 0,
   pageSize: 10
+})
+
+// Pagination côté client
+const filteredData = computed(() => {
+  const list = data.value || []
+  const q = (emailFilter.value || '').toLowerCase().trim()
+  if (!q) return list
+  return list.filter((u: Utilisateur) => (u.email || '').toLowerCase().includes(q))
+})
+
+const totalRows = computed(() => filteredData.value.length)
+
+const paginatedData = computed(() => {
+  const fd = filteredData.value
+  const { pageIndex, pageSize } = pagination.value
+  const start = pageIndex * pageSize
+  return fd.slice(start, start + pageSize)
+})
+
+watch(emailFilter, () => {
+  pagination.value.pageIndex = 0
 })
 </script>
 
@@ -286,7 +298,7 @@ const pagination = ref({
     <template #body>
       <div class="flex flex-wrap items-center justify-between gap-1.5 mb-4">
         <UInput
-          v-model="email"
+          v-model="emailFilter"
           class="max-w-sm"
           icon="i-lucide-search"
           placeholder="Filtrer les e-mails..."
@@ -351,11 +363,8 @@ const pagination = ref({
         v-model:column-visibility="columnVisibility"
         v-model:row-selection="rowSelection"
         v-model:pagination="pagination"
-        :pagination-options="{
-          getPaginationRowModel: getPaginationRowModel()
-        }"
         class="shrink-0"
-        :data="data || []"
+        :data="paginatedData"
         :columns="columns"
         :loading="status === 'pending'"
         :ui="{
@@ -371,15 +380,15 @@ const pagination = ref({
       <div class="flex items-center justify-between gap-3 border-t border-default pt-4 mt-auto">
         <div class="text-sm text-muted">
           {{ table?.tableApi?.getFilteredSelectedRowModel().rows.length || 0 }} sur
-          {{ table?.tableApi?.getFilteredRowModel().rows.length || 0 }} ligne(s) sélectionnée(s).
+          {{ totalRows }} ligne(s) sélectionnée(s).
         </div>
 
         <div class="flex items-center gap-1.5">
           <UPagination
-            :default-page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
-            :items-per-page="table?.tableApi?.getState().pagination.pageSize"
-            :total="table?.tableApi?.getFilteredRowModel().rows.length"
-            @update:page="(p: number) => table?.tableApi?.setPageIndex(p - 1)"
+            :page="pagination.pageIndex + 1"
+            :items-per-page="pagination.pageSize"
+            :total="totalRows"
+            @update:page="(p: number) => { pagination.pageIndex = p - 1 }"
           />
         </div>
       </div>

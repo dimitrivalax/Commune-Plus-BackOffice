@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { upperFirst } from 'scule'
-import { getPaginationRowModel } from '@tanstack/table-core'
 import type { Row } from '@tanstack/table-core'
 import type { User } from '~/types'
 
@@ -14,6 +13,7 @@ const UCheckbox = resolveComponent('UCheckbox')
 const toast = useToast()
 const table = useTemplateRef('table')
 
+const emailFilter = ref('')
 const columnFilters = ref([{
   id: 'email',
   value: ''
@@ -184,31 +184,34 @@ const columns: TableColumn<User>[] = [
 
 const statusFilter = ref('all')
 
-watch(() => statusFilter.value, (newVal) => {
-  if (!table?.value?.tableApi) return
-
-  const statusColumn = table.value.tableApi.getColumn('status')
-  if (!statusColumn) return
-
-  if (newVal === 'all') {
-    statusColumn.setFilterValue(undefined)
-  } else {
-    statusColumn.setFilterValue(newVal)
-  }
-})
-
-const email = computed({
-  get: (): string => {
-    return (table.value?.tableApi?.getColumn('email')?.getFilterValue() as string) || ''
-  },
-  set: (value: string) => {
-    table.value?.tableApi?.getColumn('email')?.setFilterValue(value || undefined)
-  }
-})
-
 const pagination = ref({
   pageIndex: 0,
   pageSize: 10
+})
+
+// Pagination côté client (filtres email + statut)
+const filteredData = computed(() => {
+  const list = data.value || []
+  const emailQ = (emailFilter.value || '').toLowerCase().trim()
+  const statusVal = statusFilter.value
+  return list.filter((user: User) => {
+    if (emailQ && !(user.email || '').toLowerCase().includes(emailQ)) return false
+    if (statusVal !== 'all' && user.status !== statusVal) return false
+    return true
+  })
+})
+
+const totalRows = computed(() => filteredData.value.length)
+
+const paginatedData = computed(() => {
+  const fd = filteredData.value
+  const { pageIndex, pageSize } = pagination.value
+  const start = pageIndex * pageSize
+  return fd.slice(start, start + pageSize)
+})
+
+watch([emailFilter, statusFilter], () => {
+  pagination.value.pageIndex = 0
 })
 </script>
 
@@ -229,7 +232,7 @@ const pagination = ref({
     <template #body>
       <div class="flex flex-wrap items-center justify-between gap-1.5">
         <UInput
-          v-model="email"
+          v-model="emailFilter"
           class="max-w-sm"
           icon="i-lucide-search"
           placeholder="Filtrer les e-mails..."
@@ -299,11 +302,8 @@ const pagination = ref({
         v-model:column-visibility="columnVisibility"
         v-model:row-selection="rowSelection"
         v-model:pagination="pagination"
-        :pagination-options="{
-          getPaginationRowModel: getPaginationRowModel()
-        }"
         class="shrink-0"
-        :data="data"
+        :data="paginatedData"
         :columns="columns"
         :loading="status === 'pending'"
         :ui="{
@@ -319,15 +319,15 @@ const pagination = ref({
       <div class="flex items-center justify-between gap-3 border-t border-default pt-4 mt-auto">
         <div class="text-sm text-muted">
           {{ table?.tableApi?.getFilteredSelectedRowModel().rows.length || 0 }} sur
-          {{ table?.tableApi?.getFilteredRowModel().rows.length || 0 }} ligne(s) sélectionnée(s).
+          {{ totalRows }} ligne(s) sélectionnée(s).
         </div>
 
         <div class="flex items-center gap-1.5">
           <UPagination
-            :default-page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
-            :items-per-page="table?.tableApi?.getState().pagination.pageSize"
-            :total="table?.tableApi?.getFilteredRowModel().rows.length"
-            @update:page="(p: number) => table?.tableApi?.setPageIndex(p - 1)"
+            :page="pagination.pageIndex + 1"
+            :items-per-page="pagination.pageSize"
+            :total="totalRows"
+            @update:page="(p: number) => { pagination.pageIndex = p - 1 }"
           />
         </div>
       </div>

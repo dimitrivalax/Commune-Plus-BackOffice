@@ -102,9 +102,9 @@ const columns: TableColumn<MunicipalInfo>[] = [
     accessorKey: 'content',
     header: 'Contenu',
     cell: ({ row }) => {
-      const content = row.original.content
+      const content = row.original.content ?? ''
       // Strip HTML tags for preview
-      const textContent = content.replace(/<[^>]*>/g, '').trim()
+      const textContent = String(content).replace(/<[^>]*>/g, '').trim()
       const preview
         = textContent.length > 100
           ? textContent.substring(0, 100) + '...'
@@ -208,6 +208,15 @@ const pagination = ref({
   pageIndex: 0,
   pageSize: 10
 })
+
+// Pagination côté client (sans v-model:pagination sur UTable pour éviter boucle réactive / fuite)
+const list = computed(() => data.value ?? [])
+const totalRows = computed(() => list.value.length)
+const paginatedData = computed(() => {
+  const { pageIndex, pageSize } = pagination.value
+  const start = pageIndex * pageSize
+  return list.value.slice(start, start + pageSize)
+})
 </script>
 
 <template>
@@ -230,9 +239,8 @@ const pagination = ref({
     <template #body>
       <UTable
         ref="table"
-        v-model:pagination="pagination"
         class="shrink-0"
-        :data="data"
+        :data="paginatedData"
         :columns="columns"
         :loading="status === 'pending'"
         :ui="{
@@ -250,17 +258,15 @@ const pagination = ref({
         class="flex items-center justify-between gap-3 border-t border-default pt-4 mt-auto"
       >
         <div class="text-sm text-muted">
-          {{ data?.length || 0 }} information(s) au total.
+          {{ totalRows }} information(s) au total.
         </div>
 
         <div class="flex items-center gap-1.5">
           <UPagination
-            :default-page="
-              (table?.tableApi?.getState().pagination.pageIndex || 0) + 1
-            "
-            :items-per-page="table?.tableApi?.getState().pagination.pageSize"
-            :total="data?.length || 0"
-            @update:page="(p: number) => table?.tableApi?.setPageIndex(p - 1)"
+            :page="pagination.pageIndex + 1"
+            :items-per-page="pagination.pageSize"
+            :total="totalRows"
+            @update:page="(p: number) => { pagination.pageIndex = p - 1 }"
           />
         </div>
       </div>
