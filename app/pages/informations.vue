@@ -99,30 +99,6 @@ const columns: TableColumn<MunicipalInfo>[] = [
     }
   },
   {
-    accessorKey: 'content',
-    header: 'Contenu',
-    cell: ({ row }) => {
-      const content = row.original.content ?? ''
-      // Strip HTML tags for preview
-      const textContent = String(content).replace(/<[^>]*>/g, '').trim()
-      const preview
-        = textContent.length > 100
-          ? textContent.substring(0, 100) + '...'
-          : textContent
-      return h(
-        'p',
-        {
-          class: 'text-sm text-muted max-w-md cursor-pointer',
-          onClick: (e: Event) => {
-            e.stopPropagation()
-            handleRowClick(row.original)
-          }
-        },
-        preview
-      )
-    }
-  },
-  {
     accessorKey: 'category',
     header: 'Catégorie',
     cell: ({ row }) => {

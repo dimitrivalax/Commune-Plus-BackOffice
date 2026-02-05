@@ -362,7 +362,6 @@ watch(emailFilter, () => {
         v-model:column-filters="columnFilters"
         v-model:column-visibility="columnVisibility"
         v-model:row-selection="rowSelection"
-        v-model:pagination="pagination"
         class="shrink-0"
         :data="paginatedData"
         :columns="columns"
