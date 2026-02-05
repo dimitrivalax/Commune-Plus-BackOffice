@@ -2,6 +2,12 @@ import { getSupabaseAdminClient } from "../../utils/supabase-auth";
 import { z } from "zod";
 import { sendPropositionNotification } from "../../utils/send-proposition-notification";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
 const notifySchema = z.object({
   proposition_id: z.string().uuid(),
   type: z.enum(["vote", "comment"]),
@@ -9,6 +15,7 @@ const notifySchema = z.object({
 });
 
 export default eventHandler(async (event) => {
+  setResponseHeaders(event, corsHeaders);
   const body = await readBody(event);
   const validatedData = notifySchema.parse(body);
   const supabase = getSupabaseAdminClient();

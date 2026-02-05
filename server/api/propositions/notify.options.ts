@@ -1,0 +1,16 @@
+/**
+ * CORS preflight for POST /api/propositions/notify
+ * Required so browsers can send cross-origin requests from the Mobile app (e.g. localhost:5173).
+ */
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "86400",
+};
+
+export default defineEventHandler((event) => {
+  setResponseHeaders(event, corsHeaders);
+  setResponseStatus(event, 204);
+  return null;
+});
