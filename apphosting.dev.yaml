@@ -16,10 +16,10 @@ runConfig:
 env:
   # --- URL publique (build + runtime) ---
   - variable: NUXT_PUBLIC_SITE_URL
-    value: "" # ex: https://backoffice-dev.xxx.web.app
+    value: "https://dev.commune-plus.fr" # ex: https://backoffice-dev.xxx.web.app
     availability: [BUILD, RUNTIME]
   - variable: APP_URL
-    value: "" # ex: https://backoffice-dev.xxx.web.app (liens dans les emails)
+    value: "https://dev.commune-plus.fr" # ex: https://backoffice-dev.xxx.web.app (liens dans les emails)
 
   # --- Supabase (public pour le client) ---
   - variable: NUXT_PUBLIC_SUPABASE_URL
