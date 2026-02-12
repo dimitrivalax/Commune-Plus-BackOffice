@@ -1,0 +1,89 @@
+# Configuration Firebase App Hosting - environnement dev (backoffice)
+# Ce fichier est fusionné avec apphosting.yaml ; les valeurs ici écrasent les défauts.
+# Dans la console Firebase > App Hosting > Settings > Environment, définir le nom "dev".
+
+# Firebase App Hosting Configuration
+# Documentation: https://firebase.google.com/docs/app-hosting/configure
+
+# Settings for Cloud Run
+runConfig:
+  minInstances: 1
+  maxInstances: 20 # Reduced to comply with quota limits in europe-west4 (max 20 CPU)
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  # --- URL publique (build + runtime) ---
+  - variable: NUXT_PUBLIC_SITE_URL
+    value: "" # ex: https://backoffice-dev.xxx.web.app
+    availability: [BUILD, RUNTIME]
+  - variable: APP_URL
+    value: "" # ex: https://backoffice-dev.xxx.web.app (liens dans les emails)
+
+  # --- Supabase (public pour le client) ---
+  - variable: NUXT_PUBLIC_SUPABASE_URL
+    value: ""
+    availability: [BUILD, RUNTIME]
+  - variable: NUXT_PUBLIC_SUPABASE_ANON_KEY
+    value: ""
+    availability: [BUILD, RUNTIME]
+  - variable: SUPABASE_URL
+    value: ""
+    availability: [BUILD, RUNTIME]
+  - variable: SUPABASE_ANON_KEY
+    value: ""
+    availability: [BUILD, RUNTIME]
+
+  # --- Supabase (secret : service role, ne pas mettre en value) ---
+  - variable: SUPABASE_SERVICE_ROLE_KEY
+    secret: SUPABASE_SERVICE_ROLE_KEY
+
+  # --- Resend (emails) ---
+  - variable: RESEND_FROM_EMAIL
+    value: "noreply@commune-plus.fr"
+    availability: [RUNTIME]
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+
+  # --- FCM (notifications push) : JSON du compte de service ---
+  - variable: FCM_SERVICE_ACCOUNT_JSON
+    secret: FCM_SERVICE_ACCOUNT_JSON
+    availability: [RUNTIME]
+
+  # --- Cloudinary (optionnel) ---
+  - variable: CLOUDINARY_CLOUD_NAME
+    value: ""
+    availability: [BUILD, RUNTIME]
+  - variable: CLOUDINARY_UPLOAD_PRESET
+    value: ""
+    availability: [BUILD, RUNTIME]
+  - variable: CLOUDINARY_API_KEY
+    secret: CLOUDINARY_API_KEY
+  - variable: CLOUDINARY_API_SECRET
+    secret: CLOUDINARY_API_SECRET
+  - variable: CLOUDINARY_URL
+    secret: CLOUDINARY_URL
+
+  # --- PostHog (analytics) ---
+  - variable: POSTHOG_API_KEY
+    value: ""
+    availability: [BUILD, RUNTIME]
+  - variable: POSTHOG_HOST
+    value: "https://app.posthog.com"
+    availability: [BUILD, RUNTIME]
+
+  # --- SMTP Infomaniak (optionnel, si pas Resend) ---
+  - variable: SMTP_HOST
+    value: ""
+    availability: [RUNTIME]
+  - variable: SMTP_PORT
+    value: ""
+    availability: [RUNTIME]
+  - variable: SMTP_USER
+    secret: SMTP_USER
+  - variable: SMTP_PASSWORD
+    secret: SMTP_PASSWORD
+  - variable: SMTP_FROM_EMAIL
+    value: ""
+    availability: [RUNTIME]
