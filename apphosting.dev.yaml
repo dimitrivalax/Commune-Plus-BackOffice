@@ -17,23 +17,33 @@ env:
   # --- URL publique (build + runtime) ---
   - variable: NUXT_PUBLIC_SITE_URL
     value: "https://dev.commune-plus.fr" # ex: https://backoffice-dev.xxx.web.app
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: APP_URL
     value: "https://dev.commune-plus.fr" # ex: https://backoffice-dev.xxx.web.app (liens dans les emails)
 
   # --- Supabase (public pour le client) ---
   - variable: NUXT_PUBLIC_SUPABASE_URL
     value: "https://rmkcglmohxphykhbwbge.supabase.co"
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NUXT_PUBLIC_SUPABASE_ANON_KEY
     value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJta2NnbG1vaHhwaHlraGJ3YmdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NTUwNjQsImV4cCI6MjA4MDQzMTA2NH0.BUJn1HxHLzYp2CR7q7yuaMngyEJJcuYtPfw3o7dCj6k"
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: SUPABASE_URL
     value: "https://rmkcglmohxphykhbwbge.supabase.co"
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: SUPABASE_ANON_KEY
     value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJta2NnbG1vaHxwaHlraGJ3YmdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NTUwNjQsImV4cCI6MjA4MDQzMTA2NH0.BUJn1HxHLzYp2CR7q7yuaMngyEJJcuYtPfw3o7dCj6k"
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
 
   # --- Supabase (secret : service role, ne pas mettre en value) ---
   - variable: SUPABASE_SERVICE_ROLE_KEY
@@ -42,22 +52,28 @@ env:
   # --- Resend (emails) ---
   - variable: RESEND_FROM_EMAIL
     value: "noreply@commune-plus.fr"
-    availability: [RUNTIME]
+    availability:
+      - RUNTIME
   - variable: RESEND_API_KEY
     secret: RESEND_API_KEY
 
   # --- FCM (notifications push) : JSON du compte de service ---
   - variable: FCM_SERVICE_ACCOUNT_JSON
     secret: FCM_SERVICE_ACCOUNT_JSON
-    availability: [RUNTIME]
+    availability:
+      - RUNTIME
 
   # --- Cloudinary (optionnel) ---
   - variable: CLOUDINARY_CLOUD_NAME
     value: ""
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: CLOUDINARY_UPLOAD_PRESET
     value: ""
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: CLOUDINARY_API_KEY
     secret: CLOUDINARY_API_KEY
   - variable: CLOUDINARY_API_SECRET
@@ -68,22 +84,29 @@ env:
   # --- PostHog (analytics) ---
   - variable: POSTHOG_API_KEY
     value: ""
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: POSTHOG_HOST
     value: "https://app.posthog.com"
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
 
   # --- SMTP Infomaniak (optionnel, si pas Resend) ---
   - variable: SMTP_HOST
     value: ""
-    availability: [RUNTIME]
+    availability:
+      - RUNTIME
   - variable: SMTP_PORT
     value: ""
-    availability: [RUNTIME]
+    availability:
+      - RUNTIME
   - variable: SMTP_USER
     secret: SMTP_USER
   - variable: SMTP_PASSWORD
     secret: SMTP_PASSWORD
   - variable: SMTP_FROM_EMAIL
     value: ""
-    availability: [RUNTIME]
+    availability:
+      - RUNTIME
