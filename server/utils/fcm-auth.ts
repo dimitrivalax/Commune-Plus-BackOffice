@@ -32,8 +32,6 @@ async function loadServiceAccount(): Promise<ServiceAccount> {
   // Option 2: Depuis un chemin vers un fichier JSON
   const serviceAccountPath = process.env.FCM_SERVICE_ACCOUNT_PATH;
 
-  console.log("serviceAccountJson ::::::::::: ", serviceAccountJson);
-
   let serviceAccount: any;
 
   if (serviceAccountJson) {

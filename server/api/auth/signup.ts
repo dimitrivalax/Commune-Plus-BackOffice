@@ -4,10 +4,6 @@ import { z } from 'zod'
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-console.log('supabaseUrl', supabaseUrl)
-console.log('supabaseAnonKey', supabaseAnonKey)
-console.log('process.env', process.env)
-
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
     'Supabase credentials are missing. Please check your environment variables.'
