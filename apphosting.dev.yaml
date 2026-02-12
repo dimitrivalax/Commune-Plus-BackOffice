@@ -23,16 +23,16 @@ env:
 
   # --- Supabase (public pour le client) ---
   - variable: NUXT_PUBLIC_SUPABASE_URL
-    value: ""
+    value: "https://rmkcglmohxphykhbwbge.supabase.co"
     availability: [BUILD, RUNTIME]
   - variable: NUXT_PUBLIC_SUPABASE_ANON_KEY
-    value: ""
+    value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJta2NnbG1vaHhwaHlraGJ3YmdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NTUwNjQsImV4cCI6MjA4MDQzMTA2NH0.BUJn1HxHLzYp2CR7q7yuaMngyEJJcuYtPfw3o7dCj6k"
     availability: [BUILD, RUNTIME]
   - variable: SUPABASE_URL
-    value: ""
+    value: "https://rmkcglmohxphykhbwbge.supabase.co"
     availability: [BUILD, RUNTIME]
   - variable: SUPABASE_ANON_KEY
-    value: ""
+    value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJta2NnbG1vaHxwaHlraGJ3YmdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NTUwNjQsImV4cCI6MjA4MDQzMTA2NH0.BUJn1HxHLzYp2CR7q7yuaMngyEJJcuYtPfw3o7dCj6k"
     availability: [BUILD, RUNTIME]
 
   # --- Supabase (secret : service role, ne pas mettre en value) ---
