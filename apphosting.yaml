@@ -1,0 +1,94 @@
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+  maxInstances: 20
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+# Environment variables (valeurs issues de .env).
+# Pour les secrets sensibles, préférer Cloud Secret Manager et "secret: NOM" en prod.
+env:
+  # Supabase
+  - variable: SUPABASE_URL
+    value: "https://rmkcglmohxphykhbwbge.supabase.co"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: SUPABASE_ANON_KEY
+    value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJta2NnbG1vaHhwaHlraGJ3YmdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NTUwNjQsImV4cCI6MjA4MDQzMTA2NH0.BUJn1HxHLzYp2CR7q7yuaMngyEJJcuYtPfw3o7dCj6k"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_SUPABASE_URL
+    value: "https://rmkcglmohxphykhbwbge.supabase.co"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_SUPABASE_ANON_KEY
+    value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJta2NnbG1vaHhwaHlraGJ3YmdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NTUwNjQsImV4cCI6MjA4MDQzMTA2NH0.BUJn1HxHLzYp2CR7q7yuaMngyEJJcuYtPfw3o7dCj6k"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Cloudinary
+  - variable: CLOUDINARY_CLOUD_NAME
+    value: "REDACTED"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: CLOUDINARY_UPLOAD_PRESET
+    value: "Commune Plus"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: CLOUDINARY_API_KEY
+    value: "942595455679791"
+    availability:
+      - RUNTIME
+  - variable: CLOUDINARY_URL
+    value: "cloudinary://:<your_api_secret>@REDACTED"
+    availability:
+      - RUNTIME
+
+  # SMTP Infomaniak
+  - variable: SMTP_HOST
+    value: "mail.infomaniak.com"
+    availability:
+      - RUNTIME
+  - variable: SMTP_PORT
+    value: "465"
+    availability:
+      - RUNTIME
+  - variable: SMTP_USER
+    value: "contact@commune-plus.fr"
+    availability:
+      - RUNTIME
+  - variable: SMTP_FROM_EMAIL
+    value: "contact@commune-plus.fr"
+    availability:
+      - RUNTIME
+
+  # PostHog
+  - variable: POSTHOG_API_KEY
+    value: "REDACTED"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: POSTHOG_HOST
+    value: "https://eu.i.posthog.com"
+    availability:
+      - BUILD
+      - RUNTIME
+
+
+  # Resend
+  - variable: RESEND_API_KEY
+    value: "REDACTED"
+    availability:
+      - RUNTIME
+  - variable: RESEND_FROM_EMAIL
+    value: "contact@commune-plus.fr"
+    availability:
+      - RUNTIME
