@@ -47,8 +47,8 @@ env:
     value: "942595455679791"
     availability:
       - RUNTIME
-  - variable: CLOUDINARY_URL
-    value: "cloudinary://:<your_api_secret>@REDACTED"
+  - variable: CLOUDINARY_API_SECRET
+    value: "Maho4I2jP6oaxL2HdBlYPA2mEE8"
     availability:
       - RUNTIME
 
