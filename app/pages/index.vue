@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const shortcuts = [
   {
-    title: 'Informations',
+    title: 'Actualités',
     description: 'Gérer les informations municipales',
     icon: 'i-lucide-info',
     to: '/informations',

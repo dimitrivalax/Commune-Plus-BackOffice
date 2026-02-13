@@ -79,17 +79,7 @@ const emit = defineEmits<{
 
 const isPublishing = ref(false)
 
-const imagePreview = computed(() => {
-  if (!state.image_url || state.image_url.trim() === '') {
-    return null
-  }
-  try {
-    new URL(state.image_url)
-    return state.image_url
-  } catch {
-    return null
-  }
-})
+const galleryCommuneId = computed(() => props.info?.commune_id ?? currentCommune.value?.id ?? null)
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!props.info) return
@@ -261,24 +251,14 @@ defineExpose({
         </UFormField>
 
         <UFormField
-          label="URL de l'image"
-          placeholder="https://exemple.com/image.jpg"
+          label="Image de l'information"
           name="image_url"
         >
-          <UInput v-model="state.image_url" class="w-full" />
+          <GalleryImagePicker
+            v-model="state.image_url"
+            :commune-id="galleryCommuneId"
+          />
         </UFormField>
-
-        <div v-if="imagePreview" class="mt-2">
-          <p class="text-sm text-muted mb-2">
-            Aperçu de l'image :
-          </p>
-          <img
-            :src="imagePreview"
-            alt="Preview"
-            class="max-w-full max-h-64 rounded-lg border border-default object-contain"
-            @error="(e: any) => (e.target.style.display = 'none')"
-          >
-        </div>
 
         <div class="flex justify-between gap-2 pt-2">
           <UButton

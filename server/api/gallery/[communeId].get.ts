@@ -1,0 +1,26 @@
+import { requireAuth } from '../../utils/supabase-auth'
+import { requireCurrentUserProfile } from '../../utils/supabase-auth'
+import { listGalleryImages } from '../../utils/cloudinary'
+
+export default eventHandler(async (event) => {
+  await requireAuth(event)
+  const profile = await requireCurrentUserProfile(event)
+
+  const communeId = getRouterParam(event, 'communeId')
+  if (!communeId) {
+    throw createError({ statusCode: 400, message: 'communeId manquant' })
+  }
+
+  const canAccess = profile.role === 'administrateur' || profile.communeIds.includes(communeId)
+  if (!canAccess) {
+    throw createError({ statusCode: 403, message: 'Accès à cette commune non autorisé' })
+  }
+
+  try {
+    const resources = await listGalleryImages(communeId)
+    return { images: resources }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur lors du chargement de la galerie'
+    throw createError({ statusCode: 500, message })
+  }
+})

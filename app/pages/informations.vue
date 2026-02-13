@@ -198,7 +198,7 @@ const paginatedData = computed(() => {
 <template>
   <UDashboardPanel id="informations">
     <template #header>
-      <UDashboardNavbar title="Informations">
+      <UDashboardNavbar title="Actualités">
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
