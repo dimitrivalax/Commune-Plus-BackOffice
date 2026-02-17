@@ -80,3 +80,9 @@ env:
     value: "contact@commune-plus.fr"
     availability:
       - RUNTIME
+
+  # FCM (notifications push) — compte de service Firebase (JSON complet, pas google-services.json)
+  - variable: FCM_SERVICE_ACCOUNT_JSON
+    secret: FCM_SERVICE_ACCOUNT_JSON
+    availability:
+      - RUNTIME
