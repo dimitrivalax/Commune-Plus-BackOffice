@@ -6,7 +6,6 @@ const UButton = resolveComponent('UButton')
 const UDropdownMenu = resolveComponent('UDropdownMenu')
 const UBadge = resolveComponent('UBadge')
 
-const toast = useToast()
 const table = useTemplateRef('table')
 const { session } = useSupabase()
 
@@ -40,6 +39,8 @@ watch(currentCommune, () => {
 
 provide('refresh-informations', refresh)
 
+const { publish } = usePublishMunicipalInfo({ onSuccess: refresh })
+
 const selectedInfo = ref<MunicipalInfo | null>(null)
 const editModal = useTemplateRef<{ openModal: (info?: MunicipalInfo) => void }>(
   'editModal'
@@ -58,6 +59,13 @@ function getRowItems(row: MunicipalInfo) {
       onSelect() {
         selectedInfo.value = row
         editModal.value?.openModal(row)
+      }
+    },
+    {
+      label: 'Publier',
+      icon: 'i-lucide-send',
+      onSelect() {
+        publish(row)
       }
     },
     {

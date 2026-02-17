@@ -72,12 +72,11 @@ const toast = useToast()
 const refresh = inject<() => void>('refresh-informations')
 const { getAuthHeaders } = useApiAuth()
 const { currentCommune } = useCurrentCommune()
+const { publish, isPublishing } = usePublishMunicipalInfo({ onSuccess: () => refresh?.() })
 
 const emit = defineEmits<{
   delete: [info: MunicipalInfo]
 }>()
-
-const isPublishing = ref(false)
 
 const galleryCommuneId = computed(() => props.info?.commune_id ?? currentCommune.value?.id ?? null)
 
@@ -125,49 +124,9 @@ async function handleDelete() {
   emit('delete', props.info)
 }
 
-async function handlePublish() {
+function handlePublish() {
   if (!props.info) return
-
-  // Utiliser la commune_id de l'information si disponible, sinon la commune courante
-  const communeId = props.info.commune_id || currentCommune.value?.id
-
-  if (!communeId) {
-    toast.add({
-      title: 'Erreur',
-      description:
-        'Aucune commune associée à cette information. Veuillez sélectionner une commune dans le menu ou associer cette information à une commune.',
-      color: 'error'
-    })
-    return
-  }
-
-  isPublishing.value = true
-
-  try {
-    await $fetch(`/api/municipal-info/${props.info.id}/publish`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: {
-        commune_id: communeId
-      }
-    })
-
-    toast.add({
-      title: 'Succès',
-      description: 'La notification a été envoyée aux utilisateurs',
-      color: 'success'
-    })
-  } catch (error: any) {
-    toast.add({
-      title: 'Erreur',
-      description:
-        error.message
-        || 'Une erreur est survenue lors de l\'envoi de la notification',
-      color: 'error'
-    })
-  } finally {
-    isPublishing.value = false
-  }
+  publish(props.info)
 }
 
 function openModal(info?: MunicipalInfo) {
