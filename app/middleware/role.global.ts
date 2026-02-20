@@ -7,7 +7,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return
   }
 
-  const adminOnlyPaths = ['/utilisateurs', '/communes']
+  const adminOnlyPaths = ['/notifications', '/utilisateurs', '/communes']
   if (!adminOnlyPaths.some(path => to.path === path || to.path.startsWith(path + '/'))) {
     return
   }

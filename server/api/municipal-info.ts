@@ -8,13 +8,22 @@ export default eventHandler(async (event) => {
     const profile = await getCurrentUserProfile(event)
     const query = getQuery(event)
     const queryCommuneId = query.commune_id as string | undefined
-    const communeId = getEffectiveCommuneIdForRequest(profile, queryCommuneId)
+    const category = query.category as string | undefined
+    const isAdminNotifications =
+      profile?.role === 'administrateur' &&
+      category === 'Information Générale'
+    const communeId = isAdminNotifications
+      ? undefined
+      : getEffectiveCommuneIdForRequest(profile, queryCommuneId)
 
     let queryBuilder = supabase
       .from('municipal_info')
       .select('*')
       .order('created_at', { ascending: false })
 
+    if (category) {
+      queryBuilder = queryBuilder.eq('category', category)
+    }
     if (communeId) {
       queryBuilder = queryBuilder.eq('commune_id', communeId)
     } else if (profile?.role === 'utilisateur') {

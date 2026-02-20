@@ -21,7 +21,12 @@ export default eventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'public_id invalide' })
   }
 
-  const canAccess = profile.role === 'administrateur' || profile.communeIds.includes(communeId)
+  // Galerie globale "commune-plus" : seul l'admin peut supprimer
+  const isGlobalGallery = communeId === 'commune-plus'
+  const canAccess =
+    isGlobalGallery
+      ? profile.role === 'administrateur'
+      : profile.role === 'administrateur' || profile.communeIds.includes(communeId)
   if (!canAccess) {
     throw createError({ statusCode: 403, message: 'Accès à cette commune non autorisé' })
   }

@@ -1,21 +1,30 @@
 import { requireAuth } from '../../../utils/supabase-auth'
+import { getCurrentUserProfile } from '../../../utils/supabase-auth'
 import { getFCMAccessToken, getFCMProjectId } from '../../../utils/fcm-auth'
 
 /**
  * API endpoint pour publier une information municipale et envoyer une push notification
- * à tous les utilisateurs qui ont cette commune en favoris
+ * - Sans global: à tous les utilisateurs qui ont cette commune en favoris
+ * - Avec global: à tous les utilisateurs de toutes les communes (réservé aux administrateurs)
  *
  * Utilise l'API FCM v1 avec authentification OAuth 2.0
  */
 export default eventHandler(async (event) => {
-  // Vérifier l'authentification
   const { supabase } = await requireAuth(event)
+  const profile = await getCurrentUserProfile(event)
 
   const id = getRouterParam(event, 'id')
-  const body = await readBody(event)
-  const { commune_id } = body
+  const body = await readBody(event) as { commune_id?: string; global?: boolean }
+  const { commune_id: bodyCommuneId, global: isGlobal } = body || {}
 
-  if (!commune_id) {
+  if (isGlobal) {
+    if (profile?.role !== 'administrateur') {
+      throw createError({
+        statusCode: 403,
+        message: 'Accès réservé aux administrateurs'
+      })
+    }
+  } else if (!bodyCommuneId) {
     throw createError({
       statusCode: 400,
       message: 'commune_id is required'
@@ -53,12 +62,15 @@ export default eventHandler(async (event) => {
       })
     }
 
-    // Récupérer tous les tokens de push actifs pour cette commune
-    const { data: pushTokens, error: tokensError } = await supabase
+    // Récupérer les tokens de push : tous si global, sinon pour la commune
+    let tokensQuery = supabase
       .from('push_tokens')
       .select('token, platform, user_id')
-      .eq('commune_id', commune_id)
       .eq('is_active', true)
+    if (!isGlobal) {
+      tokensQuery = tokensQuery.eq('commune_id', bodyCommuneId)
+    }
+    const { data: pushTokens, error: tokensError } = await tokensQuery
 
     if (tokensError) {
       console.error('Error fetching push tokens:', tokensError)
@@ -71,7 +83,9 @@ export default eventHandler(async (event) => {
     if (!pushTokens || pushTokens.length === 0) {
       return {
         success: true,
-        message: 'Aucun token de push trouvé pour cette commune',
+        message: isGlobal
+          ? 'Aucun token de push trouvé'
+          : 'Aucun token de push trouvé pour cette commune',
         tokens_sent: 0
       }
     }
@@ -115,7 +129,7 @@ export default eventHandler(async (event) => {
             data: {
               type: 'municipal_info',
               info_id: String(info.id),
-              commune_id: String(commune_id)
+              commune_id: String(info.commune_id ?? '')
             },
             android: {
               priority: 'high',

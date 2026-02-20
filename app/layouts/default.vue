@@ -13,7 +13,7 @@ const {
   setCurrentCommune,
   refreshUserCommunes,
 } = useCurrentCommune();
-const { isAdministrator } = useCurrentUser();
+const { isAdministrator, refreshFromCache } = useCurrentUser();
 
 const editCommuneModal = useTemplateRef<{ openModal: () => void }>(
   "editCommuneModal",
@@ -94,6 +94,14 @@ const baseNavItems: NavigationMenuItem[] = [
 
 const adminOnlyNavItems: NavigationMenuItem[] = [
   {
+    label: "Notifications",
+    icon: "i-lucide-bell",
+    to: "/notifications",
+    onSelect: () => {
+      open.value = false;
+    },
+  },
+  {
     label: "Utilisateurs",
     icon: "i-lucide-user-circle",
     to: "/utilisateurs",
@@ -141,6 +149,8 @@ const groups = computed(() => [
 ]);
 
 onMounted(async () => {
+  refreshFromCache();
+
   const cookie = useCookie("cookie-consent");
   if (cookie.value === "accepted") {
     return;
@@ -221,20 +231,21 @@ onMounted(async () => {
           />
         </div>
 
-        <div
-          v-if="
-            isAdministrator &&
-            !userCommunesPending &&
-            communeSelectItems.length > 0
-          "
-          class="px-3 py-2"
-        >
+        <div v-if="isAdministrator" class="px-3 py-2">
           <UFormField label="Commune courante" name="commune">
+            <template v-if="userCommunesPending">
+              <div class="flex items-center gap-2 py-2 text-sm text-muted">
+                <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
+                <span>Chargement des communes…</span>
+              </div>
+            </template>
             <USelect
+              v-else-if="communeSelectItems.length > 0"
               v-model="selectedCommuneId"
               :items="communeSelectItems"
               placeholder="Sélectionner une commune"
             />
+            <div v-else class="py-2 text-sm text-muted">Aucune commune</div>
           </UFormField>
         </div>
 

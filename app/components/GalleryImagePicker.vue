@@ -29,6 +29,7 @@ const emit = defineEmits<{
 }>()
 
 const { getAuthHeaders } = useApiAuth()
+const { session } = useSupabase()
 const { currentCommune } = useCurrentCommune()
 const toast = useToast()
 
@@ -97,6 +98,11 @@ async function onFileSelected(event: Event) {
     const formData = new FormData()
     formData.append('commune_id', cid)
     formData.append('file', file)
+    // Fallback pour l'auth : certains environnements n'envoient pas Authorization avec FormData
+    const token = session.value?.access_token
+    if (token) {
+      formData.append('access_token', token)
+    }
     const result = await $fetch<{ secure_url: string; public_id: string }>('/api/gallery/upload', {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -147,7 +153,7 @@ defineExpose({
 <template>
   <div class="gallery-image-picker">
     <p class="text-sm text-muted mb-2">
-      Choisissez une photo dans la galerie de la commune, ajoutez-en ou supprimez-en.
+      {{ effectiveCommuneId === 'commune-plus' ? 'Choisissez une photo dans la galerie Commune Plus, ajoutez-en ou supprimez-en.' : 'Choisissez une photo dans la galerie de la commune, ajoutez-en ou supprimez-en.' }}
     </p>
     <div
       v-if="!effectiveCommuneId && showWhenNoCommune"

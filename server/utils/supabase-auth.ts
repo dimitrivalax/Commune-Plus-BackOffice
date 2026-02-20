@@ -53,13 +53,40 @@ export async function getAuthenticatedSupabaseClient(event: H3Event): Promise<{
   // Récupérer le token depuis les headers Authorization ou depuis les cookies
   const authHeader = getHeader(event, 'authorization')
   const token
-    = authHeader?.replace('Bearer ', '') || getCookie(event, 'sb-access-token')
+    = authHeader?.replace(/^Bearer\s+/i, '').trim() || getCookie(event, 'sb-access-token')
 
   if (!token) {
     return null
   }
 
-  // Créer un client Supabase avec le token de l'utilisateur
+  return createSupabaseClientWithToken(supabaseUrl, supabaseAnonKey, token)
+}
+
+/**
+ * Crée un client Supabase authentifié à partir d'un token explicite.
+ * Utile pour les requêtes multipart (upload) où le header Authorization peut être perdu.
+ */
+export async function getAuthenticatedSupabaseClientFromToken(token: string): Promise<{
+  supabase: SupabaseClient
+  user: User | null
+} | null> {
+  const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseCredentials()
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw createError({
+      statusCode: 500,
+      message: 'Supabase configuration is missing'
+    })
+  }
+  const t = token.replace(/^Bearer\s+/i, '').trim()
+  if (!t) return null
+  return createSupabaseClientWithToken(supabaseUrl, supabaseAnonKey, t)
+}
+
+async function createSupabaseClientWithToken(
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  token: string
+): Promise<{ supabase: SupabaseClient; user: User | null } | null> {
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: {
       headers: {
@@ -72,7 +99,6 @@ export async function getAuthenticatedSupabaseClient(event: H3Event): Promise<{
     }
   })
 
-  // Vérifier que le token est valide et obtenir l'utilisateur
   const {
     data: { user },
     error
@@ -114,15 +140,14 @@ export interface CurrentUserProfile {
 }
 
 /**
- * Récupère le profil de l'utilisateur connecté (role + communes).
- * À utiliser après requireAuth(). Lance 404 si l'utilisateur n'existe pas dans la table utilisateur.
+ * Récupère le profil utilisateur à partir d'une auth déjà obtenue (ex. token formulaire upload).
  */
-export async function getCurrentUserProfile(event: H3Event): Promise<CurrentUserProfile | null> {
-  const auth = await getAuthenticatedSupabaseClient(event)
-  if (!auth) return null
-
+export async function getCurrentUserProfileFromAuth(auth: {
+  supabase: SupabaseClient
+  user: User | null
+}): Promise<CurrentUserProfile | null> {
+  if (!auth.user) return null
   const { supabase, user } = auth
-  if (!user) return null
 
   const { data: utilisateurData, error: utilisateurError } = await supabase
     .from('utilisateur')
@@ -150,6 +175,17 @@ export async function getCurrentUserProfile(event: H3Event): Promise<CurrentUser
     role: utilisateurData.role as UserProfileRole,
     communeIds
   }
+}
+
+/**
+ * Récupère le profil de l'utilisateur connecté (role + communes).
+ * À utiliser après requireAuth(). Lance 404 si l'utilisateur n'existe pas dans la table utilisateur.
+ */
+export async function getCurrentUserProfile(event: H3Event): Promise<CurrentUserProfile | null> {
+  const auth = await getAuthenticatedSupabaseClient(event)
+  if (!auth) return null
+
+  return getCurrentUserProfileFromAuth(auth)
 }
 
 /**

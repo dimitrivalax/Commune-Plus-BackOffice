@@ -11,7 +11,12 @@ export default eventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'communeId manquant' })
   }
 
-  const canAccess = profile.role === 'administrateur' || profile.communeIds.includes(communeId)
+  // Galerie globale "commune-plus" réservée aux administrateurs
+  const isGlobalGallery = communeId === 'commune-plus'
+  const canAccess =
+    isGlobalGallery
+      ? profile.role === 'administrateur'
+      : profile.role === 'administrateur' || profile.communeIds.includes(communeId)
   if (!canAccess) {
     throw createError({ statusCode: 403, message: 'Accès à cette commune non autorisé' })
   }
