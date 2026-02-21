@@ -142,6 +142,8 @@ const dropdownItems = computed(() => [[{
   icon: 'i-lucide-archive',
   onSelect: () => updateStatus('archive')
 }]])
+
+const { displayAddress, showLocalisation, isResolvingAddress } = useSignalementAddress(toRef(props, 'signalement'))
 </script>
 
 <template>
@@ -192,8 +194,66 @@ const dropdownItems = computed(() => [[{
     </div>
 
     <div class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
-      <!-- Section de gestion du signalement -->
-      <div class="bg-default/50 rounded-lg p-4 space-y-4 border border-default">
+      <div v-if="signalement.description">
+        <h3 class="font-semibold text-highlighted mb-2">
+          Description
+        </h3>
+        <p class="whitespace-pre-wrap">
+          {{ signalement.description }}
+        </p>
+      </div>
+
+      <div v-if="signalement.reponse">
+        <h3 class="font-semibold text-highlighted mb-2">
+          Réponse
+        </h3>
+        <p class="whitespace-pre-wrap">
+          {{ signalement.reponse }}
+        </p>
+      </div>
+
+      <div v-if="showLocalisation">
+        <h3 class="font-semibold text-highlighted mb-2">
+          Localisation
+        </h3>
+        <p class="mb-2">
+          <span v-if="isResolvingAddress" class="text-muted">
+            Résolution de l'adresse…
+          </span>
+          <template v-else>
+            📍 {{ displayAddress }}
+          </template>
+        </p>
+        <p v-if="signalement.address?.trim() && signalement.latitude != null && signalement.longitude != null" class="text-muted text-sm">
+          Coordonnées : {{ signalement.latitude.toFixed(6) }}, {{ signalement.longitude.toFixed(6) }}
+        </p>
+        <div v-if="signalement.latitude != null && signalement.longitude != null" class="mt-2">
+          <a
+            :href="`https://www.openstreetmap.org/?mlat=${signalement.latitude}&mlon=${signalement.longitude}#map=17/${signalement.latitude}/${signalement.longitude}`"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-primary hover:underline"
+          >
+            Voir sur OpenStreetMap
+          </a>
+        </div>
+      </div>
+
+      <div v-if="signalement.photo_url">
+        <h3 class="font-semibold text-highlighted mb-2">
+          Photo
+        </h3>
+        <img
+          :src="signalement.photo_url"
+          :alt="`Photo du signalement ${signalement.id}`"
+          class="max-w-full rounded-lg border border-default"
+        >
+        <p v-if="signalement.comment" class="mt-3 text-muted italic whitespace-pre-wrap">
+          {{ signalement.comment }}
+        </p>
+      </div>
+            <!-- Section de gestion du signalement -->
+            <div class="bg-default/50 rounded-lg p-4 space-y-4 border border-default">
         <h3 class="font-semibold text-highlighted mb-3">
           Gestion du signalement
         </h3>
@@ -237,60 +297,6 @@ const dropdownItems = computed(() => [[{
             @click="updateSignalement"
           />
         </div>
-      </div>
-
-      <div v-if="signalement.description">
-        <h3 class="font-semibold text-highlighted mb-2">
-          Description
-        </h3>
-        <p class="whitespace-pre-wrap">
-          {{ signalement.description }}
-        </p>
-      </div>
-
-      <div v-if="signalement.reponse">
-        <h3 class="font-semibold text-highlighted mb-2">
-          Réponse
-        </h3>
-        <p class="whitespace-pre-wrap">
-          {{ signalement.reponse }}
-        </p>
-      </div>
-
-      <div v-if="signalement.address || (signalement.latitude && signalement.longitude)">
-        <h3 class="font-semibold text-highlighted mb-2">
-          Localisation
-        </h3>
-        <p v-if="signalement.address" class="mb-2">
-          📍 {{ signalement.address }}
-        </p>
-        <p v-if="signalement.latitude && signalement.longitude" class="text-muted text-sm">
-          Coordonnées: {{ signalement.latitude.toFixed(6) }}, {{ signalement.longitude.toFixed(6) }}
-        </p>
-        <div v-if="signalement.latitude && signalement.longitude" class="mt-2">
-          <a
-            :href="`https://www.google.com/maps?q=${signalement.latitude},${signalement.longitude}`"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-primary hover:underline"
-          >
-            Voir sur Google Maps
-          </a>
-        </div>
-      </div>
-
-      <div v-if="signalement.photo_url">
-        <h3 class="font-semibold text-highlighted mb-2">
-          Photo
-        </h3>
-        <img
-          :src="signalement.photo_url"
-          :alt="`Photo du signalement ${signalement.id}`"
-          class="max-w-full rounded-lg border border-default"
-        >
-        <p v-if="signalement.comment" class="mt-3 text-muted italic whitespace-pre-wrap">
-          {{ signalement.comment }}
-        </p>
       </div>
     </div>
   </UDashboardPanel>
