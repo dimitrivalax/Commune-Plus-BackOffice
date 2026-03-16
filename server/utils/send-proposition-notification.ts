@@ -98,7 +98,10 @@ export async function sendPropositionNotification(
 
         if (platform === "ios") {
           message.message.apns = {
-            headers: { "apns-priority": "10" },
+            headers: {
+              "apns-priority": "10",
+              "apns-topic": "com.communeplus.app",
+            },
             payload: {
               aps: {
                 sound: "default",

@@ -96,6 +96,9 @@ export async function sendReservationNotification(
 
             if (t.platform === "ios") {
               message.message.apns = {
+                headers: {
+                  "apns-topic": "com.communeplus.app",
+                },
                 payload: {
                   aps: {
                     sound: "default",
