@@ -20,6 +20,7 @@ const tabItems = [
   },
 ];
 const selectedTab = ref("active");
+const searchQuery = ref("");
 
 const { currentCommune } = useCurrentCommune();
 const { session } = useSupabase();
@@ -54,17 +55,46 @@ watch(
   { immediate: true },
 );
 
+function propositionMatchesSearch(p: Proposition, q: string) {
+  if (!q)
+    return true;
+  const needle = q.toLowerCase();
+  const hay = [
+    p.name,
+    p.description,
+    p.user_firstname,
+    p.user_lastname,
+    p.user_email,
+  ];
+  return hay.some((v) => (v ?? "").toLowerCase().includes(needle));
+}
+
 const filteredPropositions = computed(() => {
-  if (selectedTab.value === "all") {
-    return propositions.value;
-  }
+  let list = propositions.value;
   if (selectedTab.value === "active") {
-    return propositions.value.filter((p) => !p.is_archived);
+    list = list.filter((p) => !p.is_archived);
+  } else if (selectedTab.value === "archive") {
+    list = list.filter((p) => p.is_archived);
   }
-  return propositions.value.filter((p) => p.is_archived);
+
+  const q = searchQuery.value.trim();
+  if (q) {
+    list = list.filter((p) => propositionMatchesSearch(p, q));
+  }
+  return list;
 });
 
 const selectedProposition = ref<Proposition | null>(null);
+
+watch(filteredPropositions, () => {
+  if (
+    !filteredPropositions.value.find(
+      (p) => p.id === selectedProposition.value?.id,
+    )
+  ) {
+    selectedProposition.value = null;
+  }
+});
 
 const isPropositionPanelOpen = computed({
   get() {
@@ -112,17 +142,30 @@ const handleUpdate = (updated: Proposition) => {
 
     <template #body>
       <div
-        class="flex items-center justify-between gap-4 mb-4 pb-4 border-b border-default"
+        class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-3 mb-4 pb-4 border-b border-default items-center"
       >
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 min-w-0 w-max max-w-full">
           <UTabs
             v-model="selectedTab"
             :items="tabItems"
             :content="false"
             size="xs"
+            :ui="{ root: 'w-max max-w-full', list: '!w-max max-w-full', trigger: 'grow-0' }"
           />
         </div>
-        <UBadge :label="filteredPropositions.length" variant="subtle" />
+        <div class="flex items-center gap-3 justify-end min-w-0">
+          <UInput
+            v-model="searchQuery"
+            class="w-full min-w-48 max-w-sm"
+            icon="i-lucide-search"
+            placeholder="Rechercher (titre, description, auteur...)"
+          />
+          <UBadge
+            class="shrink-0"
+            :label="filteredPropositions.length"
+            variant="subtle"
+          />
+        </div>
       </div>
 
       <div class="flex gap-4 h-[calc(100vh-12rem)]">

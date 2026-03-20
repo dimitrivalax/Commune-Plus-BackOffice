@@ -193,13 +193,33 @@ const pagination = ref({
   pageSize: 10
 })
 
+const searchQuery = ref('')
+
+function municipalInfoMatchesSearch(info: MunicipalInfo, q: string) {
+  if (!q)
+    return true
+  const needle = q.toLowerCase()
+  const hay = [info.title, info.content, info.category]
+  return hay.some(v => (v ?? '').toLowerCase().includes(needle))
+}
+
 // Pagination côté client (sans v-model:pagination sur UTable pour éviter boucle réactive / fuite)
 const list = computed(() => data.value ?? [])
-const totalRows = computed(() => list.value.length)
+const filteredList = computed(() => {
+  const q = searchQuery.value.trim()
+  if (!q)
+    return list.value
+  return list.value.filter(info => municipalInfoMatchesSearch(info, q))
+})
+const totalRows = computed(() => filteredList.value.length)
 const paginatedData = computed(() => {
   const { pageIndex, pageSize } = pagination.value
   const start = pageIndex * pageSize
-  return list.value.slice(start, start + pageSize)
+  return filteredList.value.slice(start, start + pageSize)
+})
+
+watch(searchQuery, () => {
+  pagination.value.pageIndex = 0
 })
 </script>
 
@@ -221,6 +241,13 @@ const paginatedData = computed(() => {
     </template>
 
     <template #body>
+      <UInput
+        v-model="searchQuery"
+        class="max-w-sm mb-4"
+        icon="i-lucide-search"
+        placeholder="Rechercher par titre, contenu ou catégorie..."
+      />
+
       <UTable
         ref="table"
         class="shrink-0"

@@ -219,13 +219,38 @@ const pagination = ref({
   pageSize: 10
 })
 
-// Pagination côté client
-const totalRows = computed(() => (data.value || []).length)
+const searchQuery = ref('')
+
+function salleMatchesSearch(s: Salle, q: string) {
+  if (!q)
+    return true
+  const needle = q.toLowerCase()
+  const hay = [
+    s.nom,
+    s.adresse,
+    s.description,
+    String(s.nombre_max_places)
+  ]
+  return hay.some(v => (v ?? '').toString().toLowerCase().includes(needle))
+}
+
+// Pagination côté client (liste filtrée par recherche)
+const list = computed(() => data.value ?? [])
+const filteredList = computed(() => {
+  const q = searchQuery.value.trim()
+  if (!q)
+    return list.value
+  return list.value.filter(s => salleMatchesSearch(s, q))
+})
+const totalRows = computed(() => filteredList.value.length)
 const paginatedData = computed(() => {
-  const list = data.value || []
   const { pageIndex, pageSize } = pagination.value
   const start = pageIndex * pageSize
-  return list.slice(start, start + pageSize)
+  return filteredList.value.slice(start, start + pageSize)
+})
+
+watch(searchQuery, () => {
+  pagination.value.pageIndex = 0
 })
 </script>
 
@@ -247,6 +272,13 @@ const paginatedData = computed(() => {
     </template>
 
     <template #body>
+      <UInput
+        v-model="searchQuery"
+        class="max-w-sm mb-4"
+        icon="i-lucide-search"
+        placeholder="Rechercher par nom, adresse, description ou places max..."
+      />
+
       <UTable
         ref="table"
         class="shrink-0"

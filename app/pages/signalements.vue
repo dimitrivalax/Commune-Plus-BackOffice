@@ -24,6 +24,7 @@ const tabItems = [{
 }]
 const selectedTab = ref('all')
 const viewMode = ref<'table' | 'map'>('table')
+const searchQuery = ref('')
 
 const { currentCommune } = useCurrentCommune()
 const { session } = useSupabase()
@@ -54,13 +55,34 @@ watch([() => session.value?.access_token, currentCommune], () => {
   }
 }, { immediate: true })
 
-// Filter signalements based on the selected tab
-const filteredSignalements = computed(() => {
-  if (selectedTab.value === 'all') {
-    return signalements.value
-  }
+function signalementMatchesSearch(s: Signalement, q: string) {
+  if (!q)
+    return true
+  const needle = q.toLowerCase()
+  const hay = [
+    s.description,
+    s.address,
+    s.comment,
+    s.last_name,
+    s.first_name,
+    s.email,
+    s.phone,
+    s.reponse
+  ]
+  return hay.some(v => (v ?? '').toLowerCase().includes(needle))
+}
 
-  return signalements.value.filter(s => s.status === selectedTab.value)
+// Filter by tab, then by search (description, address, comment, names, email, phone, réponse)
+const filteredSignalements = computed(() => {
+  let list = selectedTab.value === 'all'
+    ? signalements.value
+    : signalements.value.filter(s => s.status === selectedTab.value)
+
+  const q = searchQuery.value.trim()
+  if (q) {
+    list = list.filter(s => signalementMatchesSearch(s, q))
+  }
+  return list
 })
 
 const selectedSignalement = ref<Signalement | null>()
@@ -117,8 +139,8 @@ const handleMarkerClick = (signalement: Signalement) => {
 
     <template #body>
       <!-- Contrôles (boutons viewMode et tabs) -->
-      <div class="flex items-center justify-between gap-4 mb-4 pb-4 border-b border-default">
-        <div class="flex items-center gap-2">
+      <div class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-3 mb-4 pb-4 border-b border-default items-center">
+        <div class="flex items-center gap-2 flex-wrap min-w-0 w-max max-w-full">
           <UFieldGroup>
             <UButton
               :variant="viewMode === 'table' ? 'solid' : 'outline'"
@@ -138,9 +160,22 @@ const handleMarkerClick = (signalement: Signalement) => {
             :items="tabItems"
             :content="false"
             size="xs"
+            :ui="{ root: 'w-max max-w-full', list: '!w-max max-w-full', trigger: 'grow-0' }"
           />
         </div>
-        <UBadge :label="filteredSignalements.length" variant="subtle" />
+        <div class="flex items-center gap-3 justify-end min-w-0">
+          <UInput
+            v-model="searchQuery"
+            class="w-full min-w-48 max-w-sm"
+            icon="i-lucide-search"
+            placeholder="Rechercher (description, adresse, contact, réponse...)"
+          />
+          <UBadge
+            class="shrink-0"
+            :label="filteredSignalements.length"
+            variant="subtle"
+          />
+        </div>
       </div>
 
       <!-- Contenu principal : liste + détail en deux colonnes sur desktop -->
