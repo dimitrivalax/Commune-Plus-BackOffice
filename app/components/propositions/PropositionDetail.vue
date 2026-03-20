@@ -20,6 +20,7 @@ const fullProposition = ref<Proposition | null>(null);
 const loading = ref(false);
 const newComment = ref("");
 const isSubmittingComment = ref(false);
+const isImageModalOpen = ref(false);
 
 const authHeaders = computed(() => {
   const currentSession = session.value;
@@ -169,7 +170,11 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
           <UIcon name="i-lucide-image" />
           Photo
         </h3>
-        <img :src="proposition.photo_url" class="max-w-full rounded-xl border border-default shadow-sm" />
+        <img
+          :src="proposition.photo_url"
+          class="h-48 w-48 object-cover rounded-xl border border-default shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
+          @click="isImageModalOpen = true"
+        />
       </div>
 
       <UDivider />
@@ -217,4 +222,17 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
       </div>
     </div>
   </UDashboardPanel>
+
+  <UModal v-model:open="isImageModalOpen">
+    <template #body>
+      <div class="flex flex-col items-center justify-center p-2 gap-4">
+        <img
+          v-if="proposition.photo_url"
+          :src="proposition.photo_url"
+          :alt="`Photo de la doléance ${proposition.id}`"
+          class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-xl"
+        >
+      </div>
+    </template>
+  </UModal>
 </template>

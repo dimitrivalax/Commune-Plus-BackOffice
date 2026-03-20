@@ -146,7 +146,7 @@ const handleMarkerClick = (signalement: Signalement) => {
       <!-- Contenu principal : liste + détail en deux colonnes sur desktop -->
       <div class="flex gap-4 h-[calc(100vh-12rem)]">
         <!-- Colonne gauche : Liste ou Carte (plus étroite) -->
-        <div class="w-1/3 min-w-[300px] max-w-[400px]">
+        <div class="w-1/3 min-w-[300px] max-w-[400px] h-full overflow-hidden">
           <div v-if="viewMode === 'table'" class="h-full">
             <SignalementsList v-model="selectedSignalement" :signalements="filteredSignalements" />
           </div>
@@ -163,7 +163,7 @@ const handleMarkerClick = (signalement: Signalement) => {
         </div>
 
         <!-- Colonne droite : Détail du signalement (plus large) -->
-        <div v-if="selectedSignalement" class="hidden lg:block flex-1 min-w-0">
+        <div v-if="selectedSignalement" class="hidden lg:block flex-1 min-w-0 h-full overflow-hidden">
           <SignalementDetail
             :signalement="selectedSignalement"
             @close="selectedSignalement = null"

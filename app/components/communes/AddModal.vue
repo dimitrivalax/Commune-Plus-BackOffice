@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import * as z from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
+import type { Commune } from "~/types";
+
+const emit = defineEmits<{
+  add: [commune: Commune];
+}>();
 
 const schema = z.object({
   name: z.string().min(1, "Le nom est requis"),
@@ -33,7 +38,7 @@ function resetForm() {
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
-    await $fetch("/api/communes/create", {
+    const newCommune = await $fetch<Commune>("/api/communes/create", {
       method: "POST",
       headers: getAuthHeaders(),
       body: {
@@ -43,6 +48,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         logo_url: event.data.logo_url || null,
       },
     });
+
+    emit("add", newCommune);
 
     toast.add({
       title: "Succès",

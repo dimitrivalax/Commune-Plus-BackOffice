@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { format, isToday } from 'date-fns'
 import type { Signalement } from '~/types'
 
@@ -6,7 +7,7 @@ const props = defineProps<{
   signalements: Signalement[]
 }>()
 
-const signalementsRefs = ref<Element[]>([])
+const signalementsRefs: Record<string | number, Element> = {}
 
 const selectedSignalement = defineModel<Signalement | null>()
 
@@ -14,9 +15,9 @@ watch(selectedSignalement, () => {
   if (!selectedSignalement.value) {
     return
   }
-  const ref = signalementsRefs.value[selectedSignalement.value.id]
-  if (ref) {
-    ref.scrollIntoView({ block: 'nearest' })
+  const refEl = signalementsRefs[selectedSignalement.value.id]
+  if (refEl) {
+    refEl.scrollIntoView({ block: 'nearest' })
   }
 })
 
@@ -44,11 +45,11 @@ defineShortcuts({
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'en_attente':
-      return 'orange'
+      return 'warning'
     case 'en_cours':
-      return 'blue'
+      return 'info'
     case 'traite':
-      return 'green'
+      return 'success'
     case 'archive':
       return 'neutral'
     default:
@@ -77,11 +78,11 @@ const isUnread = (signalement: Signalement) => {
 </script>
 
 <template>
-  <div class="overflow-y-auto divide-y divide-default">
+  <div class="h-full overflow-y-auto divide-y divide-default">
     <div
-      v-for="(signalement, index) in signalements"
-      :key="index"
-      :ref="el => { signalementsRefs[signalement.id] = el as Element }"
+      v-for="signalement in signalements"
+      :key="signalement.id"
+      :ref="(el: any) => { if (el) signalementsRefs[signalement.id] = el }"
     >
       <div
         class="p-4 sm:px-6 text-sm cursor-pointer border-l-2 transition-colors"

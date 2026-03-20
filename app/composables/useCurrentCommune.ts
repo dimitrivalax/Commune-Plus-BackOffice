@@ -11,17 +11,31 @@ export const useCurrentCommune = () => {
   const sessionToken = computed(() => useSupabase().session.value?.access_token ?? '')
   const fetchKey = computed(() => `user-communes-${sessionToken.value || 'anon'}`)
 
-  // Charger les communes de l'utilisateur connecté
+  // Uniquement côté client : en SSR la session n'existe pas (auth middleware client-only),
+  // un fetch serveur partirait sans Bearer et échouerait — liste vide jusqu'à une navigation.
   const authHeaders = computed(() => getAuthHeaders())
   const { data: userCommunes, pending: userCommunesPending, refresh: refreshUserCommunes } = useFetch<Commune[]>('/api/user/communes', {
     key: fetchKey,
-    lazy: true,
+    server: false,
+    lazy: false,
     default: () => [],
     headers: authHeaders
   })
 
+  // Session parfois hydratée après le premier tick ; relancer le fetch quand le jeton est disponible.
+  if (import.meta.client) {
+    watch(sessionToken, (token) => {
+      if (token) {
+        void refreshUserCommunes()
+      }
+    })
+  }
+
   // Initialiser la commune courante avec la première commune si aucune n'est sélectionnée
   watchEffect(() => {
+    if (!import.meta.client) {
+      return
+    }
     if (!currentCommune.value && userCommunes.value && userCommunes.value.length > 0) {
       // Essayer de récupérer depuis le localStorage
       const savedCommuneId = localStorage.getItem('current_commune_id')
@@ -40,6 +54,9 @@ export const useCurrentCommune = () => {
 
   // Sauvegarder dans localStorage quand la commune change
   watch(currentCommune, (newCommune) => {
+    if (!import.meta.client) {
+      return
+    }
     if (newCommune) {
       localStorage.setItem('current_commune_id', newCommune.id)
     } else {

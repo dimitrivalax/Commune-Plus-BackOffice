@@ -45,13 +45,14 @@ watch(
 
 const emit = defineEmits<{
   delete: [commune: Commune];
+  update: [commune: Commune];
 }>();
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!props.commune) return;
 
   try {
-    await $fetch(`/api/communes/${props.commune.id}`, {
+    const updatedCommune = await $fetch<Commune>(`/api/communes/${props.commune.id}`, {
       method: "PUT",
       headers: getAuthHeaders(),
       body: {
@@ -61,6 +62,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         logo_url: event.data.logo_url || null,
       },
     });
+
+    emit("update", updatedCommune);
 
     toast.add({
       title: "Succès",

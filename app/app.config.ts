@@ -1,8 +1,17 @@
 export default defineAppConfig({
   ui: {
     colors: {
-      primary: 'green',
-      neutral: 'zinc'
-    }
-  }
-})
+      primary: "green",
+      neutral: "zinc",
+    },
+    modal: {
+      variants: {
+        fullscreen: {
+          false: {
+            content: "w-[60vw] max-w-none rounded-lg shadow-lg ring ring-default",
+          },
+        },
+      },
+    },
+  },
+});

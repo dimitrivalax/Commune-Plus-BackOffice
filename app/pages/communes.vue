@@ -18,11 +18,11 @@ const { session } = useSupabase()
 const authHeaders = computed(() => {
   const currentSession = session.value
   if (!currentSession?.access_token) {
-    return {}
+    return {} as Record<string, string>
   }
   return {
     Authorization: `Bearer ${currentSession.access_token}`
-  }
+  } as Record<string, string>
 })
 
 const nameFilter = ref('')
@@ -208,7 +208,7 @@ const pagination = ref({
 
 // Pagination côté client : filtrer puis tronquer par page
 const filteredData = computed(() => {
-  const list = data.value || []
+  const list = (data.value as Commune[] | null) || []
   const q = (nameFilter.value || '').toLowerCase().trim()
   if (!q) return list
   return list.filter((c: Commune) => (c.name || '').toLowerCase().includes(q))
@@ -226,6 +226,24 @@ const paginatedData = computed(() => {
 watch(nameFilter, () => {
   pagination.value.pageIndex = 0
 })
+
+function handleUpdate(updated: Commune) {
+  if (!data.value) return
+  const list = data.value as Commune[]
+  const index = list.findIndex((c: Commune) => c.id === updated.id)
+  if (index !== -1) {
+    list[index] = updated
+  }
+  if (selectedCommune.value?.id === updated.id) {
+    selectedCommune.value = updated
+  }
+}
+
+function handleAdd(newCommune: Commune) {
+  if (!data.value) return
+  const list = data.value as Commune[]
+  list.unshift(newCommune)
+}
 </script>
 
 <template>
@@ -319,10 +337,11 @@ watch(nameFilter, () => {
     </template>
   </UDashboardPanel>
 
-  <CommunesAddModal ref="addModal" />
+  <CommunesAddModal ref="addModal" @add="handleAdd" />
   <CommunesEditModal
     ref="editModal"
     :commune="selectedCommune"
+    @update="handleUpdate"
     @delete="(commune) => {
       selectedCommune = commune
       deleteModal?.openModal()
