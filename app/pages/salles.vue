@@ -38,7 +38,7 @@ watch(currentCommune, () => {
 provide('refresh-salles', refresh)
 
 const selectedSalle = ref<Salle | null>(null)
-const editModal = useTemplateRef<{ openModal: () => void }>('editModal')
+const editModal = useTemplateRef<{ openModal: (salle?: Salle | null) => void }>('editModal')
 const deleteModal = useTemplateRef<{ openModal: () => void }>('deleteModal')
 
 function getRowItems(row: Salle) {
@@ -52,7 +52,7 @@ function getRowItems(row: Salle) {
       icon: 'i-lucide-edit',
       onSelect() {
         selectedSalle.value = row
-        editModal.value?.openModal()
+        editModal.value?.openModal(row)
       }
     },
     {
@@ -72,7 +72,7 @@ function getRowItems(row: Salle) {
 
 function handleRowClick(row: Salle) {
   selectedSalle.value = row
-  editModal.value?.openModal()
+  editModal.value?.openModal(row)
 }
 
 const columns: TableColumn<Salle>[] = [
@@ -199,7 +199,7 @@ const columns: TableColumn<Salle>[] = [
             content: {
               align: 'end'
             },
-            items: getRowItems(row)
+            items: getRowItems(row.original)
           },
           () =>
             h(UButton, {

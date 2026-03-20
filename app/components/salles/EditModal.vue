@@ -104,15 +104,16 @@ async function handleDelete() {
   emit('delete', props.salle)
 }
 
-function openModal() {
-  if (props.salle) {
-    state.nom = props.salle.nom
-    state.adresse = props.salle.adresse
-    state.nombre_max_places = props.salle.nombre_max_places
-    state.description = props.salle.description || undefined
-    state.photo_url = props.salle.photo_url || undefined
-    open.value = true
-  }
+function openModal(salle?: Salle | null) {
+  const source = salle ?? props.salle
+  if (!source) return
+
+  state.nom = source.nom
+  state.adresse = source.adresse
+  state.nombre_max_places = source.nombre_max_places
+  state.description = source.description || undefined
+  state.photo_url = source.photo_url || undefined
+  open.value = true
 }
 
 defineExpose({
