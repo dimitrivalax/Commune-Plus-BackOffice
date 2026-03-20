@@ -16,6 +16,7 @@ const schema = z.object({
   ville: z.string().optional(),
   email: z.string().email("Email invalide"),
   role: z.enum(["utilisateur", "administrateur"]),
+  is_active: z.boolean(),
 });
 
 const open = ref(false);
@@ -31,6 +32,7 @@ const state = reactive<Partial<Schema>>({
   ville: undefined,
   email: undefined,
   role: "utilisateur" as "utilisateur" | "administrateur",
+  is_active: true,
 });
 
 const toast = useToast();
@@ -58,6 +60,7 @@ watch(
       state.ville = newUtilisateur.ville || undefined;
       state.email = newUtilisateur.email;
       state.role = newUtilisateur.role || "utilisateur";
+      state.is_active = newUtilisateur.is_active !== false;
       selectedCommunes.value = newUtilisateur.communes?.map((c) => c.id) || [];
     }
   },
@@ -84,6 +87,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         ville: event.data.ville || null,
         email: event.data.email,
         role: event.data.role || "utilisateur",
+        is_active: event.data.is_active,
         communes: selectedCommunes.value,
       },
     });
@@ -128,6 +132,7 @@ function openModal() {
     state.ville = props.utilisateur.ville || undefined;
     state.email = props.utilisateur.email;
     state.role = props.utilisateur.role || "utilisateur";
+    state.is_active = props.utilisateur.is_active !== false;
     selectedCommunes.value = props.utilisateur.communes?.map((c) => c.id) || [];
     open.value = true;
   }
@@ -199,6 +204,14 @@ defineExpose({
             value-attribute="value"
             class="w-full"
           />
+        </UFormField>
+
+        <UFormField
+          label="Compte actif"
+          name="is_active"
+          description="Si désactivé, l'utilisateur ne peut plus se connecter."
+        >
+          <USwitch v-model="state.is_active" />
         </UFormField>
 
         <div class="grid grid-cols-2 gap-4">

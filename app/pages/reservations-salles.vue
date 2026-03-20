@@ -195,6 +195,18 @@ function getReservationsForSalleAndDay(salleId: string, day: Date): ReservationS
 }
 
 // Calculer la position et la hauteur d'une réservation dans la vue jour/semaine
+function getReservationStatusClasses(reservation: ReservationSalle): string {
+  switch (reservation.status) {
+    case 'confirmée':
+      return 'bg-success/20 border-success hover:bg-success/35'
+    case 'refusée':
+      return 'bg-error/20 border-error hover:bg-error/35'
+    case 'en_attente':
+    default:
+      return 'bg-warning/20 border-warning hover:bg-warning/35'
+  }
+}
+
 function getReservationStyle(reservation: ReservationSalle, day: Date) {
   const start = parseISO(reservation.date_debut)
   const end = parseISO(reservation.date_fin)
@@ -366,7 +378,8 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
                   v-for="reservation in getReservationsForSalleAndDay(salle.id, currentDate)"
                   :key="reservation.id"
                   :style="getReservationStyle(reservation, currentDate)"
-                  class="absolute left-0 right-0 mx-1 bg-primary/20 border border-primary rounded p-1 text-xs cursor-pointer hover:bg-primary/30 z-10"
+                  class="absolute left-0 right-0 mx-1 border rounded p-1 text-xs cursor-pointer z-10"
+                  :class="getReservationStatusClasses(reservation)"
                   @click.stop="handleReservationClick(reservation)"
                 >
                   <div class="font-medium">
@@ -425,7 +438,8 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
                 <div
                   v-for="reservation in getReservationsForSalleAndDay(salle.id, day)"
                   :key="reservation.id"
-                  class="mb-1 p-2 bg-primary/20 border border-primary rounded text-xs cursor-pointer hover:bg-primary/30"
+                  class="mb-1 p-2 border rounded text-xs cursor-pointer"
+                  :class="getReservationStatusClasses(reservation)"
                   @click="handleReservationClick(reservation)"
                 >
                   <div class="font-medium">
@@ -485,7 +499,8 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
                     <div
                       v-for="reservation in getReservationsForSalleAndDay(salle.id, day)"
                       :key="reservation.id"
-                      class="mb-1 p-1 bg-primary/20 border border-primary rounded text-xs cursor-pointer hover:bg-primary/30"
+                      class="mb-1 p-1 border rounded text-xs cursor-pointer"
+                      :class="getReservationStatusClasses(reservation)"
                       @click="handleReservationClick(reservation)"
                     >
                       <div class="font-medium truncate">

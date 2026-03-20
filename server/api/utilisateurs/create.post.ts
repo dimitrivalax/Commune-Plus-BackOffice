@@ -82,6 +82,7 @@ export default eventHandler(async (event) => {
           prenom,
           email,
           role: role || "utilisateur",
+          is_active: true,
         },
         { onConflict: "user_id" },
       )

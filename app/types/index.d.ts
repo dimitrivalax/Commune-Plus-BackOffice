@@ -142,6 +142,8 @@ export interface Utilisateur {
   ville: string | null;
   email: string;
   role: "utilisateur" | "administrateur";
+  /** false = compte désactivé par un administrateur (connexion refusée) */
+  is_active: boolean;
   created_at: string;
   updated_at: string;
   last_sign_in_at: string | null;

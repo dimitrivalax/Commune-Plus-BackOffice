@@ -66,23 +66,73 @@ export default eventHandler(async (event) => {
         ...utilisateurData,
         communes: communesData
       }
+    } else if (method === 'PATCH') {
+      const body = await readBody(event) as { is_active?: boolean }
+
+      if (typeof body.is_active !== 'boolean') {
+        throw createError({
+          statusCode: 400,
+          message: 'Le champ is_active (booléen) est requis'
+        })
+      }
+
+      if (body.is_active === false && id === profile.utilisateurId) {
+        throw createError({
+          statusCode: 400,
+          message: 'Vous ne pouvez pas désactiver votre propre compte'
+        })
+      }
+
+      const { data, error } = await supabase
+        .from('utilisateur')
+        .update({
+          is_active: body.is_active,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw createError({
+          statusCode: 500,
+          message: `Error updating utilisateur: ${error.message}`
+        })
+      }
+
+      return data
     } else if (method === 'PUT') {
       const body = await readBody(event)
+
+      if (typeof body.is_active === 'boolean') {
+        if (body.is_active === false && id === profile.utilisateurId) {
+          throw createError({
+            statusCode: 400,
+            message: 'Vous ne pouvez pas désactiver votre propre compte'
+          })
+        }
+      }
+
+      const updatePayload: Record<string, unknown> = {
+        nom: body.nom,
+        prenom: body.prenom,
+        numero_de_rue: body.numero_de_rue || null,
+        rue: body.rue || null,
+        code_postal: body.code_postal || null,
+        ville: body.ville || null,
+        email: body.email,
+        role: body.role || 'utilisateur',
+        updated_at: new Date().toISOString()
+      }
+
+      if (typeof body.is_active === 'boolean') {
+        updatePayload.is_active = body.is_active
+      }
 
       // Mettre à jour l'utilisateur
       const { data, error } = await supabase
         .from('utilisateur')
-        .update({
-          nom: body.nom,
-          prenom: body.prenom,
-          numero_de_rue: body.numero_de_rue || null,
-          rue: body.rue || null,
-          code_postal: body.code_postal || null,
-          ville: body.ville || null,
-          email: body.email,
-          role: body.role || 'utilisateur',
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('id', id)
         .select()
         .single()

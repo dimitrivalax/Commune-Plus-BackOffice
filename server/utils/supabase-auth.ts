@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
+import { COMPTE_DESACTIVE_MESSAGE } from '~/utils/compte-desactive'
+
+export { COMPTE_DESACTIVE_MESSAGE }
 
 /** Lit les credentials Supabase depuis process.env ou runtimeConfig (ex. NUXT_PUBLIC_SUPABASE_* sur Koyeb). */
 function getSupabaseCredentials(): { url: string, anonKey: string } {
@@ -151,12 +154,19 @@ export async function getCurrentUserProfileFromAuth(auth: {
 
   const { data: utilisateurData, error: utilisateurError } = await supabase
     .from('utilisateur')
-    .select('id, role')
+    .select('id, role, is_active')
     .eq('user_id', user.id)
     .single()
 
   if (utilisateurError || !utilisateurData) {
     return null
+  }
+
+  if (utilisateurData.is_active === false) {
+    throw createError({
+      statusCode: 403,
+      message: COMPTE_DESACTIVE_MESSAGE
+    })
   }
 
   const { data: associationsData, error: associationsError } = await supabase

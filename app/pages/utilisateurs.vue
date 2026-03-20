@@ -83,6 +83,32 @@ function getRowItems(row: Row<Utilisateur>) {
       }
     },
     {
+      label: row.original.is_active !== false ? 'Désactiver le compte' : 'Réactiver le compte',
+      icon: row.original.is_active !== false ? 'i-lucide-user-x' : 'i-lucide-user-check',
+      async onSelect() {
+        const u = row.original
+        const nextActive = u.is_active === false
+        try {
+          await $fetch(`/api/utilisateurs/${u.id}`, {
+            method: 'PATCH',
+            headers: authHeaders.value as HeadersInit,
+            body: { is_active: nextActive }
+          })
+          toast.add({
+            title: nextActive ? 'Compte réactivé' : 'Compte désactivé',
+            color: 'success'
+          })
+          refresh()
+        } catch (e: any) {
+          toast.add({
+            title: 'Erreur',
+            description: e?.data?.message || e?.message || 'Action impossible',
+            color: 'error'
+          })
+        }
+      }
+    },
+    {
       type: 'separator'
     },
     {
@@ -208,6 +234,16 @@ const columns: TableColumn<Utilisateur>[] = [
       const role = row.original.role || 'utilisateur'
       const color = role === 'administrateur' ? 'primary' : 'neutral'
       const label = role === 'administrateur' ? 'Administrateur' : 'Utilisateur'
+      return h(UBadge, { variant: 'subtle', color }, () => label)
+    }
+  },
+  {
+    accessorKey: 'is_active',
+    header: 'Statut',
+    cell: ({ row }) => {
+      const active = row.original.is_active !== false
+      const color = active ? 'success' : 'error'
+      const label = active ? 'Activé' : 'Désactivé'
       return h(UBadge, { variant: 'subtle', color }, () => label)
     }
   },

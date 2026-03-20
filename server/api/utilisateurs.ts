@@ -92,6 +92,7 @@ export default eventHandler(async (event) => {
 
       return {
         ...utilisateur,
+        is_active: utilisateur.is_active !== false,
         last_sign_in_at: utilisateur.last_sign_in_at || null,
         communes
       }

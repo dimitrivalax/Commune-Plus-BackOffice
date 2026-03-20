@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import {
+  COMPTE_DESACTIVE_MESSAGE,
+  CONTACT_SUPPORT_EMAIL,
+  MAILTO_SUPPORT_HREF
+} from '~/utils/compte-desactive'
+
 definePageMeta({
   layout: false,
   middleware: [],
@@ -7,7 +13,7 @@ definePageMeta({
 const router = useRouter();
 const toast = useToast();
 const route = useRoute();
-const { signIn, getSession, resetPassword, updatePassword } = useSupabase();
+const { signIn, signOut, getSession, resetPassword, updatePassword } = useSupabase();
 
 const form = ref({
   email: "",
@@ -21,10 +27,24 @@ const showNewPassword = ref(false);
 const isResetMode = ref(false);
 const isRecoveryMode = ref(false);
 const errors = ref<Record<string, string>>({});
+/** Affiche l’aide sous le mot de passe (403 / redirection compte désactivé). */
+const showCompteDesactiveAlert = ref(false);
 
 onMounted(async () => {
   if (route.query.type === "recovery") {
     isRecoveryMode.value = true;
+  }
+
+  if (route.query.raison === "desactive") {
+    showCompteDesactiveAlert.value = true;
+    toast.add({
+      title: "Compte désactivé",
+      description: COMPTE_DESACTIVE_MESSAGE,
+      color: "error",
+    });
+    const q = { ...route.query };
+    delete q.raison;
+    router.replace({ path: "/login", query: q });
   }
 
   const session = await getSession();
@@ -91,6 +111,32 @@ const handleSubmit = async () => {
       isResetMode.value = false;
     } else {
       await signIn(form.value.email, form.value.password);
+
+      const { session } = useSupabase();
+      const token = session.value?.access_token;
+      if (!token) {
+        throw new Error("Session indisponible après connexion");
+      }
+
+      try {
+        await $fetch("/api/user/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (meErr: any) {
+        const status = meErr?.statusCode ?? meErr?.status ?? meErr?.response?.status;
+        await signOut();
+        if (status === 403) {
+          showCompteDesactiveAlert.value = true;
+          toast.add({
+            title: "Compte désactivé",
+            description: meErr?.data?.message ?? COMPTE_DESACTIVE_MESSAGE,
+            color: "error",
+          });
+          return;
+        }
+        throw meErr;
+      }
+
       toast.add({
         title: "Connexion réussie",
         description: "Vous êtes maintenant connecté",
@@ -203,6 +249,24 @@ const handleSubmit = async () => {
               </UButton>
             </div>
           </UFormField>
+
+          <div
+            v-if="showCompteDesactiveAlert && !isResetMode && !isRecoveryMode"
+            class="w-[70%] rounded-lg border border-error/40 bg-error/5 px-3 py-3 text-sm text-gray-700 dark:text-gray-300"
+            role="alert"
+          >
+            <p class="font-medium text-error mb-1.5">
+              Compte désactivé
+            </p>
+            <p class="leading-relaxed">
+              Votre compte est désactivé. Écrivez à
+              <a
+                :href="MAILTO_SUPPORT_HREF"
+                class="text-primary font-medium underline underline-offset-2 hover:opacity-90"
+              >{{ CONTACT_SUPPORT_EMAIL }}</a>
+              en indiquant votre nom, prénom, e-mail et commune, s'il vous plaît.
+            </p>
+          </div>
 
           <UFormField
             v-if="isRecoveryMode"
