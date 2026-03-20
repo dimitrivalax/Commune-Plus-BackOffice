@@ -10,6 +10,8 @@ const toast = useToast();
 const colorMode = useColorMode();
 const appConfig = useAppConfig();
 const { user: supabaseUser, signOut } = useSupabase();
+const { currentCommune } = useCurrentCommune();
+const openEditCommune = inject<() => void>("open-edit-commune");
 
 const colors = [
   "red",
@@ -89,31 +91,59 @@ const handleSignOut = async () => {
 const editProfileModal = ref<any>(null);
 const contactModalOpen = ref(false);
 
-const items = computed<DropdownMenuItem[][]>(() => [
-  [
+const items = computed<DropdownMenuItem[][]>(() => {
+  const footerGroup: DropdownMenuItem[] = [];
+  if (currentCommune.value && openEditCommune) {
+    footerGroup.push({
+      label: "Commune",
+      icon: "i-lucide-map-pin",
+      onSelect: (e: Event) => {
+        e.preventDefault();
+        openEditCommune();
+      },
+    });
+  }
+  footerGroup.push(
     {
-      type: "label",
-      label: user.value.name,
-      description: user.value.email,
-      avatar: user.value.avatar,
+      label: "Contact",
+      icon: "i-lucide-mail",
+      onSelect: (e: Event) => {
+        e.preventDefault();
+        contactModalOpen.value = true;
+      },
     },
-  ],
-  // [
-  //   {
-  //     label: "Profil",
-  //     icon: "i-lucide-user",
-  //     onClick: () => {
-  //       console.log("Profil clicked, opening modal", editProfileModal.value);
-  //       editProfileModal.value?.openModal();
-  //     },
-  //   },
-  //   {
-  //     label: "Paramètres",
-  //     icon: "i-lucide-settings",
-  //     to: "/settings",
-  //   },
-  // ],
-  [
+    {
+      label: "Déconnexion",
+      icon: "i-lucide-log-out",
+      onClick: handleSignOut,
+    },
+  );
+
+  return [
+    [
+      {
+        type: "label",
+        label: user.value.name,
+        description: user.value.email,
+        avatar: user.value.avatar,
+      },
+    ],
+    // [
+    //   {
+    //     label: "Profil",
+    //     icon: "i-lucide-user",
+    //     onClick: () => {
+    //       console.log("Profil clicked, opening modal", editProfileModal.value);
+    //       editProfileModal.value?.openModal();
+    //     },
+    //   },
+    //   {
+    //     label: "Paramètres",
+    //     icon: "i-lucide-settings",
+    //     to: "/settings",
+    //   },
+    // ],
+    [
     {
       label: "Thème",
       icon: "i-lucide-palette",
@@ -240,33 +270,9 @@ const items = computed<DropdownMenuItem[][]>(() => [
   //     ],
   //   },
   // ],
-  [
-    {
-      label: "Contact",
-      icon: "i-lucide-mail",
-      onSelect: (e: Event) => {
-        e.preventDefault();
-        contactModalOpen.value = true;
-      },
-    },
-
-    {
-      //   label: 'Documentation',
-      //   icon: 'i-lucide-book-open',
-      //   to: 'https://ui.nuxt.com/docs/getting-started/installation/nuxt',
-      //   target: '_blank'
-      // }, {
-      //   label: 'Dépôt GitHub',
-      //   icon: 'i-simple-icons-github',
-      //   to: 'https://github.com/nuxt-ui-templates/dashboard',
-      //   target: '_blank'
-      // }, {
-      label: "Déconnexion",
-      icon: "i-lucide-log-out",
-      onClick: handleSignOut,
-    },
-  ],
-]);
+    footerGroup,
+  ];
+});
 </script>
 
 <template>

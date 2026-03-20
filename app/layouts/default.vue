@@ -21,6 +21,12 @@ const editCommuneModal = useTemplateRef<{ openModal: () => void }>(
 
 provide("refresh-communes", refreshUserCommunes);
 
+function openEditCommuneModal() {
+  editCommuneModal.value?.openModal();
+}
+
+provide("open-edit-commune", openEditCommuneModal);
+
 // Gérer la sélection de la commune courante (réservé aux administrateurs)
 const selectedCommuneId = computed({
   get: () => currentCommune.value?.id || "",
@@ -191,7 +197,14 @@ onMounted(async () => {
       :ui="{ footer: 'lg:border-t lg:border-default' }"
     >
       <template #header>
-        <img src="/logo.png" alt="logo" class="w-20 h-20 mx-auto" />
+        <a
+          href="https://commune-plus.fr"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mx-auto block w-fit rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <img src="/logo.png" alt="Commune Plus" class="w-20 h-20" />
+        </a>
       </template>
 
       <template #default="{ collapsed }">
