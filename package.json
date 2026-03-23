@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "NODE_OPTIONS='--max-old-space-size=3072' nuxt build",
-    "dev": "nuxt dev",
-    "preview": "nuxt preview",
-    "start": "node .output/server/index.mjs",
+    "build": "dotenv -e .env -- node --max-old-space-size=3072 node_modules/nuxt/bin/nuxt.mjs build",
+    "dev": "dotenv -e .env.local -- nuxt dev",
+    "preview": "dotenv -e .env -- nuxt preview",
+    "start": "dotenv -e .env -- node .output/server/index.mjs",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck"
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.12.1",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.39.2",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.1"

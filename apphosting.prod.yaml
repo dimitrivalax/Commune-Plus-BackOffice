@@ -1,0 +1,87 @@
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+  maxInstances: 20
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+# Environment variables (valeurs issues de .env).
+# Pour les secrets sensibles, préférer Cloud Secret Manager et "secret: NOM" en prod.
+env:
+  # Supabase
+  - variable: SUPABASE_URL
+    value: "https://shirnwmttaufgnbboyyu.supabase.co"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_SUPABASE_URL
+    value: "https://shirnwmttaufgnbboyyu.supabase.co"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_SUPABASE_ANON_KEY
+    secret: NUXT_PUBLIC_SUPABASE_ANON_KEY
+
+  # Cloudinary
+  - variable: CLOUDINARY_CLOUD_NAME
+    value: "REDACTED"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: CLOUDINARY_UPLOAD_PRESET
+    value: "Commune Plus"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: CLOUDINARY_API_KEY
+    secret: CLOUDINARY_API_KEY
+  - variable: CLOUDINARY_API_SECRET
+    secret: CLOUDINARY_API_SECRET
+
+  # SMTP Infomaniak
+  - variable: SMTP_HOST
+    value: "mail.infomaniak.com"
+    availability:
+      - RUNTIME
+  - variable: SMTP_PORT
+    value: "465"
+    availability:
+      - RUNTIME
+  - variable: SMTP_USER
+    value: "contact@commune-plus.fr"
+    availability:
+      - RUNTIME
+  - variable: SMTP_FROM_EMAIL
+    value: "contact@commune-plus.fr"
+    availability:
+      - RUNTIME
+
+  # PostHog
+  - variable: POSTHOG_API_KEY
+    value: "REDACTED"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: POSTHOG_HOST
+    value: "https://eu.i.posthog.com"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Resend
+  - variable: RESEND_API_KEY
+    value: "REDACTED"
+    availability:
+      - RUNTIME
+  - variable: RESEND_FROM_EMAIL
+    value: "contact@commune-plus.fr"
+    availability:
+      - RUNTIME
+
+  # FCM (notifications push) — compte de service Firebase (JSON complet, pas google-services.json)
+  - variable: FCM_SERVICE_ACCOUNT_JSON
+    secret: FCM_SERVICE_ACCOUNT_JSON
+    availability:
+      - RUNTIME
