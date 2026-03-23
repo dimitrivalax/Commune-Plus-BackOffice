@@ -44,6 +44,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_signalement_notification ON signalements;
 CREATE TRIGGER trigger_signalement_notification
   AFTER INSERT ON signalements
   FOR EACH ROW
@@ -74,6 +75,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_reservation_notification ON reservations_salles;
 CREATE TRIGGER trigger_reservation_notification
   AFTER INSERT ON reservations_salles
   FOR EACH ROW
@@ -84,11 +86,13 @@ ALTER TABLE backoffice_notifications ENABLE ROW LEVEL SECURITY;
 
 -- Politiques RLS pour backoffice_notifications
 -- Permettre la lecture aux utilisateurs authentifiés
+DROP POLICY IF EXISTS "Les utilisateurs authentifiés peuvent lire les notifications" ON backoffice_notifications;
 CREATE POLICY "Les utilisateurs authentifiés peuvent lire les notifications"
     ON backoffice_notifications FOR SELECT
     USING (true); -- Pour l'instant, permettre à tous les utilisateurs authentifiés
 
 -- Permettre la mise à jour aux utilisateurs authentifiés (pour marquer comme lu)
+DROP POLICY IF EXISTS "Les utilisateurs authentifiés peuvent mettre à jour les notifications" ON backoffice_notifications;
 CREATE POLICY "Les utilisateurs authentifiés peuvent mettre à jour les notifications"
     ON backoffice_notifications FOR UPDATE
     USING (true)
@@ -96,6 +100,7 @@ CREATE POLICY "Les utilisateurs authentifiés peuvent mettre à jour les notific
 
 -- Permettre l'insertion depuis les triggers (même si SECURITY DEFINER devrait suffire)
 -- Cette politique permet aux triggers de créer des notifications
+DROP POLICY IF EXISTS "Les triggers peuvent insérer des notifications" ON backoffice_notifications;
 CREATE POLICY "Les triggers peuvent insérer des notifications"
     ON backoffice_notifications FOR INSERT
     WITH CHECK (true);

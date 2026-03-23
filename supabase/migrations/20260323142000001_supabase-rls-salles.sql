@@ -25,6 +25,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_salles_updated_at ON salles;
 CREATE TRIGGER update_salles_updated_at BEFORE UPDATE ON salles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -35,19 +36,23 @@ CREATE INDEX IF NOT EXISTS idx_salles_created_at ON salles(created_at DESC);
 ALTER TABLE salles ENABLE ROW LEVEL SECURITY;
 
 -- Politiques RLS pour permettre la lecture publique et l'écriture authentifiée
+DROP POLICY IF EXISTS "Tout le monde peut lire les salles" ON salles;
 CREATE POLICY "Tout le monde peut lire les salles"
     ON salles FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Les utilisateurs authentifiés peuvent créer des salles" ON salles;
 CREATE POLICY "Les utilisateurs authentifiés peuvent créer des salles"
     ON salles FOR INSERT
     WITH CHECK (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Les utilisateurs authentifiés peuvent mettre à jour les salles" ON salles;
 CREATE POLICY "Les utilisateurs authentifiés peuvent mettre à jour les salles"
     ON salles FOR UPDATE
     USING (auth.role() = 'authenticated')
     WITH CHECK (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Les utilisateurs authentifiés peuvent supprimer les salles" ON salles;
 CREATE POLICY "Les utilisateurs authentifiés peuvent supprimer les salles"
     ON salles FOR DELETE
     USING (auth.role() = 'authenticated');

@@ -1,0 +1,1 @@
+-- Migration ignorée (destructive et redondante)

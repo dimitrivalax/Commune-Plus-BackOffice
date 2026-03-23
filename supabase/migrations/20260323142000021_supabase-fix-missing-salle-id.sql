@@ -1,8 +1,11 @@
 -- Script SQL pour identifier et corriger les réservations sans salle_id
---
--- Ce script :
--- 1. Identifie les réservations qui n'ont pas pu être migrées
--- 2. Propose des solutions pour les corriger
+-- Sécurité : s'assurer que room_name existe si 016 a été appliqué partiellement
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'reservations_salles') THEN
+        ALTER TABLE reservations_salles ADD COLUMN IF NOT EXISTS room_name TEXT;
+    END IF;
+END $$;
 
 -- Étape 1: Voir les réservations sans salle_id
 SELECT

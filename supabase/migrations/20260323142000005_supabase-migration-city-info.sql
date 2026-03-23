@@ -17,6 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_city_info_name ON city_info(name);
 CREATE INDEX IF NOT EXISTS idx_city_info_postal_code ON city_info(postal_code);
 
 -- Trigger pour mettre à jour updated_at automatiquement
+DROP TRIGGER IF EXISTS update_city_info_updated_at ON city_info;
 CREATE TRIGGER update_city_info_updated_at BEFORE UPDATE ON city_info
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -28,14 +29,17 @@ ALTER TABLE city_info ENABLE ROW LEVEL SECURITY;
 
 -- Politiques RLS pour permettre la lecture et l'écriture publique
 -- Note: Pour un environnement de production, vous devriez restreindre ces permissions
+DROP POLICY IF EXISTS "Tout le monde peut lire les informations de la commune" ON city_info;
 CREATE POLICY "Tout le monde peut lire les informations de la commune"
     ON city_info FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Tout le monde peut créer les informations de la commune" ON city_info;
 CREATE POLICY "Tout le monde peut créer les informations de la commune"
     ON city_info FOR INSERT
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Tout le monde peut mettre à jour les informations de la commune" ON city_info;
 CREATE POLICY "Tout le monde peut mettre à jour les informations de la commune"
     ON city_info FOR UPDATE
     USING (true)

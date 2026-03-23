@@ -21,6 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_push_tokens_token ON push_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_push_tokens_active ON push_tokens(is_active) WHERE is_active = true;
 
 -- Trigger pour mettre à jour updated_at automatiquement
+DROP TRIGGER IF EXISTS update_push_tokens_updated_at ON push_tokens;
 CREATE TRIGGER update_push_tokens_updated_at BEFORE UPDATE ON push_tokens
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -32,22 +33,26 @@ ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
 -- avec des restrictions basées sur le user_id local stocké côté client
 
 -- Permettre la lecture publique des tokens actifs (nécessaire pour envoyer les notifications)
+DROP POLICY IF EXISTS "Lecture publique des tokens actifs" ON push_tokens;
 CREATE POLICY "Lecture publique des tokens actifs"
     ON push_tokens FOR SELECT
     USING (is_active = true);
 
 -- Permettre l'insertion publique (l'app mobile créera les tokens)
+DROP POLICY IF EXISTS "Insertion publique des tokens" ON push_tokens;
 CREATE POLICY "Insertion publique des tokens"
     ON push_tokens FOR INSERT
     WITH CHECK (true);
 
 -- Permettre la mise à jour publique (pour mettre à jour les tokens existants)
+DROP POLICY IF EXISTS "Mise à jour publique des tokens" ON push_tokens;
 CREATE POLICY "Mise à jour publique des tokens"
     ON push_tokens FOR UPDATE
     USING (true)
     WITH CHECK (true);
 
 -- Permettre la suppression publique (pour nettoyer les tokens)
+DROP POLICY IF EXISTS "Suppression publique des tokens" ON push_tokens;
 CREATE POLICY "Suppression publique des tokens"
     ON push_tokens FOR DELETE
     USING (true);

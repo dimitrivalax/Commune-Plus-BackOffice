@@ -66,9 +66,59 @@ DROP TRIGGER IF EXISTS update_commune_updated_at ON commune;
 CREATE TRIGGER update_commune_updated_at BEFORE UPDATE ON commune
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Créer une fonction pour vérifier si l'utilisateur connecté est administrateur
--- (Doit être créée avant les politiques RLS qui l'utilisent)
--- Note: Cette fonction sera recréée plus tard pour la table utilisateur, mais on la crée ici pour les politiques communes
+-- Étape 3: Créer la table utilisateur
+CREATE TABLE IF NOT EXISTS utilisateur (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  nom TEXT NOT NULL,
+  prenom TEXT NOT NULL,
+  numero_de_rue TEXT,
+  rue TEXT,
+  code_postal TEXT,
+  ville TEXT,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'utilisateur' CHECK (role IN ('utilisateur', 'administrateur')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Ajouter la colonne role si elle n'existe pas déjà (pour les migrations existantes)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'utilisateur'
+    AND column_name = 'role'
+  ) THEN
+    ALTER TABLE utilisateur ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'utilisateur';
+  END IF;
+
+  -- Ajouter la contrainte CHECK si elle n'existe pas déjà
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_schema = 'public'
+    AND table_name = 'utilisateur'
+    AND constraint_name = 'utilisateur_role_check'
+  ) THEN
+    ALTER TABLE utilisateur ADD CONSTRAINT utilisateur_role_check CHECK (role IN ('utilisateur', 'administrateur'));
+  END IF;
+END $$;
+
+-- Index pour améliorer les performances
+CREATE INDEX IF NOT EXISTS idx_utilisateur_user_id ON utilisateur(user_id);
+CREATE INDEX IF NOT EXISTS idx_utilisateur_email ON utilisateur(email);
+CREATE INDEX IF NOT EXISTS idx_utilisateur_code_postal ON utilisateur(code_postal);
+CREATE INDEX IF NOT EXISTS idx_utilisateur_role ON utilisateur(role);
+CREATE INDEX IF NOT EXISTS idx_utilisateur_updated_at ON utilisateur(updated_at DESC);
+
+-- Trigger pour mettre à jour updated_at automatiquement
+DROP TRIGGER IF EXISTS update_utilisateur_updated_at ON utilisateur;
+CREATE TRIGGER update_utilisateur_updated_at BEFORE UPDATE ON utilisateur
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Étape 2.5: Créer une fonction pour vérifier si l'utilisateur connecté est administrateur
+-- (Doit être créée avant les politiques RLS qui l'utilisent et après la table utilisateur)
 CREATE OR REPLACE FUNCTION is_current_user_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -114,57 +164,6 @@ CREATE POLICY "Les administrateurs peuvent modifier les communes"
 CREATE POLICY "Les administrateurs peuvent supprimer les communes"
     ON commune FOR DELETE
     USING (is_current_user_admin());
-
--- Étape 3: Créer la table utilisateur
-CREATE TABLE IF NOT EXISTS utilisateur (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  nom TEXT NOT NULL,
-  prenom TEXT NOT NULL,
-  numero_de_rue TEXT,
-  rue TEXT,
-  code_postal TEXT,
-  ville TEXT,
-  email TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'utilisateur' CHECK (role IN ('utilisateur', 'administrateur')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Ajouter la colonne role si elle n'existe pas déjà (pour les migrations existantes)
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'utilisateur'
-    AND column_name = 'role'
-  ) THEN
-    ALTER TABLE utilisateur ADD COLUMN role TEXT NOT NULL DEFAULT 'utilisateur';
-  END IF;
-
-  -- Ajouter la contrainte CHECK si elle n'existe pas déjà
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.table_constraints
-    WHERE table_schema = 'public'
-    AND table_name = 'utilisateur'
-    AND constraint_name = 'utilisateur_role_check'
-  ) THEN
-    ALTER TABLE utilisateur ADD CONSTRAINT utilisateur_role_check CHECK (role IN ('utilisateur', 'administrateur'));
-  END IF;
-END $$;
-
--- Index pour améliorer les performances
-CREATE INDEX IF NOT EXISTS idx_utilisateur_user_id ON utilisateur(user_id);
-CREATE INDEX IF NOT EXISTS idx_utilisateur_email ON utilisateur(email);
-CREATE INDEX IF NOT EXISTS idx_utilisateur_code_postal ON utilisateur(code_postal);
-CREATE INDEX IF NOT EXISTS idx_utilisateur_role ON utilisateur(role);
-CREATE INDEX IF NOT EXISTS idx_utilisateur_updated_at ON utilisateur(updated_at DESC);
-
--- Trigger pour mettre à jour updated_at automatiquement
-DROP TRIGGER IF EXISTS update_utilisateur_updated_at ON utilisateur;
-CREATE TRIGGER update_utilisateur_updated_at BEFORE UPDATE ON utilisateur
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- RLS (Row Level Security) pour la table utilisateur
 -- Note: La fonction is_current_user_admin() a déjà été créée plus haut
@@ -239,6 +238,7 @@ CREATE POLICY "Les utilisateurs peuvent créer leurs associations"
       )
     );
 
+DROP POLICY IF EXISTS "Les utilisateurs peuvent mettre à jour leurs associations" ON utilisateur_commune;
 CREATE POLICY "Les utilisateurs peuvent mettre à jour leurs associations"
     ON utilisateur_commune FOR UPDATE
     USING (
@@ -256,6 +256,7 @@ CREATE POLICY "Les utilisateurs peuvent mettre à jour leurs associations"
       )
     );
 
+DROP POLICY IF EXISTS "Les utilisateurs peuvent supprimer leurs associations" ON utilisateur_commune;
 CREATE POLICY "Les utilisateurs peuvent supprimer leurs associations"
     ON utilisateur_commune FOR DELETE
     USING (
@@ -274,11 +275,13 @@ CREATE POLICY "Les administrateurs peuvent tout créer"
     ON utilisateur_commune FOR INSERT
     WITH CHECK (is_current_user_admin());
 
+DROP POLICY IF EXISTS "Les administrateurs peuvent tout modifier" ON utilisateur_commune;
 CREATE POLICY "Les administrateurs peuvent tout modifier"
     ON utilisateur_commune FOR UPDATE
     USING (is_current_user_admin())
     WITH CHECK (is_current_user_admin());
 
+DROP POLICY IF EXISTS "Les administrateurs peuvent tout supprimer" ON utilisateur_commune;
 CREATE POLICY "Les administrateurs peuvent tout supprimer"
     ON utilisateur_commune FOR DELETE
     USING (is_current_user_admin());

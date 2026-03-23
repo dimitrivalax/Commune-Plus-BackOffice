@@ -27,15 +27,21 @@ CREATE TABLE IF NOT EXISTS signalements (
 -- Table pour les réservations
 CREATE TABLE IF NOT EXISTS reservations_salles (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  salle_id UUID NOT NULL REFERENCES salles(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  start_time TIME NOT NULL,
-  end_time TIME NOT NULL,
+  salle_id UUID REFERENCES salles(id) ON DELETE CASCADE,
+  room_name TEXT, -- Utilisé par les migrations de transition
+  date DATE,
+  start_time TIME,
+  end_time TIME,
+  date_debut TIMESTAMP WITH TIME ZONE, -- Utilisé par les migrations RLS
+  date_fin TIMESTAMP WITH TIME ZONE, -- Utilisé par les migrations RLS
   reason TEXT,
-  name TEXT NOT NULL,
+  name TEXT,
+  nom TEXT,
+  prenom TEXT,
   email TEXT NOT NULL,
   phone TEXT,
-  status TEXT DEFAULT 'en_attente' CHECK (status IN ('en_attente', 'confirmée', 'refusée')),
+  telephone TEXT,
+  status TEXT DEFAULT 'en_attente' CHECK (status IN ('en_attente', 'confirmée', 'refusée', 'en_cours', 'traité')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -71,12 +77,15 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers pour mettre à jour updated_at
+DROP TRIGGER IF EXISTS update_signalements_updated_at ON signalements;
 CREATE TRIGGER update_signalements_updated_at BEFORE UPDATE ON signalements
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_reservations_salles_updated_at ON reservations_salles;
 CREATE TRIGGER update_reservations_salles_updated_at BEFORE UPDATE ON reservations_salles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_municipal_info_updated_at ON municipal_info;
 CREATE TRIGGER update_municipal_info_updated_at BEFORE UPDATE ON municipal_info
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -86,23 +95,28 @@ ALTER TABLE reservations_salles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE municipal_info ENABLE ROW LEVEL SECURITY;
 
 -- Politiques RLS pour permettre la lecture publique des informations municipales
+DROP POLICY IF EXISTS "Les informations municipales sont publiques en lecture" ON municipal_info;
 CREATE POLICY "Les informations municipales sont publiques en lecture"
     ON municipal_info FOR SELECT
     USING (true);
 
 -- Politiques RLS pour permettre l'insertion publique des signalements et réservations
+DROP POLICY IF EXISTS "Tout le monde peut créer des signalements" ON signalements;
 CREATE POLICY "Tout le monde peut créer des signalements"
     ON signalements FOR INSERT
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Tout le monde peut lire ses propres signalements" ON signalements;
 CREATE POLICY "Tout le monde peut lire ses propres signalements"
     ON signalements FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Tout le monde peut créer des réservations" ON reservations_salles;
 CREATE POLICY "Tout le monde peut créer des réservations"
     ON reservations_salles FOR INSERT
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Tout le monde peut lire ses propres réservations" ON reservations_salles;
 CREATE POLICY "Tout le monde peut lire ses propres réservations"
     ON reservations_salles FOR SELECT
     USING (true);

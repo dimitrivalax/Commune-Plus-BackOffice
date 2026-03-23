@@ -8,7 +8,7 @@
 
 -- Étape 1: Ajouter la colonne salle_id (nullable temporairement)
 ALTER TABLE reservations_salles
-ADD COLUMN salle_id UUID REFERENCES salles(id) ON DELETE CASCADE;
+ADD COLUMN IF NOT EXISTS salle_id UUID REFERENCES salles(id) ON DELETE CASCADE;
 
 -- Étape 2: Migrer les données existantes
 -- Mettre à jour salle_id en trouvant l'ID correspondant dans la table salles

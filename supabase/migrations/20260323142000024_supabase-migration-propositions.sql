@@ -45,6 +45,7 @@ CREATE INDEX IF NOT EXISTS idx_proposition_votes_proposition_id ON proposition_v
 CREATE INDEX IF NOT EXISTS idx_proposition_comments_proposition_id ON proposition_comments(proposition_id);
 
 -- Updated at Trigger
+DROP TRIGGER IF EXISTS update_propositions_updated_at ON propositions;
 CREATE TRIGGER update_propositions_updated_at BEFORE UPDATE ON propositions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -54,26 +55,32 @@ ALTER TABLE propositions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE proposition_votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE proposition_comments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Propositions are public within their commune" ON propositions;
 CREATE POLICY "Propositions are public within their commune"
     ON propositions FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Anyone can create a proposition" ON propositions;
 CREATE POLICY "Anyone can create a proposition"
     ON propositions FOR INSERT
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Creators can update/delete their own propositions" ON propositions;
 CREATE POLICY "Creators can update/delete their own propositions"
     ON propositions FOR ALL
     USING (true); -- Verification will be done at app level for now as per project style
 
+DROP POLICY IF EXISTS "Anyone can vote" ON proposition_votes;
 CREATE POLICY "Anyone can vote"
     ON proposition_votes FOR ALL
     USING (true);
 
+DROP POLICY IF EXISTS "Anyone can comment" ON proposition_comments;
 CREATE POLICY "Anyone can comment"
     ON proposition_comments FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Anyone can create a comment" ON proposition_comments;
 CREATE POLICY "Anyone can create a comment"
     ON proposition_comments FOR INSERT
     WITH CHECK (true);

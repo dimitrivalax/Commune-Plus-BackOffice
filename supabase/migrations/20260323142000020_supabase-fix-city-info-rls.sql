@@ -11,6 +11,7 @@ CREATE POLICY "Tout le monde peut lire les informations de la commune"
     ON city_info FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Tout le monde peut créer les informations de la commune" ON city_info;
 CREATE POLICY "Tout le monde peut créer les informations de la commune"
     ON city_info FOR INSERT
     WITH CHECK (true);

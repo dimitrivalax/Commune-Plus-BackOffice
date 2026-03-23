@@ -1,0 +1,1 @@
+-- Migration ignorée (déjà incluse dans le schéma de base 003)

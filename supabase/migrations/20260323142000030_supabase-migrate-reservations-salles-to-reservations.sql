@@ -1,0 +1,1 @@
+-- Migration ignorée (conflit avec le schéma de base 002)

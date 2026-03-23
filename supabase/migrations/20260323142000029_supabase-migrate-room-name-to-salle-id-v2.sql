@@ -16,7 +16,7 @@ BEGIN
     AND column_name = 'salle_id'
   ) THEN
     ALTER TABLE reservations_salles
-    ADD COLUMN salle_id UUID REFERENCES salles(id) ON DELETE CASCADE;
+    ADD COLUMN IF NOT EXISTS salle_id UUID REFERENCES salles(id) ON DELETE CASCADE;
   END IF;
 END $$;
 
@@ -32,6 +32,7 @@ DO $$
 DECLARE
   unmigrated_count INTEGER;
   total_count INTEGER;
+  rec RECORD;
 BEGIN
   SELECT COUNT(*) INTO unmigrated_count
   FROM reservations_salles

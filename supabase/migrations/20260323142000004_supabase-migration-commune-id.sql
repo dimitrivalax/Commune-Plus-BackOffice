@@ -10,7 +10,7 @@ BEGIN
     AND table_name = 'salles'
     AND column_name = 'commune_id'
   ) THEN
-    ALTER TABLE salles ADD COLUMN commune_id UUID REFERENCES commune(id) ON DELETE SET NULL;
+    ALTER TABLE salles ADD COLUMN IF NOT EXISTS commune_id UUID REFERENCES commune(id) ON DELETE SET NULL;
     CREATE INDEX IF NOT EXISTS idx_salles_commune_id ON salles(commune_id);
     COMMENT ON COLUMN salles.commune_id IS 'Référence à la commune associée à la salle';
   END IF;
@@ -25,7 +25,7 @@ BEGIN
     AND table_name = 'municipal_info'
     AND column_name = 'commune_id'
   ) THEN
-    ALTER TABLE municipal_info ADD COLUMN commune_id UUID REFERENCES commune(id) ON DELETE SET NULL;
+    ALTER TABLE municipal_info ADD COLUMN IF NOT EXISTS commune_id UUID REFERENCES commune(id) ON DELETE SET NULL;
     CREATE INDEX IF NOT EXISTS idx_municipal_info_commune_id ON municipal_info(commune_id);
     COMMENT ON COLUMN municipal_info.commune_id IS 'Référence à la commune associée à l''information municipale';
   END IF;
