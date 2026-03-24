@@ -23,6 +23,10 @@ env:
       - RUNTIME
   - variable: NUXT_PUBLIC_SUPABASE_ANON_KEY
     secret: NUXT_PUBLIC_SUPABASE_ANON_KEY
+  - variable: NODE_OPTIONS
+    value: "--max-old-space-size=4096"
+    availability:
+      - BUILD
 
   # Cloudinary
   - variable: CLOUDINARY_CLOUD_NAME
