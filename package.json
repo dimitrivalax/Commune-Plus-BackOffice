@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nuxt build --dotenv .env",
+    "build": "nuxt build --dotenv .env --node --max-old-space-size=3072",
     "dev": "nuxt dev --dotenv .env.local",
     "prod": "nuxt dev --dotenv .env",
     "preview": "nuxt preview --dotenv .env",
