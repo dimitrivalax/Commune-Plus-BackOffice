@@ -3,10 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "dotenv -e .env -- node --max-old-space-size=3072 node_modules/nuxt/bin/nuxt.mjs build",
-    "dev": "dotenv -e .env.local -- nuxt dev",
-    "preview": "dotenv -e .env -- nuxt preview",
-    "start": "dotenv -e .env -- node .output/server/index.mjs",
+    "build": "nuxt build --dotenv .env",
+    "dev": "nuxt dev --dotenv .env.local",
+    "prod": "nuxt dev --dotenv .env",
+    "preview": "nuxt preview --dotenv .env",
+    "start": "nuxt start --dotenv .env",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck"
