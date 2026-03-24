@@ -143,6 +143,8 @@ const _useSupabase = () => {
       throw new Error("Supabase is not configured");
     }
 
+    console.log("Resetting password for email:", email);
+    console.log("Current URL:", window.location.origin);
     const { error } = await client.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/login?type=recovery`,
     });

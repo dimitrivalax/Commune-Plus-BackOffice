@@ -55,8 +55,8 @@ echo "🚀 Préparation du renommage des migrations..."
 
 # Étape 1 : Supprimer les anciens préfixes pour repartir sur une base propre
 for f in "$MIGRATIONS_DIR"/*.sql; do
-  if [[ $(basename "$f") =~ ^[0-9]{14}[0-9]*_ ]]; then
-    base_name=$(basename "$f" | sed -E 's/^[0-9]{14}[0-9]*_//')
+  if [[ $(basename "$f") =~ ^20260323142000[0-9]*_ ]]; then
+    base_name=$(basename "$f" | sed -E 's/^20260323142000[0-9]*_//')
     if [ "$base_name" != "README.md" ]; then
        mv "$f" "$MIGRATIONS_DIR/$base_name"
     fi
