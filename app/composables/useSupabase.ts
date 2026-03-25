@@ -113,9 +113,16 @@ const _useSupabase = () => {
       return null;
     }
 
-    const {
-      data: { session: currentSession },
-    } = await client.auth.getSession();
+    const { data, error } = await client.auth.getSession();
+
+    if (error) {
+      console.error(
+        "Erreur lors de la récupération de la session Supabase:",
+        error,
+      );
+    }
+
+    const currentSession = data.session;
     session.value = currentSession;
     if (currentSession) {
       user.value = currentSession.user;
@@ -125,13 +132,13 @@ const _useSupabase = () => {
 
   // Initialiser la session si on est côté client
   if (import.meta.client) {
-    getSession().catch(() => {
-      // Ignorer les erreurs silencieusement
+    getSession().catch((err) => {
+      console.error("Erreur inattendue au chargement de la session:", err);
     });
 
     // Écouter les changements d'authentification
     if (client) {
-      client.auth.onAuthStateChange((_event, newSession) => {
+      client.auth.onAuthStateChange((event, newSession) => {
         session.value = newSession;
         user.value = newSession?.user ?? null;
       });

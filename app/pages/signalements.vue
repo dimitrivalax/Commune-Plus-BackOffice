@@ -182,8 +182,17 @@ const handleMarkerClick = (signalement: Signalement) => {
       <div class="flex gap-4 h-[calc(100vh-12rem)]">
         <!-- Colonne gauche : Liste ou Carte (plus étroite) -->
         <div class="w-1/3 min-w-[300px] max-w-[400px] h-full overflow-hidden">
-          <div v-if="viewMode === 'table'" class="h-full">
-            <SignalementsList v-model="selectedSignalement" :signalements="filteredSignalements" />
+          <div v-if="viewMode === 'table'" class="h-full border border-default rounded-lg overflow-hidden bg-default/10">
+            <SignalementsList v-show="filteredSignalements.length > 0" v-model="selectedSignalement" :signalements="filteredSignalements" />
+            <div v-if="signalementsPending" class="p-4 text-center">
+              <UIcon name="i-lucide-loader-2" class="animate-spin" />
+            </div>
+            <div
+              v-else-if="filteredSignalements.length === 0"
+              class="p-8 text-center text-dimmed italic text-sm"
+            >
+              Aucun signalement trouvé.
+            </div>
           </div>
           <div v-else class="h-full">
             <ClientOnly>
@@ -205,8 +214,17 @@ const handleMarkerClick = (signalement: Signalement) => {
             @update="handleUpdate"
           />
         </div>
-        <div v-else class="hidden lg:flex flex-1 items-center justify-center">
-          <UIcon name="i-lucide-alert-triangle" class="size-32 text-dimmed" />
+        <div
+          v-else
+          class="hidden lg:flex flex-1 items-center justify-center border border-default rounded-lg bg-default/5"
+        >
+          <div class="text-center text-dimmed">
+            <UIcon
+              name="i-lucide-alert-triangle"
+              class="size-24 mb-4 opacity-20 mx-auto"
+            />
+            <p>Sélectionnez un signalement pour voir les détails</p>
+          </div>
         </div>
       </div>
     </template>
