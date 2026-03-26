@@ -1,5 +1,5 @@
 import { requireAuth } from "../../utils/supabase-auth";
-import { requireCurrentUserProfile } from "../../utils/supabase-auth";
+import { requireCurrentUserProfile, getSupabaseAdminClient } from "../../utils/supabase-auth";
 
 export default eventHandler(async (event) => {
   const { supabase } = await requireAuth(event);
@@ -48,8 +48,10 @@ export default eventHandler(async (event) => {
     } else if (method === "PUT") {
       const body = await readBody(event);
 
+      const adminClient = getSupabaseAdminClient() || supabase;
+
       // Mettre à jour la commune
-      const { data, error } = await supabase
+      const { data, error } = await adminClient
         .from("commune")
         .update({
           name: body.name,

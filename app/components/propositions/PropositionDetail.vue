@@ -116,7 +116,13 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
 </script>
 
 <template>
-  <UDashboardPanel id="proposition-detail">
+  <UDashboardPanel
+    id="proposition-detail"
+    :ui="{
+      root: 'relative flex flex-col min-w-0 h-full !min-h-0 overflow-hidden shrink',
+      body: 'flex flex-col gap-4 sm:gap-6 flex-1 min-h-0 overflow-hidden p-0',
+    }"
+  >
     <UDashboardNavbar :title="`Doléance #${proposition.id.slice(0, 8)}`" :toggle="false">
       <template #leading>
         <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
@@ -155,7 +161,7 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
       </div>
     </div>
 
-    <div class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-6">
+    <div class="min-h-0 flex-1 p-4 sm:p-6 overflow-y-auto space-y-6">
       <div>
         <h1 class="text-2xl font-bold text-highlighted mb-4">
           {{ proposition.name }}

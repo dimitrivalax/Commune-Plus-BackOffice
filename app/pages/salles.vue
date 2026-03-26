@@ -1,30 +1,34 @@
 <script setup lang="ts">
+import type { SortingState } from '@tanstack/table-core'
 import type { TableColumn } from '@nuxt/ui'
 import type { Salle } from '~/types'
+import {
+  compareIsoDateStrings,
+  compareLocaleFr,
+  compareOptionalStringNullsLast
+} from '~/utils/tableSortCompare'
 
 const UButton = resolveComponent('UButton')
 const UDropdownMenu = resolveComponent('UDropdownMenu')
 const UBadge = resolveComponent('UBadge')
 
-const toast = useToast()
+const sortableHeader = useSortableTableHeader<Salle>()
+
 const table = useTemplateRef('table')
 const { session } = useSupabase()
 
-const authHeaders = computed(() => {
-  const currentSession = session.value
-  if (!currentSession?.access_token) {
-    return {}
-  }
-  return {
-    Authorization: `Bearer ${currentSession.access_token}`
-  }
+const sallesFetchHeaders = computed(() => {
+  const token = session.value?.access_token
+  if (!token)
+    return undefined
+  return { Authorization: `Bearer ${token}` }
 })
 
 const { currentCommune } = useCurrentCommune()
 
 const { data, status, refresh } = await useFetch<Salle[]>('/api/salles', {
   lazy: true,
-  headers: authHeaders,
+  headers: sallesFetchHeaders,
   query: computed(() => ({
     commune_id: currentCommune.value?.id
   }))
@@ -75,10 +79,40 @@ function handleRowClick(row: Salle) {
   editModal.value?.openModal(row)
 }
 
+function compareSallesForSort(a: Salle, b: Salle, columnId: string, desc: boolean): number {
+  const dir = desc ? -1 : 1
+  let cmp = 0
+
+  switch (columnId) {
+    case 'nom':
+      cmp = compareLocaleFr(a.nom, b.nom)
+      break
+    case 'adresse':
+      cmp = compareLocaleFr(a.adresse, b.adresse)
+      break
+    case 'nombre_max_places':
+      cmp = a.nombre_max_places - b.nombre_max_places
+      break
+    case 'description':
+      cmp = compareLocaleFr(a.description, b.description)
+      break
+    case 'photo_url':
+      cmp = compareOptionalStringNullsLast(a.photo_url, b.photo_url)
+      break
+    case 'created_at':
+      cmp = compareIsoDateStrings(a.created_at, b.created_at)
+      break
+    default:
+      cmp = 0
+  }
+
+  return cmp * dir
+}
+
 const columns: TableColumn<Salle>[] = [
   {
     accessorKey: 'nom',
-    header: 'Nom',
+    header: sortableHeader('Nom'),
     cell: ({ row }) => {
       return h('div', {
         class: 'font-medium text-highlighted cursor-pointer',
@@ -91,7 +125,7 @@ const columns: TableColumn<Salle>[] = [
   },
   {
     accessorKey: 'adresse',
-    header: 'Adresse',
+    header: sortableHeader('Adresse'),
     cell: ({ row }) => {
       return h('p', {
         class: 'text-sm text-muted max-w-md cursor-pointer',
@@ -104,7 +138,7 @@ const columns: TableColumn<Salle>[] = [
   },
   {
     accessorKey: 'nombre_max_places',
-    header: 'Places max',
+    header: sortableHeader('Places max'),
     cell: ({ row }) => {
       return h(UBadge, {
         variant: 'subtle',
@@ -119,7 +153,7 @@ const columns: TableColumn<Salle>[] = [
   },
   {
     accessorKey: 'description',
-    header: 'Description',
+    header: sortableHeader('Description'),
     cell: ({ row }) => {
       const description = row.original.description
       if (!description) {
@@ -143,7 +177,7 @@ const columns: TableColumn<Salle>[] = [
   },
   {
     accessorKey: 'photo_url',
-    header: 'Photo',
+    header: sortableHeader('Photo'),
     cell: ({ row }) => {
       if (!row.original.photo_url) {
         return h('span', {
@@ -162,15 +196,17 @@ const columns: TableColumn<Salle>[] = [
           e.stopPropagation()
           handleRowClick(row.original)
         },
-        onError: (e: any) => {
-          e.target.style.display = 'none'
+        onError: (e: Event) => {
+          const el = e.target
+          if (el instanceof HTMLImageElement)
+            el.style.display = 'none'
         }
       })
     }
   },
   {
     accessorKey: 'created_at',
-    header: 'Date de création',
+    header: sortableHeader('Date de création'),
     cell: ({ row }) => {
       const date = new Date(row.original.created_at)
       return h('span', {
@@ -184,6 +220,7 @@ const columns: TableColumn<Salle>[] = [
   },
   {
     id: 'actions',
+    enableSorting: false,
     cell: ({ row }) => {
       return h(
         'div',
@@ -219,6 +256,8 @@ const pagination = ref({
   pageSize: 10
 })
 
+const sorting = ref<SortingState>([])
+
 const searchQuery = ref('')
 
 function salleMatchesSearch(s: Salle, q: string) {
@@ -243,15 +282,30 @@ const filteredList = computed(() => {
   return list.value.filter(s => salleMatchesSearch(s, q))
 })
 const totalRows = computed(() => filteredList.value.length)
+
+const sortedFilteredList = computed(() => {
+  const list = [...filteredList.value]
+  const rule = sorting.value[0]
+  if (!rule)
+    return list
+
+  list.sort((a, b) => compareSallesForSort(a, b, rule.id, rule.desc))
+  return list
+})
+
 const paginatedData = computed(() => {
   const { pageIndex, pageSize } = pagination.value
   const start = pageIndex * pageSize
-  return filteredList.value.slice(start, start + pageSize)
+  return sortedFilteredList.value.slice(start, start + pageSize)
 })
 
 watch(searchQuery, () => {
   pagination.value.pageIndex = 0
 })
+
+watch(sorting, () => {
+  pagination.value.pageIndex = 0
+}, { deep: true })
 </script>
 
 <template>
@@ -281,9 +335,12 @@ watch(searchQuery, () => {
 
       <UTable
         ref="table"
+        v-model:sorting="sorting"
         class="shrink-0"
         :data="paginatedData"
         :columns="columns"
+        :sorting-options="{ manualSorting: true }"
+        :get-row-id="(row: Salle) => row.id"
         :loading="status === 'pending'"
         :ui="{
           base: 'table-fixed border-separate border-spacing-0',

@@ -168,8 +168,8 @@ const handleUpdate = (updated: Proposition) => {
         </div>
       </div>
 
-      <div class="flex gap-4 h-[calc(100vh-12rem)]">
-        <div class="w-1/3 min-w-[300px] max-w-[400px]">
+      <div class="flex gap-4 h-[calc(100vh-12rem)] min-h-0">
+        <div class="w-1/3 min-w-[300px] max-w-[400px] h-full min-h-0 overflow-hidden">
           <div
             class="h-full border border-default rounded-lg overflow-hidden bg-default/10"
           >
@@ -189,7 +189,7 @@ const handleUpdate = (updated: Proposition) => {
           </div>
         </div>
 
-        <div v-if="selectedProposition" class="hidden lg:block flex-1 min-w-0">
+        <div v-if="selectedProposition" class="hidden lg:block flex-1 min-w-0 min-h-0 h-full overflow-hidden">
           <PropositionDetail
             :proposition="selectedProposition"
             @close="selectedProposition = null"

@@ -1,22 +1,51 @@
 <script setup lang="ts">
+import type { SortingState } from '@tanstack/table-core'
 import type { TableColumn } from '@nuxt/ui'
 import type { MunicipalInfo } from '~/types'
+import {
+  compareIsoDateStrings,
+  compareLocaleFr,
+  compareOptionalIsoDateNullsLast
+} from '~/utils/tableSortCompare'
 
 const UButton = resolveComponent('UButton')
 const UDropdownMenu = resolveComponent('UDropdownMenu')
 const UBadge = resolveComponent('UBadge')
 
+const sortableHeader = useSortableTableHeader<MunicipalInfo>()
+
+function compareInfosForSort(a: MunicipalInfo, b: MunicipalInfo, columnId: string, desc: boolean): number {
+  const dir = desc ? -1 : 1
+  let cmp = 0
+
+  switch (columnId) {
+    case 'title':
+      cmp = compareLocaleFr(a.title, b.title)
+      break
+    case 'category':
+      cmp = compareLocaleFr(a.category, b.category)
+      break
+    case 'event_date':
+      cmp = compareOptionalIsoDateNullsLast(a.event_date, b.event_date)
+      break
+    case 'created_at':
+      cmp = compareIsoDateStrings(a.created_at, b.created_at)
+      break
+    default:
+      cmp = 0
+  }
+
+  return cmp * dir
+}
+
 const table = useTemplateRef('table')
 const { session } = useSupabase()
 
-const authHeaders = computed(() => {
-  const currentSession = session.value
-  if (!currentSession?.access_token) {
-    return {}
-  }
-  return {
-    Authorization: `Bearer ${currentSession.access_token}`
-  }
+const municipalInfoFetchHeaders = computed(() => {
+  const token = session.value?.access_token
+  if (!token)
+    return undefined
+  return { Authorization: `Bearer ${token}` }
 })
 
 const { currentCommune } = useCurrentCommune()
@@ -25,7 +54,7 @@ const { data, status, refresh } = await useFetch<MunicipalInfo[]>(
   '/api/municipal-info',
   {
     lazy: true,
-    headers: authHeaders as any,
+    headers: municipalInfoFetchHeaders,
     query: computed(() => ({
       commune_id: currentCommune.value?.id
     }))
@@ -91,7 +120,7 @@ function handleRowClick(row: MunicipalInfo) {
 const columns: TableColumn<MunicipalInfo>[] = [
   {
     accessorKey: 'title',
-    header: 'Titre',
+    header: sortableHeader('Titre'),
     cell: ({ row }) => {
       return h(
         'div',
@@ -108,7 +137,7 @@ const columns: TableColumn<MunicipalInfo>[] = [
   },
   {
     accessorKey: 'category',
-    header: 'Catégorie',
+    header: sortableHeader('Catégorie'),
     cell: ({ row }) => {
       if (!row.original.category) {
         return h(
@@ -139,8 +168,40 @@ const columns: TableColumn<MunicipalInfo>[] = [
     }
   },
   {
+    accessorKey: 'event_date',
+    header: sortableHeader('Date de l\'actualité'),
+    cell: ({ row }) => {
+      const raw = row.original.event_date
+      if (!raw) {
+        return h(
+          'span',
+          {
+            class: 'text-muted cursor-pointer',
+            onClick: (e: Event) => {
+              e.stopPropagation()
+              handleRowClick(row.original)
+            }
+          },
+          '-'
+        )
+      }
+      const date = new Date(raw)
+      return h(
+        'span',
+        {
+          class: 'text-sm cursor-pointer',
+          onClick: (e: Event) => {
+            e.stopPropagation()
+            handleRowClick(row.original)
+          }
+        },
+        date.toLocaleDateString('fr-FR')
+      )
+    }
+  },
+  {
     accessorKey: 'created_at',
-    header: 'Date de création',
+    header: sortableHeader('Date de création'),
     cell: ({ row }) => {
       const date = new Date(row.original.created_at)
       return h(
@@ -158,6 +219,7 @@ const columns: TableColumn<MunicipalInfo>[] = [
   },
   {
     id: 'actions',
+    enableSorting: false,
     cell: ({ row }) => {
       return h(
         'div',
@@ -193,6 +255,8 @@ const pagination = ref({
   pageSize: 10
 })
 
+const sorting = ref<SortingState>([])
+
 const searchQuery = ref('')
 
 function municipalInfoMatchesSearch(info: MunicipalInfo, q: string) {
@@ -212,15 +276,30 @@ const filteredList = computed(() => {
   return list.value.filter(info => municipalInfoMatchesSearch(info, q))
 })
 const totalRows = computed(() => filteredList.value.length)
+
+const sortedFilteredList = computed(() => {
+  const list = [...filteredList.value]
+  const rule = sorting.value[0]
+  if (!rule)
+    return list
+
+  list.sort((a, b) => compareInfosForSort(a, b, rule.id, rule.desc))
+  return list
+})
+
 const paginatedData = computed(() => {
   const { pageIndex, pageSize } = pagination.value
   const start = pageIndex * pageSize
-  return filteredList.value.slice(start, start + pageSize)
+  return sortedFilteredList.value.slice(start, start + pageSize)
 })
 
 watch(searchQuery, () => {
   pagination.value.pageIndex = 0
 })
+
+watch(sorting, () => {
+  pagination.value.pageIndex = 0
+}, { deep: true })
 </script>
 
 <template>
@@ -250,9 +329,12 @@ watch(searchQuery, () => {
 
       <UTable
         ref="table"
+        v-model:sorting="sorting"
         class="shrink-0"
         :data="paginatedData"
         :columns="columns"
+        :sorting-options="{ manualSorting: true }"
+        :get-row-id="(row: MunicipalInfo) => row.id"
         :loading="status === 'pending'"
         :ui="{
           base: 'table-fixed border-separate border-spacing-0',
