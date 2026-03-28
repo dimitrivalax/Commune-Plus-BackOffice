@@ -28,6 +28,10 @@ const currentDate = ref(new Date())
 
 const { currentCommune } = useCurrentCommune()
 
+const isReservationsMobileDisabled = computed(
+  () => currentCommune.value?.feature_reservations_salles === false,
+)
+
 // Charger les salles
 const { data: salles, refresh: refreshSalles } = await useFetch<Salle[]>('/api/salles', {
   lazy: true,
@@ -305,6 +309,11 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
     </template>
 
     <template #body>
+      <CommuneMobileFeatureDisabledBanner
+        v-if="isReservationsMobileDisabled"
+        feature="reservations"
+      />
+
       <!-- Navigation -->
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">

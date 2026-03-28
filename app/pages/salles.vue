@@ -26,6 +26,10 @@ const sallesFetchHeaders = computed(() => {
 
 const { currentCommune } = useCurrentCommune()
 
+const isReservationsMobileDisabled = computed(
+  () => currentCommune.value?.feature_reservations_salles === false,
+)
+
 const { data, status, refresh } = await useFetch<Salle[]>('/api/salles', {
   lazy: true,
   headers: sallesFetchHeaders,
@@ -326,6 +330,11 @@ watch(sorting, () => {
     </template>
 
     <template #body>
+      <CommuneMobileFeatureDisabledBanner
+        v-if="isReservationsMobileDisabled"
+        feature="reservations"
+      />
+
       <UInput
         v-model="searchQuery"
         class="max-w-sm mb-4"

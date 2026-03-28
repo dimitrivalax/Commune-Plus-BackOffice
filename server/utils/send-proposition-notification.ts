@@ -11,7 +11,7 @@ interface SendPropositionNotificationOptions {
 }
 
 /**
- * Envoie une notification push à l'utilisateur qui a créé la doléance
+ * Envoie une notification push à l'utilisateur qui a créé la proposition
  */
 export async function sendPropositionNotification(
   options: SendPropositionNotificationOptions,

@@ -18,7 +18,7 @@ export default eventHandler(async (event) => {
       const { data: communesData, error: communesError } = await supabase
         .from("commune")
         .select(
-          "id, name, postal_code, email, logo_url, created_at, updated_at",
+          "id, name, postal_code, email, logo_url, feature_reservations_salles, feature_propositions, created_at, updated_at",
         )
         .order("name", { ascending: true });
 
@@ -38,7 +38,7 @@ export default eventHandler(async (event) => {
 
     const { data: communesData, error: communesError } = await supabase
       .from("commune")
-      .select("id, name, postal_code, email, logo_url, created_at, updated_at")
+      .select("id, name, postal_code, email, logo_url, feature_reservations_salles, feature_propositions, created_at, updated_at")
       .in("id", profile.communeIds)
       .order("name", { ascending: true });
 

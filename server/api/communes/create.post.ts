@@ -22,6 +22,9 @@ export default eventHandler(async (event) => {
         postal_code: body.postal_code,
         email: body.email,
         logo_url: body.logo_url,
+        feature_reservations_salles:
+          body.feature_reservations_salles !== false,
+        feature_propositions: body.feature_propositions !== false,
       })
       .select()
       .single();

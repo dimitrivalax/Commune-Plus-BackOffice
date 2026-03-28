@@ -27,7 +27,7 @@ export default eventHandler(async (event) => {
     });
   }
 
-  // 1. Récupérer les infos de la doléance
+  // 1. Récupérer les infos de la proposition
   const { data: proposition, error: propError } = await supabase
     .from("propositions")
     .select("*")
@@ -47,10 +47,10 @@ export default eventHandler(async (event) => {
 
   if (validatedData.type === "vote") {
     title = "Nouveau vote !";
-    messageBody = `Quelqu'un a voté pour votre doléance : "${proposition.name}"`;
+    messageBody = `Quelqu'un a voté pour votre proposition : "${proposition.name}"`;
   } else {
     title = "Nouveau commentaire";
-    messageBody = `Quelqu'un a commenté votre doléance : "${proposition.name}"`;
+    messageBody = `Quelqu'un a commenté votre proposition : "${proposition.name}"`;
     if (validatedData.comment_content) {
       // Optionnel: ajouter un aperçu du commentaire
     }

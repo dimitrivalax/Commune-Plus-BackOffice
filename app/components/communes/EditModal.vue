@@ -12,6 +12,8 @@ const schema = z.object({
   postal_code: z.string().min(1, "Le code postal est requis"),
   email: z.string().email("Email invalide"),
   logo_url: z.string().url("URL invalide").optional().or(z.literal("")),
+  feature_reservations_salles: z.boolean(),
+  feature_propositions: z.boolean(),
 });
 
 const open = ref(false);
@@ -23,6 +25,8 @@ const state = reactive<Partial<Schema>>({
   postal_code: undefined,
   email: undefined,
   logo_url: undefined,
+  feature_reservations_salles: true,
+  feature_propositions: true,
 });
 
 const toast = useToast();
@@ -38,6 +42,10 @@ watch(
       state.postal_code = newCommune.postal_code;
       state.email = newCommune.email;
       state.logo_url = newCommune.logo_url || "";
+      state.feature_reservations_salles =
+        newCommune.feature_reservations_salles !== false;
+      state.feature_propositions =
+        newCommune.feature_propositions !== false;
     }
   },
   { immediate: true },
@@ -60,6 +68,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         postal_code: event.data.postal_code,
         email: event.data.email,
         logo_url: event.data.logo_url || null,
+        feature_reservations_salles: event.data.feature_reservations_salles,
+        feature_propositions: event.data.feature_propositions,
       },
     });
 
@@ -101,6 +111,10 @@ function openModal() {
     state.postal_code = props.commune.postal_code;
     state.email = props.commune.email;
     state.logo_url = props.commune.logo_url || "";
+    state.feature_reservations_salles =
+      props.commune.feature_reservations_salles !== false;
+    state.feature_propositions =
+      props.commune.feature_propositions !== false;
     open.value = true;
   }
 }
@@ -165,6 +179,24 @@ defineExpose({
         >
           <UInput v-model="state.logo_url" class="w-full" />
         </UFormField>
+
+        <div class="space-y-3 rounded-lg border border-default p-4">
+          <p class="text-sm font-medium text-highlighted">
+            Application mobile
+          </p>
+          <UFormField
+            label="Réservation de salles"
+            name="feature_reservations_salles"
+          >
+            <USwitch v-model="state.feature_reservations_salles" />
+          </UFormField>
+          <UFormField
+            label="Propositions"
+            name="feature_propositions"
+          >
+            <USwitch v-model="state.feature_propositions" />
+          </UFormField>
+        </div>
 
         <div
           v-if="state.logo_url"

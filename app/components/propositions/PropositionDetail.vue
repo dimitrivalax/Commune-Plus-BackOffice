@@ -65,7 +65,7 @@ const toggleArchive = async () => {
     emits("update", updated);
 
     toast.add({
-      title: updated.is_archived ? "Doléance archivée" : "Doléance restaurée",
+      title: updated.is_archived ? "Proposition archivée" : "Proposition restaurée",
       icon: "i-lucide-check-circle",
       color: "success",
     });
@@ -123,7 +123,7 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
       body: 'flex flex-col gap-4 sm:gap-6 flex-1 min-h-0 overflow-hidden p-0',
     }"
   >
-    <UDashboardNavbar :title="`Doléance #${proposition.id.slice(0, 8)}`" :toggle="false">
+    <UDashboardNavbar :title="`Proposition #${proposition.id.slice(0, 8)}`" :toggle="false">
       <template #leading>
         <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
       </template>
@@ -235,7 +235,7 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
         <img
           v-if="proposition.photo_url"
           :src="proposition.photo_url"
-          :alt="`Photo de la doléance ${proposition.id}`"
+          :alt="`Photo de la proposition ${proposition.id}`"
           class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-xl"
         >
       </div>

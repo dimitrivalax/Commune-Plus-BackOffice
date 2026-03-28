@@ -89,7 +89,7 @@ const baseNavItems: NavigationMenuItem[] = [
     },
   },
   {
-    label: "Doléances",
+    label: "Propositions",
     icon: "i-lucide-book",
     to: "/propositions",
     onSelect: () => {

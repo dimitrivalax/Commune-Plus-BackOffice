@@ -25,6 +25,10 @@ const searchQuery = ref("");
 const { currentCommune } = useCurrentCommune();
 const { session } = useSupabase();
 
+const isPropositionsMobileDisabled = computed(
+  () => currentCommune.value?.feature_propositions === false,
+);
+
 const propositions = ref<Proposition[]>([]);
 const propositionsPending = ref(false);
 
@@ -129,7 +133,7 @@ const handleUpdate = (updated: Proposition) => {
 <template>
   <UDashboardPanel id="propositions">
     <template #header>
-      <UDashboardNavbar title="Cahier de Doléances">
+      <UDashboardNavbar title="Propositions">
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
@@ -141,6 +145,11 @@ const handleUpdate = (updated: Proposition) => {
     </template>
 
     <template #body>
+      <CommuneMobileFeatureDisabledBanner
+        v-if="isPropositionsMobileDisabled"
+        feature="propositions"
+      />
+
       <div
         class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-3 mb-4 pb-4 border-b border-default items-center"
       >
@@ -184,7 +193,7 @@ const handleUpdate = (updated: Proposition) => {
               v-else-if="filteredPropositions.length === 0"
               class="p-8 text-center text-dimmed italic text-sm"
             >
-              Aucune doléance trouvée.
+              Aucune proposition trouvée.
             </div>
           </div>
         </div>
@@ -205,7 +214,7 @@ const handleUpdate = (updated: Proposition) => {
               name="i-lucide-book"
               class="size-24 mb-4 opacity-20 mx-auto"
             />
-            <p>Sélectionnez une doléance pour voir les détails</p>
+            <p>Sélectionnez une proposition pour voir les détails</p>
           </div>
         </div>
       </div>

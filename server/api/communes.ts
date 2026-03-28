@@ -15,7 +15,7 @@ export default eventHandler(async (event) => {
   try {
     const { data, error } = await supabase
       .from("commune")
-      .select("id, name, postal_code, email, logo_url, created_at, updated_at")
+      .select("id, name, postal_code, email, logo_url, feature_reservations_salles, feature_propositions, created_at, updated_at")
       .order("name", { ascending: true });
 
     if (error) {
