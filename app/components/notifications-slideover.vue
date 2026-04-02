@@ -7,6 +7,10 @@ const router = useRouter()
 
 const { notifications, refreshNotifications, markAsRead, notificationsError, unreadCount } = useNotifications()
 
+const unreadNotifications = computed(() =>
+  notifications.value.filter((n) => n.unread)
+)
+
 function getNotificationUrl(notification: Notification) {
   if (notification.type === 'signalement') {
     return '/signalements'
@@ -55,21 +59,17 @@ watch(isNotificationsSlideoverOpen, (isOpen) => {
           {{ notificationsError?.message || 'Veuillez réessayer' }}
         </p>
       </div>
-      <div v-else-if="!notifications || notifications.length === 0" class="px-3 py-8 text-center text-muted">
-        <p>Aucune notification</p>
+      <div v-else-if="unreadNotifications.length === 0" class="px-3 py-8 text-center text-muted">
+        <p>Aucune notification non lue</p>
       </div>
 
       <button
-        v-for="notification in notifications"
+        v-for="notification in unreadNotifications"
         :key="notification.id"
         class="w-full px-3 py-2.5 rounded-md hover:bg-elevated/50 flex items-center gap-3 relative -mx-3 first:-mt-3 last:-mb-3 text-left transition-colors"
         @click="handleNotificationClick(notification)"
       >
-        <UChip
-          color="error"
-          :show="!!notification.unread"
-          inset
-        >
+        <UChip color="error" :show="true" inset>
           <UAvatar
             v-bind="notification.sender.avatar"
             :alt="notification.sender.name"
