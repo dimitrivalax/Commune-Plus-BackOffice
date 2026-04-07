@@ -1,60 +1,56 @@
-import { requireAuth } from "../../utils/supabase-auth";
-import { getCurrentUserProfile } from "../../utils/supabase-auth";
+import {
+  requireAuth,
+  getCurrentUserProfile,
+} from '../../utils/firebase-auth'
+import { getAdminFirestore } from '../../utils/firebase-admin-app'
+import { chunkArray, docWithId } from '../../utils/firestore-serialize'
+import { FieldPath } from 'firebase-admin/firestore'
 
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event);
-  const profile = await getCurrentUserProfile(event);
+  await requireAuth(event)
+  const profile = await getCurrentUserProfile(event)
 
   if (!profile) {
     throw createError({
       statusCode: 404,
-      message: "Utilisateur non trouvé",
-    });
+      message: 'Utilisateur non trouvé',
+    })
   }
 
   try {
-    // Administrateur : accès à toutes les communes
-    if (profile.role === "administrateur") {
-      const { data: communesData, error: communesError } = await supabase
-        .from("commune")
-        .select(
-          "id, name, postal_code, email, logo_url, feature_reservations_salles, feature_propositions, created_at, updated_at",
-        )
-        .order("name", { ascending: true });
+    const db = getAdminFirestore()
 
-      if (communesError) {
-        throw createError({
-          statusCode: 500,
-          message: `Error fetching communes: ${communesError.message}`,
-        });
-      }
-      return communesData || [];
+    if (profile.role === 'administrateur') {
+      const snap = await db.collection('commune').orderBy('name').get()
+      return snap.docs
+        .map((d) => docWithId(d.id, d.data()))
+        .filter(Boolean)
     }
 
-    // Utilisateur : uniquement ses communes (en pratique une seule)
     if (profile.communeIds.length === 0) {
-      return [];
+      return []
     }
 
-    const { data: communesData, error: communesError } = await supabase
-      .from("commune")
-      .select("id, name, postal_code, email, logo_url, feature_reservations_salles, feature_propositions, created_at, updated_at")
-      .in("id", profile.communeIds)
-      .order("name", { ascending: true });
-
-    if (communesError) {
-      throw createError({
-        statusCode: 500,
-        message: `Error fetching communes: ${communesError.message}`,
-      });
+    const all: Record<string, unknown>[] = []
+    for (const ch of chunkArray(profile.communeIds, 30)) {
+      const snap = await db
+        .collection('commune')
+        .where(FieldPath.documentId(), 'in', ch)
+        .get()
+      for (const d of snap.docs) {
+        const row = docWithId(d.id, d.data())
+        if (row) all.push(row)
+      }
     }
-
-    return communesData || [];
-  } catch (error: any) {
+    all.sort((a, b) =>
+      String(a.name || '').localeCompare(String(b.name || ''), 'fr'))
+    return all
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
+      statusCode: e.statusCode || 500,
       message:
-        error.message || "An error occurred while fetching user communes",
-    });
+        e.message || 'An error occurred while fetching user communes',
+    })
   }
-});
+})

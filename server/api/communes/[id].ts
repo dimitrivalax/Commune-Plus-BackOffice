@@ -1,106 +1,75 @@
-import { requireAuth } from "../../utils/supabase-auth";
-import { requireCurrentUserProfile, getSupabaseAdminClient } from "../../utils/supabase-auth";
+import { FieldValue } from 'firebase-admin/firestore'
+import {
+  requireAuth,
+  requireCurrentUserProfile,
+} from '../../utils/firebase-auth'
+import { getAdminFirestore } from '../../utils/firebase-admin-app'
+import { docWithId } from '../../utils/firestore-serialize'
 
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event);
-  const profile = await requireCurrentUserProfile(event);
+  await requireAuth(event)
+  const profile = await requireCurrentUserProfile(event)
 
-  const id = getRouterParam(event, "id");
-  const method = getMethod(event);
+  const id = getRouterParam(event, 'id')
+  const method = getMethod(event)
 
-  // Vérifier les permissions
-  const isGlobalAdmin = profile.role === "administrateur";
-  const isAssociated = profile.communeIds.includes(id || "");
+  const isGlobalAdmin = profile.role === 'administrateur'
+  const isAssociated = profile.communeIds.includes(id || '')
 
-  if (method === "DELETE") {
+  if (method === 'DELETE') {
     if (!isGlobalAdmin) {
       throw createError({
         statusCode: 403,
-        message: "La suppression est réservée aux administrateurs globaux",
-      });
+        message: 'La suppression est réservée aux administrateurs globaux',
+      })
     }
-  } else if (method === "GET" || method === "PUT") {
+  } else if (method === 'GET' || method === 'PUT') {
     if (!isGlobalAdmin && !isAssociated) {
       throw createError({
         statusCode: 403,
         message: "Vous n'avez pas la permission d'accéder à cette commune",
-      });
+      })
     }
   }
+
+  const db = getAdminFirestore()
+  const ref = db.collection('commune').doc(id!)
 
   try {
-    if (method === "GET") {
-      // Récupérer la commune
-      const { data, error } = await supabase
-        .from("commune")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error) {
-        throw createError({
-          statusCode: 404,
-          message: "Commune not found",
-        });
+    if (method === 'GET') {
+      const snap = await ref.get()
+      if (!snap.exists) {
+        throw createError({ statusCode: 404, message: 'Commune not found' })
       }
-
-      return data;
-    } else if (method === "PUT") {
-      const body = await readBody(event);
-
-      const adminClient = getSupabaseAdminClient() || supabase;
-
-      // Mettre à jour la commune
-      const { data, error } = await adminClient
-        .from("commune")
-        .update({
-          name: body.name,
-          postal_code: body.postal_code,
-          email: body.email,
-          logo_url: body.logo_url,
-          feature_reservations_salles: body.feature_reservations_salles,
-          feature_propositions: body.feature_propositions,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) {
-        throw createError({
-          statusCode: 500,
-          message: `Error updating commune: ${error.message}`,
-        });
-      }
-
-      return data;
-    } else if (method === "DELETE") {
-      // Supprimer la commune
-      const { data, error } = await supabase
-        .from("commune")
-        .delete()
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) {
-        throw createError({
-          statusCode: 500,
-          message: `Error deleting commune: ${error.message}`,
-        });
-      }
-
-      return { success: true, data };
-    } else {
-      throw createError({
-        statusCode: 405,
-        message: "Method not allowed",
-      });
+      return docWithId(snap.id, snap.data())
     }
-  } catch (error: any) {
+
+    if (method === 'PUT') {
+      const body = await readBody(event)
+      await ref.update({
+        name: body.name,
+        postal_code: body.postal_code,
+        email: body.email,
+        logo_url: body.logo_url,
+        feature_reservations_salles: body.feature_reservations_salles,
+        feature_propositions: body.feature_propositions,
+        updated_at: FieldValue.serverTimestamp(),
+      })
+      const snap = await ref.get()
+      return docWithId(snap.id, snap.data())
+    }
+
+    if (method === 'DELETE') {
+      await ref.delete()
+      return { success: true }
+    }
+
+    throw createError({ statusCode: 405, message: 'Method not allowed' })
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || "An error occurred",
-    });
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred',
+    })
   }
-});
+})

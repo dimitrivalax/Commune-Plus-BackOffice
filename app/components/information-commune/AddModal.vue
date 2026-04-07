@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import * as z from 'zod'
-import type { FormSubmitEvent, EditorToolbarItem } from '@nuxt/ui'
-import { ref, reactive, inject, watch } from 'vue'
+import type { EditorToolbarItem, FormSubmitEvent } from '@nuxt/ui'
 
 const editorToolbarItems: EditorToolbarItem[] = [
   {
@@ -23,99 +22,70 @@ const editorToolbarItems: EditorToolbarItem[] = [
   { kind: 'image', icon: 'i-lucide-image', tooltip: { text: 'Image' } }
 ]
 
-function todayISODate(): string {
-  return new Date().toISOString().split('T')[0] ?? ''
-}
-
 const schema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
-  content: z.string().min(1, 'Le contenu est requis'),
-  event_date: z.string().min(1, 'La date de l\'événement est requise'),
-  category: z.string().optional(),
-  image_url: z
-    .union([z.string().url('URL invalide'), z.literal(''), z.undefined()])
-    .optional()
+  description: z.string().min(1, 'La description est requise'),
+  photo_url: z.union([z.string().url('URL invalide'), z.literal(''), z.undefined()]).optional(),
+  published: z.boolean()
 })
-const open = ref(false)
-
-watch(open, (isOpen) => {
-  if (isOpen) {
-    state.event_date = todayISODate()
-  }
-})
-
 type Schema = z.output<typeof schema>
 
-const state = reactive<Omit<Partial<Schema>, 'event_date'> & { event_date: string }>({
-  title: undefined,
-  content: '',
-  event_date: todayISODate(),
-  category: undefined,
-  image_url: undefined
+const open = ref(false)
+const state = reactive<Partial<Schema>>({
+  title: '',
+  description: '',
+  photo_url: '',
+  published: false
 })
 
-const toast = useToast()
-const refresh = inject<() => void>('refresh-informations')
 const { getAuthHeaders } = useApiAuth()
 const { currentCommune } = useCurrentCommune()
-
-watch(open, (isOpen) => {
-  if (isOpen) {
-    state.event_date = todayISODate()
-  }
-})
+const toast = useToast()
+const refresh = inject<() => void>('refresh-information-commune')
+const isSubmitting = ref(false)
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
-  // Utiliser la commune courante si disponible
-  const communeId = currentCommune.value?.id
-
-  if (!communeId) {
+  if (!currentCommune.value?.id) {
     toast.add({
       title: 'Erreur',
-      description:
-        'Veuillez sélectionner une commune dans le menu avant de créer une information',
+      description: 'Veuillez sélectionner une commune avant de créer une information',
       color: 'error'
     })
     return
   }
 
   try {
-    await $fetch('/api/municipal-info/create', {
+    isSubmitting.value = true
+    await $fetch('/api/information-commune/create', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: {
         title: event.data.title,
-        content: event.data.content,
-        event_date: event.data.event_date || todayISODate(),
-        category: event.data.category || null,
-        image_url: event.data.image_url || null,
-        commune_id: communeId
+        description: event.data.description,
+        photo_url: event.data.photo_url || null,
+        published: event.data.published ?? false,
+        commune_id: currentCommune.value.id
       }
     })
-
     toast.add({
       title: 'Succès',
-      description: `L'information "${event.data.title}" a été ajoutée`,
+      description: 'Information créée',
       color: 'success'
     })
-
-    state.title = undefined
-    state.content = ''
-    state.event_date = todayISODate()
-    state.category = undefined
-    state.image_url = undefined
-
+    state.title = ''
+    state.description = ''
+    state.photo_url = ''
+    state.published = false
     open.value = false
-
-    if (refresh) {
-      refresh()
-    }
+    refresh?.()
   } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: (error instanceof Error ? error.message : undefined) || 'Une erreur est survenue lors de l\'ajout',
+      description: (error as Error)?.message || 'Une erreur est survenue',
       color: 'error'
     })
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
@@ -124,7 +94,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   <UModal
     v-model:open="open"
     title="Nouvelle information"
-    description="Ajouter une nouvelle information municipale"
+    description="Champs: titre, description, photo"
   >
     <UButton label="Nouvelle information" icon="i-lucide-plus" />
 
@@ -135,36 +105,18 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         class="space-y-4"
         @submit="onSubmit"
       >
-        <UFormField
-          label="Titre"
-          placeholder="Titre de l'information"
-          name="title"
-          required
-        >
+        <UFormField label="Titre" name="title" required>
           <UInput v-model="state.title" class="w-full" />
         </UFormField>
 
-        <UFormField
-          label="Date de l'événement"
-          name="event_date"
-          required
-        >
-          <UInput v-model="state.event_date" type="date" class="w-full" />
-        </UFormField>
-
-        <UFormField
-          label="Contenu"
-          placeholder="Contenu de l'information"
-          name="content"
-          required
-        >
+        <UFormField label="Description" name="description" required>
           <ClientOnly>
             <UEditor
               v-if="open"
               v-slot="{ editor }"
-              v-model="state.content"
+              v-model="state.description"
               content-type="html"
-              placeholder="Contenu de l'information"
+              placeholder="Description de l'information"
               class="w-full min-h-[200px] rounded-lg border border-default overflow-hidden"
             >
               <UEditorToolbar
@@ -179,19 +131,15 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           </ClientOnly>
         </UFormField>
 
-        <UFormField
-          label="Catégorie"
-          placeholder="Catégorie (optionnel)"
-          name="category"
-        >
-          <UInput v-model="state.category" class="w-full" />
+        <UFormField label="Photo" name="photo_url">
+          <GalleryImagePicker
+            v-model="state.photo_url"
+            :commune-id="currentCommune?.id"
+          />
         </UFormField>
 
-        <UFormField
-          label="Image de l'information"
-          name="image_url"
-        >
-          <GalleryImagePicker v-model="state.image_url" />
+        <UFormField label="Statut" name="published">
+          <USwitch v-model="state.published" label="Publié" />
         </UFormField>
 
         <div class="flex justify-end gap-2">
@@ -204,8 +152,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           <UButton
             label="Créer"
             color="primary"
-            variant="solid"
             type="submit"
+            :loading="isSubmitting"
           />
         </div>
       </UForm>

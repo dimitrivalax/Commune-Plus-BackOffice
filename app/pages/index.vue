@@ -1,28 +1,190 @@
 <script setup lang="ts">
-const shortcuts = [
+import type { TableColumn } from '@nuxt/ui'
+
+interface CommuneInformation {
+  id: string
+  title: string
+  description: string
+  photo_url?: string | null
+  ordre_affichage?: number
+  published?: boolean
+  commune_id?: string | null
+  created_at?: string
+}
+
+const UButton = resolveComponent('UButton')
+const UDropdownMenu = resolveComponent('UDropdownMenu')
+
+const { session } = useSupabase()
+const { currentCommune } = useCurrentCommune()
+
+const authHeaders = computed<Record<string, string> | undefined>(() => {
+  const token = session.value?.access_token
+  return token ? { Authorization: `Bearer ${token}` } : undefined
+})
+
+const { data, status, refresh } = await useFetch<CommuneInformation[]>(
+  '/api/information-commune',
   {
-    title: 'Actualités',
-    description: 'Gérer les informations municipales',
-    icon: 'i-lucide-info',
-    to: '/informations',
-    iconBgClass: 'bg-primary-50 dark:bg-primary-900/20',
-    iconTextClass: 'text-primary-600 dark:text-primary-400'
+    lazy: true,
+    headers: authHeaders,
+    query: computed(() => ({
+      commune_id: currentCommune.value?.id
+    }))
+  }
+)
+
+watch(currentCommune, () => refresh())
+provide('refresh-information-commune', refresh)
+
+const searchQuery = ref('')
+const selected = ref<CommuneInformation | null>(null)
+const editModal = useTemplateRef<{ openModal: (info?: CommuneInformation) => void }>(
+  'editModal'
+)
+const deleteModal = useTemplateRef<{ openModal: () => void }>('deleteModal')
+
+const filteredData = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  const list = ((data.value ?? []) as CommuneInformation[]).slice().sort((a, b) => {
+    const ao = a.ordre_affichage ?? 0
+    const bo = b.ordre_affichage ?? 0
+    return ao - bo
+  })
+  if (!q) return list
+  return list.filter(item =>
+    [item.title, item.description].some(v => (v ?? '').toLowerCase().includes(q))
+  )
+})
+
+function openEditModal(item: CommuneInformation) {
+  selected.value = item
+  editModal.value?.openModal(item)
+}
+
+function openDeleteModal(item: CommuneInformation) {
+  selected.value = item
+  deleteModal.value?.openModal()
+}
+
+const toast = useToast()
+const { getAuthHeaders } = useApiAuth()
+
+function getSortedList() {
+  return ((data.value ?? []) as CommuneInformation[]).slice().sort((a, b) => {
+    const ao = a.ordre_affichage ?? 0
+    const bo = b.ordre_affichage ?? 0
+    return ao - bo
+  })
+}
+
+function canMove(row: CommuneInformation, direction: 'up' | 'down') {
+  const sorted = getSortedList()
+  const index = sorted.findIndex(item => item.id === row.id)
+  if (index === -1) return false
+  return direction === 'up' ? index > 0 : index < sorted.length - 1
+}
+
+async function moveRow(row: CommuneInformation, direction: 'up' | 'down') {
+  try {
+    await $fetch('/api/information-commune/reorder', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: {
+        id: row.id,
+        commune_id: row.commune_id,
+        direction
+      }
+    })
+    await refresh()
+  } catch (error: unknown) {
+    toast.add({
+      title: 'Erreur',
+      description: (error as Error)?.message || 'Impossible de réordonner',
+      color: 'error'
+    })
+  }
+}
+
+function getRowItems(row: CommuneInformation) {
+  return [
+    {
+      label: 'Modifier',
+      icon: 'i-lucide-edit',
+      onSelect() {
+        openEditModal(row)
+      }
+    },
+    {
+      label: 'Monter',
+      icon: 'i-lucide-arrow-up',
+      disabled: !canMove(row, 'up'),
+      onSelect() {
+        moveRow(row, 'up')
+      }
+    },
+    {
+      label: 'Descendre',
+      icon: 'i-lucide-arrow-down',
+      disabled: !canMove(row, 'down'),
+      onSelect() {
+        moveRow(row, 'down')
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Supprimer',
+      icon: 'i-lucide-trash',
+      color: 'error',
+      onSelect() {
+        openDeleteModal(row)
+      }
+    }
+  ]
+}
+
+const columns: TableColumn<CommuneInformation>[] = [
+  { accessorKey: 'title', header: 'Titre' },
+  {
+    accessorKey: 'ordre_affichage',
+    header: 'Ordre',
+    cell: ({ row }) => String(row.original.ordre_affichage ?? 0)
   },
   {
-    title: 'Signalements',
-    description: 'Consulter et gérer les signalements',
-    icon: 'i-lucide-alert-triangle',
-    to: '/signalements',
-    iconBgClass: 'bg-orange-50 dark:bg-orange-900/20',
-    iconTextClass: 'text-orange-600 dark:text-orange-400'
+    accessorKey: 'published',
+    header: 'Statut',
+    cell: ({ row }) => row.original.published ? 'Publié' : 'Non publié'
   },
   {
-    title: 'Planning des réservations',
-    description: 'Voir le planning des réservations de salles',
-    icon: 'i-lucide-calendar',
-    to: '/reservations-salles',
-    iconBgClass: 'bg-blue-50 dark:bg-blue-900/20',
-    iconTextClass: 'text-blue-600 dark:text-blue-400'
+    accessorKey: 'photo_url',
+    header: 'Photo',
+    cell: ({ row }) => {
+      if (!row.original.photo_url) return h('span', { class: 'text-muted' }, '-')
+      return h('img', {
+        src: row.original.photo_url,
+        alt: row.original.title,
+        class: 'h-10 w-16 rounded object-cover'
+      })
+    }
+  },
+  {
+    id: 'actions',
+    cell: ({ row }) =>
+      h(
+        UDropdownMenu,
+        {
+          content: { align: 'end' },
+          items: getRowItems(row.original)
+        },
+        () =>
+          h(UButton, {
+            icon: 'i-lucide-ellipsis-vertical',
+            color: 'neutral',
+            variant: 'ghost'
+          })
+      )
   }
 ]
 </script>
@@ -36,64 +198,59 @@ const shortcuts = [
         </template>
 
         <template #right>
-          <NotificationBell />
+          <div class="flex items-center gap-2">
+            <InformationCommuneAddModal />
+            <NotificationBell />
+          </div>
         </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
-      <div class="p-6">
-        <div class="mb-8">
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Bienvenue
-          </h1>
-          <p class="text-gray-600 dark:text-gray-400">
-            Accédez rapidement aux principales fonctionnalités
-          </p>
+      <div class="p-6 space-y-4">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+              Informations pratiques de la commune
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">
+              Gérez le contenu affiché sur l'accueil mobile
+            </p>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <NuxtLink
-            v-for="shortcut in shortcuts"
-            :key="shortcut.to"
-            :to="shortcut.to"
-            class="block"
-          >
-            <UCard class="cursor-pointer hover:shadow-lg transition-shadow h-full">
-              <template #header>
-                <div class="flex items-center gap-4">
-                  <div
-                    :class="['p-3 rounded-lg', shortcut.iconBgClass]"
-                  >
-                    <UIcon
-                      :name="shortcut.icon"
-                      :class="['size-6', shortcut.iconTextClass]"
-                    />
-                  </div>
-                  <div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                      {{ shortcut.title }}
-                    </h3>
-                  </div>
-                </div>
-              </template>
+        <UInput
+          v-model="searchQuery"
+          class="max-w-sm"
+          icon="i-lucide-search"
+          placeholder="Rechercher par titre ou description..."
+        />
 
-              <p class="text-gray-600 dark:text-gray-400 mt-2">
-                {{ shortcut.description }}
-              </p>
-
-              <template #footer>
-                <div class="flex items-center justify-end">
-                  <UIcon
-                    name="i-lucide-arrow-right"
-                    class="size-4 text-gray-400"
-                  />
-                </div>
-              </template>
-            </UCard>
-          </NuxtLink>
-        </div>
+        <UTable
+          :data="filteredData"
+          :columns="columns"
+          :loading="status === 'pending'"
+          :ui="{
+            base: 'table-fixed border-separate border-spacing-0',
+            thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
+            tbody: '[&>tr]:last:[&>td]:border-b-0',
+            th: 'py-2 first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
+            td: 'border-b border-default'
+          }"
+        />
       </div>
     </template>
   </UDashboardPanel>
+
+  <InformationCommuneEditModal
+    ref="editModal"
+    :info="selected"
+    @delete="
+      (info) => {
+        selected = info
+        deleteModal?.openModal()
+      }
+    "
+  />
+  <InformationCommuneDeleteModal ref="deleteModal" :info="selected" />
 </template>

@@ -31,7 +31,10 @@ const errors = ref<Record<string, string>>({});
 const showCompteDesactiveAlert = ref(false);
 
 onMounted(async () => {
-  if (route.query.type === "recovery") {
+  if (
+    route.query.type === "recovery"
+    || (route.query.mode === "resetPassword" && route.query.oobCode)
+  ) {
     isRecoveryMode.value = true;
   }
 
@@ -92,7 +95,10 @@ const handleSubmit = async () => {
 
   try {
     if (isRecoveryMode.value) {
-      await updatePassword(form.value.newPassword);
+      await updatePassword(
+        form.value.newPassword,
+        route.query.oobCode as string | undefined,
+      );
       toast.add({
         title: "Succès",
         description: "Votre mot de passe a été mis à jour",

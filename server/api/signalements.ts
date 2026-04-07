@@ -1,9 +1,14 @@
 import type { Signalement } from '~/types'
-import { requireAuth } from '../utils/supabase-auth'
-import { getCurrentUserProfile, getEffectiveCommuneIdForRequest } from '../utils/supabase-auth'
+import {
+  requireAuth,
+  getCurrentUserProfile,
+  getEffectiveCommuneIdForRequest,
+} from '../utils/firebase-auth'
+import { getAdminFirestore } from '../utils/firebase-admin-app'
+import { docWithId } from '../utils/firestore-serialize'
 
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event)
+  await requireAuth(event)
 
   try {
     const profile = await getCurrentUserProfile(event)
@@ -11,31 +16,33 @@ export default eventHandler(async (event) => {
     const queryCommuneId = query.commune_id as string | undefined
     const communeId = getEffectiveCommuneIdForRequest(profile, queryCommuneId)
 
-    let queryBuilder = supabase
-      .from('signalements')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const db = getAdminFirestore()
+    let snap
 
     if (communeId) {
-      queryBuilder = queryBuilder.eq('city_id', communeId)
+      snap = await db
+        .collection('signalement')
+        .where('city_id', '==', communeId)
+        .orderBy('created_at', 'desc')
+        .get()
     } else if (profile?.role === 'utilisateur') {
       return [] as Signalement[]
+    } else {
+      snap = await db
+        .collection('signalement')
+        .orderBy('created_at', 'desc')
+        .get()
     }
 
-    const { data, error } = await queryBuilder
-
-    if (error) {
-      throw createError({
-        statusCode: 500,
-        message: `Error fetching signalements: ${error.message}`
-      })
-    }
-
-    return (data || []) as Signalement[]
-  } catch (error: any) {
+    const rows = snap.docs
+      .map((d) => docWithId(d.id, d.data()))
+      .filter(Boolean)
+    return rows as unknown as Signalement[]
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'An error occurred while fetching signalements'
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred while fetching signalements',
     })
   }
 })

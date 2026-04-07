@@ -1,8 +1,13 @@
-import { requireAuth } from '../utils/supabase-auth'
-import { getCurrentUserProfile, getEffectiveCommuneIdForRequest } from '../utils/supabase-auth'
+import {
+  requireAuth,
+  getCurrentUserProfile,
+  getEffectiveCommuneIdForRequest,
+} from '../utils/firebase-auth'
+import { getAdminFirestore } from '../utils/firebase-admin-app'
+import { docWithId } from '../utils/firestore-serialize'
 
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event)
+  await requireAuth(event)
 
   try {
     const profile = await getCurrentUserProfile(event)
@@ -10,31 +15,29 @@ export default eventHandler(async (event) => {
     const queryCommuneId = query.commune_id as string | undefined
     const communeId = getEffectiveCommuneIdForRequest(profile, queryCommuneId)
 
-    let queryBuilder = supabase
-      .from('salles')
-      .select('*')
-      .order('created_at', { ascending: false })
-
+    const db = getAdminFirestore()
+    let snap
     if (communeId) {
-      queryBuilder = queryBuilder.eq('commune_id', communeId)
+      snap = await db
+        .collection('salle')
+        .where('commune_id', '==', communeId)
+        .orderBy('created_at', 'desc')
+        .get()
     } else if (profile?.role === 'utilisateur') {
       return []
+    } else {
+      snap = await db
+        .collection('salle')
+        .orderBy('created_at', 'desc')
+        .get()
     }
 
-    const { data, error } = await queryBuilder
-
-    if (error) {
-      throw createError({
-        statusCode: 500,
-        message: `Error fetching salles: ${error.message}`
-      })
-    }
-
-    return (data || [])
-  } catch (error: any) {
+    return snap.docs.map((d) => docWithId(d.id, d.data())).filter(Boolean)
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'An error occurred while fetching salles'
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred while fetching salles',
     })
   }
 })

@@ -69,7 +69,7 @@ watch(
 )
 
 const toast = useToast()
-const refresh = inject<() => void>('refresh-informations')
+const refresh = inject<() => void>('refresh-actualites')
 const { getAuthHeaders } = useApiAuth()
 const { currentCommune } = useCurrentCommune()
 const { publish, isPublishing } = usePublishMunicipalInfo({ onSuccess: () => refresh?.() })

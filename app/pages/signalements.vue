@@ -181,9 +181,15 @@ const handleMarkerClick = (signalement: Signalement) => {
       <!-- Contenu principal : liste + détail en deux colonnes sur desktop -->
       <div class="flex gap-4 h-[calc(100vh-12rem)] min-h-0">
         <!-- Colonne gauche : Liste ou Carte (plus étroite) -->
-        <div class="w-1/3 min-w-[300px] max-w-[400px] h-full min-h-0 overflow-hidden">
-          <div v-if="viewMode === 'table'" class="h-full border border-default rounded-lg overflow-hidden bg-default/10">
-            <SignalementsList v-show="filteredSignalements.length > 0" v-model="selectedSignalement" :signalements="filteredSignalements" />
+        <div class="w-1/3 min-w-[300px] max-w-[400px] h-full overflow-hidden">
+          <div
+            v-if="viewMode === 'table'"
+            class="h-full border border-default rounded-lg overflow-hidden bg-default/10"
+          >
+            <SignalementsList
+              v-model="selectedSignalement"
+              :signalements="filteredSignalements"
+            />
             <div v-if="signalementsPending" class="p-4 text-center">
               <UIcon name="i-lucide-loader-2" class="animate-spin" />
             </div>

@@ -1,35 +1,29 @@
-import { requireAuth } from "../utils/supabase-auth";
-import { requireCurrentUserProfile } from "../utils/supabase-auth";
+import { requireAuth, requireCurrentUserProfile } from '../utils/firebase-auth'
+import { getAdminFirestore } from '../utils/firebase-admin-app'
+import { docWithId } from '../utils/firestore-serialize'
 
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event);
-  const profile = await requireCurrentUserProfile(event);
+  await requireAuth(event)
+  const profile = await requireCurrentUserProfile(event)
 
-  if (profile.role !== "administrateur") {
+  if (profile.role !== 'administrateur') {
     throw createError({
       statusCode: 403,
-      message: "Accès réservé aux administrateurs",
-    });
+      message: 'Accès réservé aux administrateurs',
+    })
   }
 
   try {
-    const { data, error } = await supabase
-      .from("commune")
-      .select("id, name, postal_code, email, logo_url, feature_reservations_salles, feature_propositions, created_at, updated_at")
-      .order("name", { ascending: true });
-
-    if (error) {
-      throw createError({
-        statusCode: 500,
-        message: `Error fetching communes: ${error.message}`,
-      });
-    }
-
-    return data || [];
-  } catch (error: any) {
+    const db = getAdminFirestore()
+    const snap = await db.collection('commune').orderBy('name').get()
+    return snap.docs
+      .map((d) => docWithId(d.id, d.data()))
+      .filter(Boolean)
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || "An error occurred while fetching communes",
-    });
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred while fetching communes',
+    })
   }
-});
+})

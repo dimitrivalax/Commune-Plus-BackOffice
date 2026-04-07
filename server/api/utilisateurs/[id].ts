@@ -1,118 +1,106 @@
-import { requireAuth } from '../../utils/supabase-auth'
-import { requireCurrentUserProfile } from '../../utils/supabase-auth'
+import { FieldValue } from 'firebase-admin/firestore'
+import {
+  requireAuth,
+  requireCurrentUserProfile,
+} from '../../utils/firebase-auth'
+import { getAdminAuth, getAdminFirestore } from '../../utils/firebase-admin-app'
+import { chunkArray, docWithId } from '../../utils/firestore-serialize'
+import { FieldPath } from 'firebase-admin/firestore'
+import { listUtilisateursWithLastSignIn } from '../../utils/list-utilisateurs'
 
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event)
+  await requireAuth(event)
   const profile = await requireCurrentUserProfile(event)
 
   if (profile.role !== 'administrateur') {
     throw createError({
       statusCode: 403,
-      message: 'Accès réservé aux administrateurs'
+      message: 'Accès réservé aux administrateurs',
     })
   }
 
   const id = getRouterParam(event, 'id')
   const method = getMethod(event)
+  const db = getAdminFirestore()
+  const auth = getAdminAuth()
 
   try {
     if (method === 'GET') {
-      // Récupérer l'utilisateur avec sa dernière connexion
-      const { data: utilisateursData, error: utilisateurError }
-        = await supabase.rpc('get_utilisateurs_with_last_sign_in')
-
-      if (utilisateurError) {
-        throw createError({
-          statusCode: 500,
-          message: `Error fetching utilisateur: ${utilisateurError.message}`
-        })
-      }
-
-      const utilisateurData = utilisateursData?.find((u: any) => u.id === id)
-
+      const list = await listUtilisateursWithLastSignIn()
+      const utilisateurData = list.find((u) => u.id === id)
       if (!utilisateurData) {
-        throw createError({
-          statusCode: 404,
-          message: 'Utilisateur not found'
-        })
+        throw createError({ statusCode: 404, message: 'Utilisateur not found' })
       }
 
-      // Récupérer les communes associées
-      const { data: associationsData, error: associationsError }
-        = await supabase
-          .from('utilisateur_commune')
-          .select('commune_id')
-          .eq('utilisateur_id', id)
-
-      if (associationsError) {
-        console.warn('Error fetching associations:', associationsError.message)
-      }
-
-      const communeIds = associationsData?.map(a => a.commune_id) || []
-      let communesData: any[] = []
-
-      if (communeIds.length > 0) {
-        const { data: communes, error: communesError } = await supabase
-          .from('commune')
-          .select('id, name, postal_code, email')
-          .in('id', communeIds)
-
-        if (!communesError && communes) {
-          communesData = communes
+      const assocSnap = await db
+        .collection('utilisateur_commune')
+        .where('utilisateur_id', '==', id)
+        .get()
+      const communeIds = assocSnap.docs.map((d) => d.get('commune_id') as string)
+      const communesData: Record<string, unknown>[] = []
+      for (const ch of chunkArray(communeIds, 30)) {
+        if (ch.length === 0) continue
+        const snap = await db
+          .collection('commune')
+          .where(FieldPath.documentId(), 'in', ch)
+          .get()
+        for (const d of snap.docs) {
+          const row = docWithId(d.id, d.data())
+          if (row) communesData.push(row)
         }
       }
 
       return {
         ...utilisateurData,
-        communes: communesData
+        communes: communesData,
       }
-    } else if (method === 'PATCH') {
-      const body = await readBody(event) as { is_active?: boolean }
+    }
 
+    if (method === 'PATCH') {
+      const body = await readBody(event) as { is_active?: boolean }
       if (typeof body.is_active !== 'boolean') {
         throw createError({
           statusCode: 400,
-          message: 'Le champ is_active (booléen) est requis'
+          message: 'Le champ is_active (booléen) est requis',
         })
       }
-
       if (body.is_active === false && id === profile.utilisateurId) {
         throw createError({
           statusCode: 400,
-          message: 'Vous ne pouvez pas désactiver votre propre compte'
+          message: 'Vous ne pouvez pas désactiver votre propre compte',
         })
       }
-
-      const { data, error } = await supabase
-        .from('utilisateur')
-        .update({
-          is_active: body.is_active,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) {
-        throw createError({
-          statusCode: 500,
-          message: `Error updating utilisateur: ${error.message}`
-        })
+      const ref = db.collection('utilisateur').doc(id!)
+      const snap = await ref.get()
+      if (!snap.exists) {
+        throw createError({ statusCode: 404, message: 'Utilisateur not found' })
       }
+      await ref.update({
+        is_active: body.is_active,
+        updated_at: FieldValue.serverTimestamp(),
+      })
+      const updated = await ref.get()
+      return docWithId(updated.id, updated.data())
+    }
 
-      return data
-    } else if (method === 'PUT') {
-      const body = await readBody(event)
-
+    if (method === 'PUT') {
+      const body = await readBody(event) as Record<string, unknown>
       if (typeof body.is_active === 'boolean') {
         if (body.is_active === false && id === profile.utilisateurId) {
           throw createError({
             statusCode: 400,
-            message: 'Vous ne pouvez pas désactiver votre propre compte'
+            message: 'Vous ne pouvez pas désactiver votre propre compte',
           })
         }
       }
 
+      const ref = db.collection('utilisateur').doc(id!)
+      const snap = await ref.get()
+      if (!snap.exists) {
+        throw createError({ statusCode: 404, message: 'Utilisateur not found' })
+      }
+
+      const uid = snap.get('user_id') as string
       const updatePayload: Record<string, unknown> = {
         nom: body.nom,
         prenom: body.prenom,
@@ -122,87 +110,82 @@ export default eventHandler(async (event) => {
         ville: body.ville || null,
         email: body.email,
         role: body.role || 'utilisateur',
-        updated_at: new Date().toISOString()
+        updated_at: FieldValue.serverTimestamp(),
       }
-
       if (typeof body.is_active === 'boolean') {
         updatePayload.is_active = body.is_active
       }
+      await ref.update(updatePayload)
 
-      // Mettre à jour l'utilisateur
-      const { data, error } = await supabase
-        .from('utilisateur')
-        .update(updatePayload)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) {
-        throw createError({
-          statusCode: 500,
-          message: `Error updating utilisateur: ${error.message}`
-        })
-      }
-
-      // Mettre à jour les associations avec les communes
-      if (body.communes && Array.isArray(body.communes)) {
-        // Supprimer les anciennes associations
-        await supabase
-          .from('utilisateur_commune')
-          .delete()
-          .eq('utilisateur_id', id)
-
-        // Créer les nouvelles associations
-        if (body.communes.length > 0) {
-          const associations = body.communes.map((communeId: string) => ({
-            utilisateur_id: id,
-            commune_id: communeId
-          }))
-
-          const { error: assocError } = await supabase
-            .from('utilisateur_commune')
-            .insert(associations)
-
-          if (assocError) {
-            console.warn('Error updating associations:', assocError.message)
-          }
+      if (body.email && typeof body.email === 'string') {
+        try {
+          await auth.updateUser(uid, { email: body.email })
+        } catch (err) {
+          console.warn('Firebase updateUser email:', err)
         }
       }
 
-      return data
-    } else if (method === 'DELETE') {
-      // Utiliser la fonction SQL pour supprimer l'utilisateur et son user Supabase associé
-      // Cette fonction utilise SECURITY DEFINER et s'exécute côté Supabase, donc pas besoin de SUPABASE_SERVICE_ROLE_KEY
-      const { data, error } = await supabase.rpc(
-        'delete_utilisateur_with_auth_user',
-        { p_utilisateur_id: id }
-      )
-
-      if (error) {
-        throw createError({
-          statusCode: 500,
-          message: `Error deleting utilisateur: ${error.message}`
-        })
+      if (body.communes && Array.isArray(body.communes)) {
+        const existing = await db
+          .collection('utilisateur_commune')
+          .where('utilisateur_id', '==', id)
+          .get()
+        const batch = db.batch()
+        for (const d of existing.docs) batch.delete(d.ref)
+        await batch.commit()
+        if (body.communes.length > 0) {
+          const wb = db.batch()
+          for (const communeId of body.communes as string[]) {
+            const aRef = db.collection('utilisateur_commune').doc()
+            wb.set(aRef, {
+              utilisateur_id: id,
+              commune_id: communeId,
+            })
+          }
+          await wb.commit()
+        }
       }
 
-      if (!data) {
+      const updated = await ref.get()
+      return docWithId(updated.id, updated.data())
+    }
+
+    if (method === 'DELETE') {
+      const ref = db.collection('utilisateur').doc(id!)
+      const snap = await ref.get()
+      if (!snap.exists) {
+        throw createError({ statusCode: 404, message: 'Utilisateur not found' })
+      }
+      const uid = snap.get('user_id') as string
+
+      const assoc = await db
+        .collection('utilisateur_commune')
+        .where('utilisateur_id', '==', id)
+        .get()
+      const batch = db.batch()
+      for (const d of assoc.docs) batch.delete(d.ref)
+      batch.delete(ref)
+      await batch.commit()
+
+      try {
+        await auth.deleteUser(uid)
+      } catch (err) {
+        console.warn('deleteUser:', err)
         throw createError({
           statusCode: 500,
-          message: 'La suppression a échoué'
+          message: 'Profil supprimé mais erreur suppression compte Firebase Auth',
         })
       }
 
       return { success: true }
-    } else {
-      throw createError({
-        statusCode: 405,
-        message: 'Method not allowed'
-      })
     }
-  } catch (error: any) {
+
+    throw createError({ statusCode: 405, message: 'Method not allowed' })
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'An error occurred'
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred',
     })
   }
 })

@@ -1,61 +1,45 @@
-import { requireAuth } from '../../utils/supabase-auth'
+import { FieldValue } from 'firebase-admin/firestore'
+import { requireAuth } from '../../utils/firebase-auth'
+import { getAdminFirestore } from '../../utils/firebase-admin-app'
+import { docWithId } from '../../utils/firestore-serialize'
 
 export default eventHandler(async (event) => {
-  // Vérifier l'authentification
-  const { supabase } = await requireAuth(event)
+  await requireAuth(event)
 
   const id = getRouterParam(event, 'id')
   const method = getMethod(event)
+  const db = getAdminFirestore()
+  const ref = db.collection('actualite').doc(id!)
 
   try {
     if (method === 'PUT') {
       const body = await readBody(event)
-      const { data, error } = await supabase
-        .from('municipal_info')
-        .update({
-          title: body.title,
-          content: body.content,
-          ...(body.event_date !== undefined && { event_date: body.event_date }),
-          category: body.category || null,
-          image_url: body.image_url || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) {
-        throw createError({
-          statusCode: 500,
-          message: `Error updating municipal info: ${error.message}`
-        })
+      const patch: Record<string, unknown> = {
+        title: body.title,
+        content: body.content,
+        category: body.category || null,
+        image_url: body.image_url || null,
+        updated_at: FieldValue.serverTimestamp(),
       }
-
-      return data
-    } else if (method === 'DELETE') {
-      const { error } = await supabase
-        .from('municipal_info')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        throw createError({
-          statusCode: 500,
-          message: `Error deleting municipal info: ${error.message}`
-        })
+      if (body.event_date !== undefined) {
+        patch.event_date = body.event_date
       }
-
-      return { success: true }
-    } else {
-      throw createError({
-        statusCode: 405,
-        message: 'Method not allowed'
-      })
+      await ref.update(patch)
+      const snap = await ref.get()
+      return docWithId(snap.id, snap.data())
     }
-  } catch (error: any) {
+
+    if (method === 'DELETE') {
+      await ref.delete()
+      return { success: true }
+    }
+
+    throw createError({ statusCode: 405, message: 'Method not allowed' })
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'An error occurred'
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred',
     })
   }
 })

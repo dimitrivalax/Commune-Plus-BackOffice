@@ -1,6 +1,8 @@
 import type { Commune } from '~/types'
-import { requireAuth } from '../../utils/supabase-auth'
-import { requireCurrentUserProfile } from '../../utils/supabase-auth'
+import { requireAuth, requireCurrentUserProfile } from '../../utils/firebase-auth'
+import { getAdminFirestore } from '../../utils/firebase-admin-app'
+import { chunkArray, docWithId } from '../../utils/firestore-serialize'
+import { FieldPath } from 'firebase-admin/firestore'
 
 export interface CurrentUserMe {
   id: string
@@ -9,27 +11,33 @@ export interface CurrentUserMe {
 }
 
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event)
+  await requireAuth(event)
   const profile = await requireCurrentUserProfile(event)
 
   const communes: Commune[] = []
+  const db = getAdminFirestore()
 
   if (profile.communeIds.length > 0) {
-    const { data: communesData, error: communesError } = await supabase
-      .from('commune')
-      .select('id, name, postal_code, email, created_at, updated_at')
-      .in('id', profile.communeIds)
-      .order('name', { ascending: true })
-
-    if (!communesError && communesData) {
-      communes.push(...communesData)
+    for (const ch of chunkArray(profile.communeIds, 30)) {
+      const snap = await db
+        .collection('commune')
+        .where(FieldPath.documentId(), 'in', ch)
+        .get()
+      for (const d of snap.docs) {
+        const row = docWithId(d.id, d.data())
+        if (row) {
+          communes.push(row as unknown as Commune)
+        }
+      }
     }
+    communes.sort((a, b) =>
+      String(a.name || '').localeCompare(String(b.name || ''), 'fr'))
   }
 
   const result: CurrentUserMe = {
     id: profile.utilisateurId,
     role: profile.role,
-    communes
+    communes,
   }
 
   return result

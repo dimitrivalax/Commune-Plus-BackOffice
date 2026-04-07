@@ -66,7 +66,7 @@ watch(currentCommune, () => {
   refresh()
 })
 
-provide('refresh-informations', refresh)
+provide('refresh-actualites', refresh)
 
 const { publish } = usePublishMunicipalInfo({ onSuccess: refresh })
 
@@ -303,7 +303,7 @@ watch(sorting, () => {
 </script>
 
 <template>
-  <UDashboardPanel id="informations">
+  <UDashboardPanel id="actualites">
     <template #header>
       <UDashboardNavbar title="Actualités">
         <template #leading>
@@ -312,7 +312,7 @@ watch(sorting, () => {
 
         <template #right>
           <div class="flex items-center gap-2">
-            <InformationsAddModal />
+            <ActualitesAddModal />
             <NotificationBell />
           </div>
         </template>
@@ -366,7 +366,7 @@ watch(sorting, () => {
     </template>
   </UDashboardPanel>
 
-  <InformationsEditModal
+  <ActualitesEditModal
     ref="editModal"
     :info="selectedInfo"
     @delete="
@@ -376,5 +376,5 @@ watch(sorting, () => {
       }
     "
   />
-  <InformationsDeleteModal ref="deleteModal" :info="selectedInfo" />
+  <ActualitesDeleteModal ref="deleteModal" :info="selectedInfo" />
 </template>
