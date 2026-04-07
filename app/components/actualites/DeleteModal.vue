@@ -8,7 +8,7 @@ const props = defineProps<{
 const open = ref(false)
 
 const toast = useToast()
-const refresh = inject<() => void>('refresh-informations')
+const refresh = inject<() => void>('refresh-actualites')
 const { getAuthHeaders } = useApiAuth()
 
 const description = computed(() => {

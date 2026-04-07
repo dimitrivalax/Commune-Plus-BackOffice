@@ -11,7 +11,7 @@ export default eventHandler(async (event) => {
     const body = await readBody(event)
     const db = getAdminFirestore()
     const id = randomUUID()
-    const ref = db.collection('municipal_info').doc(id)
+    const ref = db.collection('actualite').doc(id)
     await ref.set({
       title: body.title,
       content: body.content,

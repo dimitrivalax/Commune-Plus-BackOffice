@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { FormSubmitEvent, EditorToolbarItem } from '@nuxt/ui'
-import type { MunicipalInfo } from '~/types'
+import { ref, reactive, inject, watch } from 'vue'
 
 const editorToolbarItems: EditorToolbarItem[] = [
   {
@@ -23,134 +23,111 @@ const editorToolbarItems: EditorToolbarItem[] = [
   { kind: 'image', icon: 'i-lucide-image', tooltip: { text: 'Image' } }
 ]
 
-const props = defineProps<{
-  info: MunicipalInfo | null
-}>()
+function todayISODate(): string {
+  return new Date().toISOString().split('T')[0] ?? ''
+}
 
 const schema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
   content: z.string().min(1, 'Le contenu est requis'),
-  event_date: z.string().optional(),
+  event_date: z.string().min(1, 'La date de l\'événement est requise'),
   category: z.string().optional(),
   image_url: z
     .union([z.string().url('URL invalide'), z.literal(''), z.undefined()])
     .optional()
 })
-
 const open = ref(false)
+
+watch(open, (isOpen) => {
+  if (isOpen) {
+    state.event_date = todayISODate()
+  }
+})
 
 type Schema = z.output<typeof schema>
 
-function toDateOnly(isoOrDate: string | null | undefined): string | undefined {
-  if (!isoOrDate) return undefined
-  return isoOrDate.split('T')[0]
-}
-
-const state = reactive<Partial<Schema>>({
+const state = reactive<Omit<Partial<Schema>, 'event_date'> & { event_date: string }>({
   title: undefined,
   content: '',
-  event_date: undefined,
+  event_date: todayISODate(),
   category: undefined,
   image_url: undefined
 })
 
-watch(
-  () => props.info,
-  (newInfo) => {
-    if (newInfo) {
-      state.title = newInfo.title
-      state.content = newInfo.content
-      state.event_date = toDateOnly(newInfo.event_date ?? null) ?? undefined
-      state.category = newInfo.category || undefined
-      state.image_url = newInfo.image_url || undefined
-    }
-  },
-  { immediate: true }
-)
-
 const toast = useToast()
-const refresh = inject<() => void>('refresh-informations')
+const refresh = inject<() => void>('refresh-actualites')
 const { getAuthHeaders } = useApiAuth()
 const { currentCommune } = useCurrentCommune()
-const { publish, isPublishing } = usePublishMunicipalInfo({ onSuccess: () => refresh?.() })
 
-const emit = defineEmits<{
-  delete: [info: MunicipalInfo]
-}>()
-
-const galleryCommuneId = computed(() => props.info?.commune_id ?? currentCommune.value?.id ?? null)
+watch(open, (isOpen) => {
+  if (isOpen) {
+    state.event_date = todayISODate()
+  }
+})
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
-  if (!props.info) return
+  // Utiliser la commune courante si disponible
+  const communeId = currentCommune.value?.id
+
+  if (!communeId) {
+    toast.add({
+      title: 'Erreur',
+      description:
+        'Veuillez sélectionner une commune dans le menu avant de créer une information',
+      color: 'error'
+    })
+    return
+  }
 
   try {
-    await $fetch(`/api/municipal-info/${props.info.id}`, {
-      method: 'PUT',
+    await $fetch('/api/municipal-info/create', {
+      method: 'POST',
       headers: getAuthHeaders(),
       body: {
         title: event.data.title,
         content: event.data.content,
-        event_date: event.data.event_date || null,
+        event_date: event.data.event_date || todayISODate(),
         category: event.data.category || null,
-        image_url: event.data.image_url || null
+        image_url: event.data.image_url || null,
+        commune_id: communeId
       }
     })
 
     toast.add({
       title: 'Succès',
-      description: `L'information "${event.data.title}" a été modifiée`,
+      description: `L'information "${event.data.title}" a été ajoutée`,
       color: 'success'
     })
+
+    state.title = undefined
+    state.content = ''
+    state.event_date = todayISODate()
+    state.category = undefined
+    state.image_url = undefined
 
     open.value = false
 
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description:
-        error.message || 'Une erreur est survenue lors de la modification',
+      description: (error instanceof Error ? error.message : undefined) || 'Une erreur est survenue lors de l\'ajout',
       color: 'error'
     })
   }
 }
-
-async function handleDelete() {
-  if (!props.info) return
-
-  open.value = false
-  emit('delete', props.info)
-}
-
-function handlePublish() {
-  if (!props.info) return
-  publish(props.info)
-}
-
-function openModal(info?: MunicipalInfo) {
-  const targetInfo = info || props.info
-  if (targetInfo) {
-    state.title = targetInfo.title
-    state.content = targetInfo.content
-    state.category = targetInfo.category || undefined
-    state.image_url = targetInfo.image_url || undefined
-    open.value = true
-  }
-}
-
-defineExpose({
-  openModal
-})
 </script>
 
 <template>
   <UModal
     v-model:open="open"
-    title="Modifier l'information"
-    description="Modifier une information municipale"
+    title="Nouvelle information"
+    description="Ajouter une nouvelle information municipale"
   >
+    <UButton label="Nouvelle information" icon="i-lucide-plus" />
+
     <template #body>
       <UForm
         :schema="schema"
@@ -170,6 +147,7 @@ defineExpose({
         <UFormField
           label="Date de l'événement"
           name="event_date"
+          required
         >
           <UInput v-model="state.event_date" type="date" class="w-full" />
         </UFormField>
@@ -213,43 +191,22 @@ defineExpose({
           label="Image de l'information"
           name="image_url"
         >
-          <GalleryImagePicker
-            v-model="state.image_url"
-            :commune-id="galleryCommuneId"
-          />
+          <GalleryImagePicker v-model="state.image_url" />
         </UFormField>
 
-        <div class="flex justify-between gap-2 pt-2">
+        <div class="flex justify-end gap-2">
           <UButton
-            label="Supprimer"
-            color="error"
+            label="Annuler"
+            color="neutral"
             variant="subtle"
-            icon="i-lucide-trash"
-            @click="handleDelete"
+            @click="open = false"
           />
-          <div class="flex gap-2">
-            <UButton
-              label="Annuler"
-              color="neutral"
-              variant="subtle"
-              @click="open = false"
-            />
-            <UButton
-              label="Enregistrer"
-              color="primary"
-              variant="solid"
-              type="submit"
-            />
-            <UButton
-              label="Publier"
-              color="success"
-              variant="solid"
-              icon="i-lucide-send"
-              :loading="isPublishing"
-              :disabled="isPublishing"
-              @click="handlePublish"
-            />
-          </div>
+          <UButton
+            label="Créer"
+            color="primary"
+            variant="solid"
+            type="submit"
+          />
         </div>
       </UForm>
     </template>

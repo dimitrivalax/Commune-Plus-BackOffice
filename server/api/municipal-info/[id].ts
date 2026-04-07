@@ -9,7 +9,7 @@ export default eventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   const method = getMethod(event)
   const db = getAdminFirestore()
-  const ref = db.collection('municipal_info').doc(id!)
+  const ref = db.collection('actualite').doc(id!)
 
   try {
     if (method === 'PUT') {

@@ -47,7 +47,7 @@ export default eventHandler(async (event) => {
     }
 
     const db = getAdminFirestore()
-    const infoSnap = await db.collection('municipal_info').doc(id!).get()
+    const infoSnap = await db.collection('actualite').doc(id!).get()
     if (!infoSnap.exists) {
       throw createError({
         statusCode: 404,
@@ -95,7 +95,7 @@ export default eventHandler(async (event) => {
               body: notificationBody,
             },
             data: {
-              type: 'municipal_info',
+              type: 'actualite',
               info_id: String(info.id),
               commune_id: String(info.commune_id ?? ''),
             },

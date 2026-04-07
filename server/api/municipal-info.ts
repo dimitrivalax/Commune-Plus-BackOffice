@@ -23,7 +23,7 @@ export default eventHandler(async (event) => {
 
     const db = getAdminFirestore()
     const snap = await db
-      .collection('municipal_info')
+      .collection('actualite')
       .orderBy('created_at', 'desc')
       .limit(400)
       .get()

@@ -4,7 +4,7 @@ const shortcuts = [
     title: 'Actualités',
     description: 'Gérer les informations municipales',
     icon: 'i-lucide-info',
-    to: '/informations',
+    to: '/actualites',
     iconBgClass: 'bg-primary-50 dark:bg-primary-900/20',
     iconTextClass: 'text-primary-600 dark:text-primary-400'
   },

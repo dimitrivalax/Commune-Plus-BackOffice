@@ -67,7 +67,7 @@ const baseNavItems: NavigationMenuItem[] = [
   {
     label: "Actualités",
     icon: "i-lucide-info",
-    to: "/informations",
+    to: "/actualites",
     onSelect: () => {
       open.value = false;
     },

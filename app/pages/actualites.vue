@@ -37,7 +37,7 @@ watch(currentCommune, () => {
   refresh()
 })
 
-provide('refresh-informations', refresh)
+provide('refresh-actualites', refresh)
 
 const { publish } = usePublishMunicipalInfo({ onSuccess: refresh })
 
@@ -224,7 +224,7 @@ watch(searchQuery, () => {
 </script>
 
 <template>
-  <UDashboardPanel id="informations">
+  <UDashboardPanel id="actualites">
     <template #header>
       <UDashboardNavbar title="Actualités">
         <template #leading>
@@ -233,7 +233,7 @@ watch(searchQuery, () => {
 
         <template #right>
           <div class="flex items-center gap-2">
-            <InformationsAddModal />
+            <ActualitesAddModal />
             <NotificationBell />
           </div>
         </template>
@@ -284,7 +284,7 @@ watch(searchQuery, () => {
     </template>
   </UDashboardPanel>
 
-  <InformationsEditModal
+  <ActualitesEditModal
     ref="editModal"
     :info="selectedInfo"
     @delete="
@@ -294,5 +294,5 @@ watch(searchQuery, () => {
       }
     "
   />
-  <InformationsDeleteModal ref="deleteModal" :info="selectedInfo" />
+  <ActualitesDeleteModal ref="deleteModal" :info="selectedInfo" />
 </template>
