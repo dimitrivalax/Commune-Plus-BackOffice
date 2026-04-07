@@ -147,7 +147,7 @@ ${signalementData.firstName} ${signalementData.lastName}
 ---
 Ce mail a été créé avec Commune Plus.`
 
-  let emailHtml = `
+  const emailHtml = `
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -166,7 +166,7 @@ Ce mail a été créé avec Commune Plus.`
     to: [signalementData.mairieEmail],
     subject: emailSubject,
     html: emailHtml,
-    text: emailText,
+    text: emailText
   }
 
   if (signalementData.email?.includes('@')) {
