@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useNotifications } from '~/composables/useNotifications'
+
 const { isNotificationsSlideoverOpen } = useDashboard()
 const { unreadCount } = useNotifications()
 </script>

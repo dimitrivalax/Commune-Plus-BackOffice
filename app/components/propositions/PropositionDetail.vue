@@ -229,7 +229,7 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
         <img
           v-if="proposition.photo_url"
           :src="proposition.photo_url"
-          :alt="`Photo de la doléance ${proposition.id}`"
+          :alt="`Photo de la proposition ${proposition.id}`"
           class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-xl"
         >
       </div>

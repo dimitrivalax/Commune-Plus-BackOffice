@@ -5,6 +5,27 @@ const STORAGE_KEY = 'backoffice-notifications'
 const MAX_ITEMS = 50
 const POLL_MS = 25000
 
+type BackofficeNotificationRow = {
+  id: string | number
+  title?: string | null
+  body?: string | null
+  message?: string | null
+  created_at?: string | null
+  date?: string | null
+  unread?: boolean | null
+  is_read?: boolean | null
+  type?: 'signalement' | 'reservation' | null
+  entity_id?: string | null
+}
+
+const DEFAULT_SENDER: User = {
+  id: 0,
+  name: 'Commune Plus',
+  email: 'notifications@commune.plus',
+  status: 'subscribed',
+  location: '',
+}
+
 function loadFromStorage(): Notification[] {
   if (import.meta.server) return []
   try {
@@ -17,10 +38,33 @@ function loadFromStorage(): Notification[] {
   }
 }
 
+function saveToStorage(notifications: unknown) {
+  if (import.meta.server) return
+  try {
+    const serializable = Array.isArray(notifications) ? notifications.slice(0, MAX_ITEMS) : []
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable))
+  } catch {
+    // Ignore localStorage failures (private mode/quota/etc.)
+  }
+}
+
+function rowToNotification(row: BackofficeNotificationRow): Notification {
+  return {
+    id: row.id,
+    unread: row.unread ?? !(row.is_read ?? false),
+    sender: DEFAULT_SENDER,
+    body: row.body ?? row.message ?? '',
+    date: row.created_at ?? row.date ?? new Date().toISOString(),
+    type: row.type ?? undefined,
+    entity_id: row.entity_id ?? undefined,
+    title: row.title ?? undefined,
+  }
+}
+
 const _useNotifications = () => {
   const { session } = useSupabase()
   const { getAuthHeaders } = useApiAuth()
-  const notifications = ref<Notification[]>([])
+  const notifications = shallowRef<Notification[]>(loadFromStorage())
   const notificationsError = ref<Error | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -35,6 +79,7 @@ const _useNotifications = () => {
         headers: getAuthHeaders(),
       })
       notifications.value = (rows || []).map(rowToNotification).slice(0, MAX_ITEMS)
+      saveToStorage(notifications.value)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erreur notifications'
       notificationsError.value = new Error(msg)
@@ -77,9 +122,15 @@ const _useNotifications = () => {
     if (index === -1) return
     const current = list[index]
     if (!current?.unread) return
-    const next: Notification[] = [...list]
+    const next = notifications.value.slice()
     next[index] = { ...current, unread: false }
     notifications.value = next
+    saveToStorage(notifications.value)
+  }
+
+  function addNotification(notification: Notification) {
+    notifications.value = [notification, ...notifications.value].slice(0, MAX_ITEMS)
+    saveToStorage(notifications.value)
   }
 
   function clearAll() {
@@ -123,3 +174,5 @@ const _useNotifications = () => {
     notificationsError
   }
 }
+
+export const useNotifications = createSharedComposable(_useNotifications)

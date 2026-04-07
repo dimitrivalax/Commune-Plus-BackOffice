@@ -1,4 +1,4 @@
--- Migration for Propositions (Cahier de Doléances)
+-- Migration for Propositions (Propositions)
 
 -- Table for propositions
 CREATE TABLE IF NOT EXISTS propositions (

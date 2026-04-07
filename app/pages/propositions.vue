@@ -129,7 +129,7 @@ const handleUpdate = (updated: Proposition) => {
 <template>
   <UDashboardPanel id="propositions">
     <template #header>
-      <UDashboardNavbar title="Cahier de Doléances">
+      <UDashboardNavbar title="Propositions">
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
@@ -184,7 +184,7 @@ const handleUpdate = (updated: Proposition) => {
               v-else-if="filteredPropositions.length === 0"
               class="p-8 text-center text-dimmed italic text-sm"
             >
-              Aucune doléance trouvée.
+              Aucune proposition trouvée.
             </div>
           </div>
         </div>
@@ -205,7 +205,7 @@ const handleUpdate = (updated: Proposition) => {
               name="i-lucide-book"
               class="size-24 mb-4 opacity-20 mx-auto"
             />
-            <p>Sélectionnez une doléance pour voir les détails</p>
+            <p>Sélectionnez une proposition pour voir les détails</p>
           </div>
         </div>
       </div>
