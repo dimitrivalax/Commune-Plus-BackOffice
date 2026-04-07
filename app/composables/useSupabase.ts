@@ -49,6 +49,7 @@ export interface CompatibleSession {
 const _useSupabase = () => {
   const user = useState<User | null>("firebase_user", () => null);
   const idToken = useState<string | null>("firebase_id_token", () => null);
+  const authReady = useState<boolean>("firebase_auth_ready", () => false);
 
   const session = computed<CompatibleSession | null>(() => {
     if (!user.value || !idToken.value) return null;
@@ -78,8 +79,32 @@ const _useSupabase = () => {
       } else {
         idToken.value = null;
       }
+      authReady.value = true;
     });
   }
+  async function waitForAuthReady(timeoutMs = 1500): Promise<void> {
+    if (import.meta.server || authReady.value) return;
+    await new Promise<void>((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        resolve();
+      };
+
+      const timer = window.setTimeout(() => {
+        unsub();
+        finish();
+      }, timeoutMs);
+
+      const unsub = onAuthStateChanged(getClientAuth(), () => {
+        window.clearTimeout(timer);
+        unsub();
+        finish();
+      });
+    });
+  }
+
 
   const supabase = null as null;
 
@@ -95,6 +120,7 @@ const _useSupabase = () => {
   };
 
   const getSession = async () => {
+    await waitForAuthReady();
     const u = getClientAuth().currentUser;
     user.value = u;
     if (!u) {
