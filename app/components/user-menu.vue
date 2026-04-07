@@ -12,6 +12,7 @@ const appConfig = useAppConfig();
 const { user: supabaseUser, signOut } = useSupabase();
 const { currentCommune } = useCurrentCommune();
 const openEditCommune = inject<() => void>("open-edit-commune");
+const { status, accept, refuse, reset } = useCookieConsent();
 
 const colors = [
   "red",
@@ -91,6 +92,46 @@ const handleSignOut = async () => {
 
 const editProfileModal = ref<any>(null);
 const contactModalOpen = ref(false);
+const cookieModalOpen = ref(false);
+
+const cookieStatusLabel = computed(() => {
+  if (status.value === "accepted") {
+    return "Acceptés";
+  }
+  if (status.value === "refused") {
+    return "Refusés";
+  }
+  return "En attente de choix";
+});
+
+function applyCookieChoice(choice: "accepted" | "refused" | "reset") {
+  if (choice === "accepted") {
+    accept();
+    toast.add({
+      title: "Préférences cookies mises à jour",
+      description: "Les cookies optionnels sont désormais activés.",
+      color: "success",
+    });
+    return;
+  }
+
+  if (choice === "refused") {
+    refuse();
+    toast.add({
+      title: "Préférences cookies mises à jour",
+      description: "Les cookies optionnels sont désormais désactivés.",
+      color: "success",
+    });
+    return;
+  }
+
+  reset();
+  toast.add({
+    title: "Préférences cookies réinitialisées",
+    description: "Le bandeau de consentement sera affiché à nouveau.",
+    color: "success",
+  });
+}
 
 const items = computed<DropdownMenuItem[][]>(() => {
   const footerGroup: DropdownMenuItem[] = [];
@@ -111,6 +152,14 @@ const items = computed<DropdownMenuItem[][]>(() => {
       onSelect: (e: Event) => {
         e.preventDefault();
         contactModalOpen.value = true;
+      },
+    },
+    {
+      label: "Préférences cookies",
+      icon: "i-lucide-cookie",
+      onSelect: (e: Event) => {
+        e.preventDefault();
+        cookieModalOpen.value = true;
       },
     },
     {
@@ -346,6 +395,52 @@ const items = computed<DropdownMenuItem[][]>(() => {
           color="neutral"
           variant="subtle"
           @click="contactModalOpen = false"
+        />
+      </template>
+    </UModal>
+
+    <UModal
+      v-model:open="cookieModalOpen"
+      title="Préférences cookies"
+      description="Gérez votre consentement pour les cookies optionnels (mesure d'audience)."
+      :ui="{ content: 'sm:max-w-md' }"
+    >
+      <template #body>
+        <div class="space-y-4 py-2">
+          <p class="text-sm text-neutral-600 dark:text-neutral-400">
+            Statut actuel :
+            <span class="font-medium text-highlighted">
+              {{ cookieStatusLabel }}
+            </span>
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              label="Accepter"
+              color="success"
+              variant="soft"
+              @click="applyCookieChoice('accepted')"
+            />
+            <UButton
+              label="Refuser"
+              color="error"
+              variant="soft"
+              @click="applyCookieChoice('refused')"
+            />
+            <UButton
+              label="Réinitialiser"
+              color="neutral"
+              variant="ghost"
+              @click="applyCookieChoice('reset')"
+            />
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <UButton
+          label="Fermer"
+          color="neutral"
+          variant="subtle"
+          @click="cookieModalOpen = false"
         />
       </template>
     </UModal>

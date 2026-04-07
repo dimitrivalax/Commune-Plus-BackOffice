@@ -157,8 +157,8 @@ const groups = computed(() => [
 onMounted(async () => {
   refreshFromCache();
 
-  const cookie = useCookie("cookie-consent");
-  if (cookie.value === "accepted") {
+  const { hasDecided, accept, refuse } = useCookieConsent();
+  if (hasDecided.value) {
     return;
   }
 
@@ -173,13 +173,16 @@ onMounted(async () => {
         color: "neutral",
         variant: "outline",
         onClick: () => {
-          cookie.value = "accepted";
+          accept();
         },
       },
       {
         label: "Refuser",
         color: "neutral",
         variant: "ghost",
+        onClick: () => {
+          refuse();
+        },
       },
     ],
   });

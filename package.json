@@ -26,6 +26,7 @@
     "firebase-admin": "^13.7.0",
     "leaflet": "^1.9.4",
     "nuxt": "^4.2.2",
+    "posthog-js": "^1.365.0",
     "zod": "^4.2.1"
   },
   "devDependencies": {
