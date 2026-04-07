@@ -1,136 +1,135 @@
-import { requireAuth } from '../../utils/supabase-auth'
+import { FieldValue } from 'firebase-admin/firestore'
+import { randomUUID } from 'node:crypto'
+import { requireAuth } from '../../utils/firebase-auth'
+import { getAdminFirestore } from '../../utils/firebase-admin-app'
+import { serializeFirestoreData } from '../../utils/firestore-serialize'
+import { sendReservationConfirmationEmail } from '../../utils/resend-transactional'
 
 export default eventHandler(async (event) => {
-  // Vérifier l'authentification
-  const { supabase } = await requireAuth(event)
+  await requireAuth(event)
 
   try {
     const body = await readBody(event)
 
-    // Validation des champs requis
-    if (!body.salle_id || !body.date_debut || !body.date_fin || !body.nom || !body.prenom || !body.email || !body.telephone) {
+    if (
+      !body.salle_id
+      || !body.date_debut
+      || !body.date_fin
+      || !body.nom
+      || !body.prenom
+      || !body.email
+      || !body.telephone
+    ) {
       throw createError({
         statusCode: 400,
-        message: 'Missing required fields: salle_id, date_debut, date_fin, nom, prenom, email, telephone'
+        message:
+          'Missing required fields: salle_id, date_debut, date_fin, nom, prenom, email, telephone',
       })
     }
 
-    // Vérifier que date_fin > date_debut
     const dateDebut = new Date(body.date_debut)
     const dateFin = new Date(body.date_fin)
     if (dateFin <= dateDebut) {
       throw createError({
         statusCode: 400,
-        message: 'date_fin must be after date_debut'
+        message: 'date_fin must be after date_debut',
       })
     }
 
-    // Récupérer le nom de la salle depuis salle_id
-    const { data: salleData, error: salleError } = await supabase
-      .from('salles')
-      .select('nom, adresse')
-      .eq('id', body.salle_id)
-      .single()
-
-    if (salleError || !salleData) {
-      throw createError({
-        statusCode: 404,
-        message: 'Salle not found'
-      })
+    const db = getAdminFirestore()
+    const salleSnap = await db.collection('salle').doc(body.salle_id).get()
+    if (!salleSnap.exists) {
+      throw createError({ statusCode: 404, message: 'Salle not found' })
     }
+    const salleData = salleSnap.data()!
 
-    // Convertir date_debut et date_fin en date, start_time et end_time
     const dateDebutDate = new Date(body.date_debut)
     const dateFinDate = new Date(body.date_fin)
+    const date = dateDebutDate.toISOString().split('T')[0]
+    const startTime = dateDebutDate.toTimeString().substring(0, 5)
+    const endTime = dateFinDate.toTimeString().substring(0, 5)
 
-    const date = dateDebutDate.toISOString().split('T')[0] // YYYY-MM-DD
-    const startTime = dateDebutDate.toTimeString().substring(0, 5) // HH:mm
-    const endTime = dateFinDate.toTimeString().substring(0, 5) // HH:mm
+    const allSnap = await db
+      .collection('reservation_salle')
+      .where('salle_id', '==', body.salle_id)
+      .where('date', '==', date)
+      .get()
 
-    // Vérifier qu'il n'y a pas de chevauchement
-    // Un chevauchement existe si : même salle, même date, et les heures se chevauchent
-    // Chevauchement: (start_time < endTime_existante) ET (end_time > startTime_existante)
-    const { data: allReservations, error: checkError } = await supabase
-      .from('reservations_salles')
-      .select('id, start_time, end_time')
-      .eq('salle_id', body.salle_id)
-      .eq('date', date)
-
-    if (checkError) {
-      throw createError({
-        statusCode: 500,
-        message: `Error checking for overlapping reservations: ${checkError.message}`
-      })
-    }
-
-    const overlappingReservations = (allReservations || []).filter((res: any) => {
-      const resStart = res.start_time?.substring(0, 5) || '00:00'
-      const resEnd = res.end_time?.substring(0, 5) || '23:59'
-      // Chevauchement si: start_time < endTime ET end_time > startTime
+    const overlappingReservations = allSnap.docs.filter((doc) => {
+      const res = doc.data()
+      const resStart = String(res.start_time || '00:00').substring(0, 5)
+      const resEnd = String(res.end_time || '23:59').substring(0, 5)
       return resStart < endTime && resEnd > startTime
     })
 
-    if (checkError) {
-      throw createError({
-        statusCode: 500,
-        message: `Error checking for overlapping reservations: ${checkError.message}`
-      })
-    }
-
-    if (overlappingReservations && overlappingReservations.length > 0) {
+    if (overlappingReservations.length > 0) {
       throw createError({
         statusCode: 409,
-        message: 'Une réservation existe déjà pour cette salle à cet horaire'
+        message: 'Une réservation existe déjà pour cette salle à cet horaire',
       })
     }
 
-    // Combiner nom et prenom
     const name = `${body.prenom} ${body.nom}`.trim()
+    const id = randomUUID()
+    const ref = db.collection('reservation_salle').doc(id)
+    await ref.set({
+      salle_id: body.salle_id,
+      date,
+      start_time: startTime,
+      end_time: endTime,
+      reason: body.nom_association || null,
+      name,
+      email: body.email,
+      phone: body.telephone,
+      status: body.status || 'en_attente',
+      created_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp(),
+    })
 
-    const { data, error } = await supabase
-      .from('reservations_salles')
-      .insert({
-        salle_id: body.salle_id,
-        date: date,
-        start_time: startTime,
-        end_time: endTime,
-        reason: body.nom_association || null,
-        name: name,
-        email: body.email,
-        phone: body.telephone,
-        status: body.status || 'en_attente'
-      })
-      .select()
-      .single()
+    const dataSnap = await ref.get()
+    const data = serializeFirestoreData({
+      id: dataSnap.id,
+      ...dataSnap.data(),
+    }) as Record<string, unknown>
 
-    if (error) {
-      throw createError({
-        statusCode: 500,
-        message: `Error creating reservation: ${error.message}`
-      })
+    try {
+      const existSnap = await db
+        .collection('backoffice_notification')
+        .where('type', '==', 'reservation')
+        .where('entity_id', '==', id)
+        .limit(1)
+        .get()
+      if (existSnap.empty) {
+        await db.collection('backoffice_notification').add({
+          type: 'reservation',
+          entity_id: id,
+          title: 'Nouvelle réservation',
+          message: `${name} a demandé une réservation de salle`,
+          is_read: false,
+          created_at: FieldValue.serverTimestamp(),
+          read_at: null,
+        })
+      }
+    } catch (notifyErr: unknown) {
+      console.error('backoffice notification (reservation):', notifyErr)
     }
 
-    // Envoyer l'email de confirmation (ne pas bloquer si l'envoi échoue)
     try {
-      await supabase.functions.invoke('send-reservation-confirmation', {
-        body: {
-          email: body.email,
-          nom: body.nom,
-          prenom: body.prenom,
-          telephone: body.telephone,
-          nom_association: body.nom_association || null,
-          date_debut: body.date_debut,
-          date_fin: body.date_fin,
-          salle_nom: salleData.nom,
-          salle_adresse: salleData.adresse
-        }
+      await sendReservationConfirmationEmail({
+        email: body.email,
+        nom: body.nom,
+        prenom: body.prenom,
+        telephone: body.telephone,
+        nom_association: body.nom_association || null,
+        date_debut: body.date_debut,
+        date_fin: body.date_fin,
+        salle_nom: salleData.nom as string,
+        salle_adresse: (salleData.adresse as string) || null,
       })
-    } catch (emailError: any) {
-      // Logger l'erreur mais ne pas faire échouer la création de la réservation
+    } catch (emailError: unknown) {
       console.error('Error sending confirmation email:', emailError)
     }
 
-    // Retourner au format attendu par le frontend
     return {
       id: data.id,
       salle_id: body.salle_id,
@@ -147,13 +146,14 @@ export default eventHandler(async (event) => {
       salles: {
         id: body.salle_id,
         nom: salleData.nom,
-        adresse: salleData.adresse
-      }
+        adresse: salleData.adresse,
+      },
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'An error occurred while creating reservation'
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred while creating reservation',
     })
   }
 })

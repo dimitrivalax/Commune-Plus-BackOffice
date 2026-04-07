@@ -1,32 +1,30 @@
-import { getFCMAccessToken, getFCMProjectId } from "./fcm-auth";
-import { sendEmail } from "./emails";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { getFCMAccessToken, getFCMProjectId } from './fcm-auth'
+import { sendEmail } from './emails'
+import {
+  deactivatePushTokenByValue,
+  fetchActivePushTokensByEmail,
+} from './push-tokens-db'
 
 interface SendReservationNotificationOptions {
-  supabase: SupabaseClient;
-  reservationId: string;
-  userEmail: string;
-  userName: string;
-  salleName: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  status: "confirmée" | "refusée";
+  reservationId: string
+  userEmail: string
+  userName: string
+  salleName: string
+  date: string
+  startTime: string
+  endTime: string
+  status: 'confirmée' | 'refusée'
 }
 
-/**
- * Envoie une notification push et un email à l'utilisateur pour sa réservation
- */
 export async function sendReservationNotification(
   options: SendReservationNotificationOptions,
 ): Promise<{
-  push_success: boolean;
-  email_success: boolean;
-  tokens_sent: number;
-  errors?: string[];
+  push_success: boolean
+  email_success: boolean
+  tokens_sent: number
+  errors?: string[]
 }> {
   const {
-    supabase,
     reservationId,
     userEmail,
     userName,
@@ -35,120 +33,120 @@ export async function sendReservationNotification(
     startTime,
     endTime,
     status,
-  } = options;
+  } = options
 
-  const title =
-    status === "confirmée" ? "Réservation confirmée" : "Réservation refusée";
-  const body =
-    status === "confirmée"
+  const title
+    = status === 'confirmée' ? 'Réservation confirmée' : 'Réservation refusée'
+  const body
+    = status === 'confirmée'
       ? `Votre réservation pour la salle "${salleName}" le ${date} est confirmée.`
-      : `Désolé, votre réservation pour la salle "${salleName}" le ${date} a été refusée.`;
+      : `Désolé, votre réservation pour la salle "${salleName}" le ${date} a été refusée.`
 
   const result = {
     push_success: false,
     email_success: false,
     tokens_sent: 0,
     errors: [] as string[],
-  };
+  }
 
-  // 1. Envoi de la notification Push
   try {
-    let accessToken: string;
-    let projectId: string;
-
+    let accessToken: string | undefined
+    let projectId: string | undefined
     try {
-      accessToken = await getFCMAccessToken();
-      projectId = await getFCMProjectId();
+      accessToken = await getFCMAccessToken()
+      projectId = await getFCMProjectId()
+    } catch (fcmInitError: unknown) {
+      const msg
+        = fcmInitError instanceof Error
+          ? fcmInitError.message
+          : String(fcmInitError)
+      console.warn('FCM not configured or failed:', msg)
+      result.errors.push(`FCM Config: ${msg}`)
+    }
 
-      // Récupérer les tokens associés à cet email
-      const { data: pushTokens, error: tokensError } = await supabase
-        .from("push_tokens")
-        .select("token, platform")
-        .eq("email", userEmail.toLowerCase())
-        .eq("is_active", true);
-
-      if (tokensError) {
-        throw new Error(`Error fetching tokens: ${tokensError.message}`);
-      }
-
+    if (accessToken && projectId) {
+      const pushTokens = await fetchActivePushTokensByEmail(userEmail)
       if (pushTokens && pushTokens.length > 0) {
         for (const t of pushTokens) {
           try {
-            const message: any = {
+            const message: Record<string, unknown> = {
               message: {
                 token: t.token,
                 notification: { title, body },
                 data: {
-                  type: "reservation",
+                  type: 'reservation',
                   reservation_id: String(reservationId),
-                  status: status,
+                  status: String(status),
                 },
                 android: {
-                  priority: "high",
+                  priority: 'high',
                   notification: {
-                    sound: "default",
-                    channel_id: "default",
+                    sound: 'default',
+                    channel_id: 'default',
                     tag: `reservation_${reservationId}`,
                   },
                 },
               },
-            };
+            }
 
-            if (t.platform === "ios") {
-              message.message.apns = {
+            if (t.platform === 'ios') {
+              ;(message.message as Record<string, unknown>).apns = {
                 headers: {
-                  "apns-topic": "com.communeplus.app",
+                  'apns-topic': 'com.communeplus.app',
                 },
                 payload: {
                   aps: {
-                    sound: "default",
+                    sound: 'default',
                     badge: 1,
                     alert: { title, body },
                   },
                 },
-              };
+              }
             }
 
             const response = await fetch(
               `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
               {
-                method: "POST",
+                method: 'POST',
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
-                  "Content-Type": "application/json",
+                  'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(message),
               },
-            );
+            )
 
             if (response.ok) {
-              result.tokens_sent++;
+              result.tokens_sent++
             } else {
-              const errData = await response.json();
-              result.errors.push(
-                `FCM Error (${t.platform}): ${JSON.stringify(errData)}`,
-              );
+              const errData = await response.json().catch(() => ({}))
+              const errStr = JSON.stringify(errData)
+              if (
+                errStr.includes('NOT_FOUND')
+                || errStr.includes('UNREGISTERED')
+              ) {
+                await deactivatePushTokenByValue(t.token)
+              }
+              result.errors.push(`FCM Error (${t.platform}): ${errStr}`)
             }
-          } catch (e: any) {
-            result.errors.push(`Push error for token: ${e.message}`);
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e)
+            result.errors.push(`Push error for token: ${msg}`)
           }
         }
-        result.push_success = result.tokens_sent > 0;
+        result.push_success = result.tokens_sent > 0
       }
-    } catch (fcmInitError: any) {
-      console.warn("FCM not configured or failed:", fcmInitError.message);
-      result.errors.push(`FCM Config: ${fcmInitError.message}`);
     }
-  } catch (error: any) {
-    console.error("Push notification failed:", error);
-    result.errors.push(`Global push error: ${error.message}`);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('Push notification failed:', error)
+    result.errors.push(`Global push error: ${msg}`)
   }
 
-  // 2. Envoi de l'Email
   try {
     const emailHtml = `
       <div style="font-family: sans-serif; line-height: 1.5; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
-        <h2 style="color: ${status === "confirmée" ? "#10b981" : "#ef4444"};">${title}</h2>
+        <h2 style="color: ${status === 'confirmée' ? '#10b981' : '#ef4444'};">${title}</h2>
         <p>Bonjour ${userName},</p>
         <p>${body}</p>
         <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -160,22 +158,23 @@ export async function sendReservationNotification(
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 12px; color: #6b7280;">Ceci est un message automatique, merci de ne pas y répondre.</p>
       </div>
-    `;
+    `
 
     const emailResult = await sendEmail({
       to: userEmail,
       subject: `[Commune Plus] ${title}`,
       html: emailHtml,
-    });
+    })
 
-    result.email_success = emailResult.success;
-    if (!emailResult.success) {
-      result.errors.push(`Email error: ${emailResult.error}`);
+    result.email_success = emailResult.success
+    if (!emailResult.success && emailResult.error) {
+      result.errors.push(`Email error: ${emailResult.error}`)
     }
-  } catch (error: any) {
-    console.error("Email sending failed:", error);
-    result.errors.push(`Global email error: ${error.message}`);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('Email sending failed:', error)
+    result.errors.push(`Global email error: ${msg}`)
   }
 
-  return result;
+  return result
 }

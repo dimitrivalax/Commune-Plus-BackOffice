@@ -1,7 +1,9 @@
-import type { Notification } from '~/types'
+import type { Notification, User } from '~/types'
+import { createSharedComposable } from '@vueuse/core'
 
 const STORAGE_KEY = 'backoffice-notifications'
 const MAX_ITEMS = 50
+const POLL_MS = 25000
 
 function loadFromStorage(): Notification[] {
   if (import.meta.server) return []
@@ -15,52 +17,69 @@ function loadFromStorage(): Notification[] {
   }
 }
 
-function saveToStorage(items: Notification[]) {
-  if (import.meta.server) return
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, MAX_ITEMS)))
-  } catch {
-    // ignore
-  }
-}
-
-/**
- * Composable pour gérer les notifications du BackOffice en localStorage (pas de base de données).
- */
-export const useNotifications = () => {
+const _useNotifications = () => {
+  const { session } = useSupabase()
+  const { getAuthHeaders } = useApiAuth()
   const notifications = ref<Notification[]>([])
+  const notificationsError = ref<Error | null>(null)
+  let pollTimer: ReturnType<typeof setInterval> | null = null
 
-  function init() {
-    if (import.meta.client) {
-      notifications.value = loadFromStorage()
+  async function fetchNotifications() {
+    if (!session.value?.access_token) {
+      notifications.value = []
+      return
+    }
+    notificationsError.value = null
+    try {
+      const rows = await $fetch<BackofficeNotificationRow[]>('/api/notifications', {
+        headers: getAuthHeaders(),
+      })
+      notifications.value = (rows || []).map(rowToNotification).slice(0, MAX_ITEMS)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erreur notifications'
+      notificationsError.value = new Error(msg)
     }
   }
 
-  function refreshNotifications() {
-    init()
+  function startPolling() {
+    if (pollTimer || !import.meta.client) return
+    pollTimer = setInterval(() => {
+      void fetchNotifications()
+    }, POLL_MS)
   }
 
-  function markAsRead(id: string | number) {
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer)
+      pollTimer = null
+    }
+  }
+
+  async function refreshNotifications() {
+    await fetchNotifications()
+  }
+
+  async function markAsRead(id: string | number) {
+    const idStr = String(id)
+    if (session.value?.access_token) {
+      try {
+        await $fetch(`/api/notifications/${idStr}/read`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+        })
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e)
+        notificationsError.value = new Error(msg)
+      }
+    }
     const list = notifications.value
-    const index = list.findIndex((n) => String(n.id) === String(id))
-    if (index !== -1 && list[index].unread) {
-      list[index] = { ...list[index], unread: false }
-      notifications.value = [...list]
-      saveToStorage(notifications.value)
-    }
-  }
-
-  function addNotification(notification: Omit<Notification, 'id' | 'date'> & { id?: string | number; date?: string }) {
-    if (import.meta.server) return
-    const item: Notification = {
-      ...notification,
-      id: notification.id ?? crypto.randomUUID(),
-      date: notification.date ?? new Date().toISOString(),
-      unread: notification.unread ?? true
-    }
-    const list = [item, ...notifications.value].slice(0, MAX_ITEMS)
-    notifications.value = list
-    saveToStorage(list)
+    const index = list.findIndex((n) => String(n.id) === idStr)
+    if (index === -1) return
+    const current = list[index]
+    if (!current?.unread) return
+    const next: Notification[] = [...list]
+    next[index] = { ...current, unread: false }
+    notifications.value = next
   }
 
   function clearAll() {
@@ -70,14 +89,28 @@ export const useNotifications = () => {
     }
   }
 
-  const unreadCount = computed(() =>
-    notifications.value.filter((n) => n.unread).length
-  )
-
-  const notificationsError = ref<Error | null>(null)
+  const unreadCount = computed(() => {
+    let n = 0
+    for (const item of notifications.value) {
+      if (item.unread) n++
+    }
+    return n
+  })
 
   if (import.meta.client) {
-    init()
+    watch(
+      () => session.value?.access_token,
+      async (token) => {
+        stopPolling()
+        if (token) {
+          await fetchNotifications()
+          startPolling()
+        } else {
+          notifications.value = []
+        }
+      },
+      { immediate: true },
+    )
   }
 
   return {

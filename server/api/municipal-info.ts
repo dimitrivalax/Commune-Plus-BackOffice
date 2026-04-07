@@ -1,49 +1,52 @@
-import { requireAuth } from '../utils/supabase-auth'
-import { getCurrentUserProfile, getEffectiveCommuneIdForRequest } from '../utils/supabase-auth'
+import {
+  requireAuth,
+  getCurrentUserProfile,
+  getEffectiveCommuneIdForRequest,
+} from '../utils/firebase-auth'
+import { getAdminFirestore } from '../utils/firebase-admin-app'
+import { docWithId } from '../utils/firestore-serialize'
 
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event)
+  await requireAuth(event)
 
   try {
     const profile = await getCurrentUserProfile(event)
     const query = getQuery(event)
     const queryCommuneId = query.commune_id as string | undefined
     const category = query.category as string | undefined
-    const isAdminNotifications =
-      profile?.role === 'administrateur' &&
-      category === 'Information Générale'
+    const isAdminNotifications
+      = profile?.role === 'administrateur'
+        && category === 'Information Générale'
     const communeId = isAdminNotifications
       ? undefined
       : getEffectiveCommuneIdForRequest(profile, queryCommuneId)
 
-    let queryBuilder = supabase
-      .from('municipal_info')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const db = getAdminFirestore()
+    const snap = await db
+      .collection('municipal_info')
+      .orderBy('created_at', 'desc')
+      .limit(400)
+      .get()
+
+    let rows = snap.docs
+      .map((d) => docWithId(d.id, d.data()))
+      .filter(Boolean) as Record<string, unknown>[]
 
     if (category) {
-      queryBuilder = queryBuilder.eq('category', category)
+      rows = rows.filter((r) => r.category === category)
     }
     if (communeId) {
-      queryBuilder = queryBuilder.eq('commune_id', communeId)
-    } else if (profile?.role === 'utilisateur') {
+      rows = rows.filter((r) => r.commune_id === communeId)
+    } else if (profile?.role === 'utilisateur' && !isAdminNotifications) {
       return []
     }
 
-    const { data, error } = await queryBuilder
-
-    if (error) {
-      throw createError({
-        statusCode: 500,
-        message: `Error fetching municipal info: ${error.message}`
-      })
-    }
-
-    return (data || [])
-  } catch (error: any) {
+    return rows
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'An error occurred while fetching municipal info'
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred while fetching municipal info',
     })
   }
 })

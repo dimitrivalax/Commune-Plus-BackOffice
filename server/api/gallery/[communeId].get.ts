@@ -1,5 +1,4 @@
-import { requireAuth } from '../../utils/supabase-auth'
-import { requireCurrentUserProfile } from '../../utils/supabase-auth'
+import { requireAuth, requireCurrentUserProfile } from '../../utils/firebase-auth'
 import { listGalleryImages } from '../../utils/cloudinary'
 
 export default eventHandler(async (event) => {

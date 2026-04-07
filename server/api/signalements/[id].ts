@@ -1,182 +1,135 @@
-import { requireAuth } from "../../utils/supabase-auth";
-import { z } from "zod";
-import { sendSignalementNotification } from "../../utils/send-signalement-notification";
+import { FieldValue } from 'firebase-admin/firestore'
+import { requireAuth } from '../../utils/firebase-auth'
+import { getAdminFirestore } from '../../utils/firebase-admin-app'
+import { docWithId } from '../../utils/firestore-serialize'
+import { z } from 'zod'
+import { sendSignalementNotification } from '../../utils/send-signalement-notification'
 
 const updateSignalementSchema = z.object({
-  status: z.enum(["en_attente", "en_cours", "traite", "archive"]).optional(),
+  status: z.enum(['en_attente', 'en_cours', 'traite', 'archive']).optional(),
   description: z.string().nullable().optional(),
   comment: z.string().nullable().optional(),
   reponse: z.string().nullable().optional(),
-});
+})
 
 export default eventHandler(async (event) => {
-  console.log("Signalement ID:", event.context.params?.id);
-  // Vérifier l'authentification
-  const { supabase } = await requireAuth(event);
+  await requireAuth(event)
 
-  const id = getRouterParam(event, "id");
+  const id = getRouterParam(event, 'id')
   if (!id) {
     throw createError({
       statusCode: 400,
-      message: "Signalement ID is required",
-    });
+      message: 'Signalement ID is required',
+    })
   }
 
-  if (event.method === "PUT") {
+  const db = getAdminFirestore()
+
+  if (event.method === 'PUT') {
     try {
-      const body = await readBody(event);
-      const validatedData = updateSignalementSchema.parse(body);
+      const body = await readBody(event)
+      const validatedData = updateSignalementSchema.parse(body)
 
-      // Récupérer le signalement existant AVANT la mise à jour pour comparer les valeurs
-      const { data: existingSignalement, error: fetchError } = await supabase
-        .from("signalements")
-        .select("id, status, reponse, user_id, first_name, last_name")
-        .eq("id", id)
-        .single();
-
-      if (fetchError || !existingSignalement) {
+      const ref = db.collection('signalement').doc(id)
+      const existingSnap = await ref.get()
+      if (!existingSnap.exists) {
         throw createError({
           statusCode: 404,
-          message: `Signalement not found: ${
-            fetchError?.message || "No data returned"
-          }`,
-        });
+          message: 'Signalement not found',
+        })
       }
+      const existingSignalement = existingSnap.data()!
 
-      const oldStatus = existingSignalement.status;
-      const oldReponse = existingSignalement.reponse || null;
-      const userId = existingSignalement.user_id;
+      const oldStatus = existingSignalement.status
+      const oldReponse = existingSignalement.reponse || null
+      const userId = existingSignalement.user_id
 
-      const updateData: {
-        status?: string;
-        description?: string | null;
-        comment?: string | null;
-        reponse?: string | null;
-        updated_at: string;
-      } = {
-        updated_at: new Date().toISOString(),
-      };
-
+      const updateData: Record<string, unknown> = {
+        updated_at: FieldValue.serverTimestamp(),
+      }
       if (validatedData.status !== undefined) {
-        updateData.status = validatedData.status;
+        updateData.status = validatedData.status
       }
-
       if (validatedData.description !== undefined) {
-        updateData.description = validatedData.description;
+        updateData.description = validatedData.description
       }
-
       if (validatedData.comment !== undefined) {
-        updateData.comment = validatedData.comment;
+        updateData.comment = validatedData.comment
       }
-
       if (validatedData.reponse !== undefined) {
-        updateData.reponse = validatedData.reponse;
+        updateData.reponse = validatedData.reponse
       }
 
-      // Mettre à jour le signalement
-      const { data, error } = await supabase
-        .from("signalements")
-        .update(updateData)
-        .eq("id", id)
-        .select();
-
-      if (error) {
-        throw createError({
-          statusCode: 500,
-          message: `Error updating signalement: ${error.message}`,
-        });
+      await ref.update(updateData)
+      const updatedSnap = await ref.get()
+      const updatedSignalement = docWithId(updatedSnap.id, updatedSnap.data())
+      if (!updatedSignalement) {
+        throw createError({ statusCode: 500, message: 'Update failed' })
       }
 
-      if (!data || data.length === 0) {
-        throw createError({
-          statusCode: 404,
-          message: "Signalement not found after update",
-        });
-      }
+      const newStatus = updatedSignalement.status as string
+      const newReponse = (updatedSignalement.reponse || null) as string | null
 
-      if (data.length > 1) {
-        throw createError({
-          statusCode: 500,
-          message: "Multiple signalements found with the same ID",
-        });
-      }
-
-      const updatedSignalement = data[0];
-      const newStatus = updatedSignalement.status;
-      const newReponse = updatedSignalement.reponse || null;
-
-      // Envoyer une notification si nécessaire
-      // Ne pas bloquer la réponse si l'envoi de notification échoue
       try {
-        const statusChanged =
-          validatedData.status !== undefined && newStatus !== oldStatus;
-        const responseAdded =
-          validatedData.reponse !== undefined &&
-          newReponse !== null &&
-          (oldReponse === null || oldReponse.trim() === "");
+        const statusChanged
+          = validatedData.status !== undefined && newStatus !== oldStatus
+        const responseAdded
+          = validatedData.reponse !== undefined
+            && newReponse !== null
+            && (oldReponse === null || String(oldReponse).trim() === '')
 
         if (statusChanged || responseAdded) {
-          let notificationTitle = "";
-          let notificationBody = "";
-          let notificationType: "status_change" | "response_added" =
-            "status_change";
+          let notificationTitle = ''
+          let notificationBody = ''
+          let notificationType: 'status_change' | 'response_added' = 'status_change'
 
           if (responseAdded) {
-            notificationTitle = "Réponse à votre signalement";
-            notificationBody = `Votre signalement a reçu une réponse de la mairie.`;
-            notificationType = "response_added";
+            notificationTitle = 'Réponse à votre signalement'
+            notificationBody = 'Votre signalement a reçu une réponse de la mairie.'
+            notificationType = 'response_added'
           } else if (statusChanged) {
             const statusLabels: Record<string, string> = {
-              en_attente: "En Attente",
-              en_cours: "En Cours",
-              traite: "Traité",
-              archive: "Archivé",
-            };
-            notificationTitle = "Mise à jour de votre signalement";
-            notificationBody = `Le statut de votre signalement a été mis à jour : ${statusLabels[newStatus] || newStatus}`;
-            notificationType = "status_change";
+              en_attente: 'En Attente',
+              en_cours: 'En Cours',
+              traite: 'Traité',
+              archive: 'Archivé',
+            }
+            notificationTitle = 'Mise à jour de votre signalement'
+            notificationBody = `Le statut de votre signalement a été mis à jour : ${statusLabels[newStatus] || newStatus}`
+            notificationType = 'status_change'
           }
 
           if (notificationTitle && notificationBody) {
             await sendSignalementNotification({
-              supabase,
               signalementId: id,
-              userId: userId,
+              userId: userId ?? null,
               title: notificationTitle,
               body: notificationBody,
               type: notificationType,
               newStatus: statusChanged ? newStatus : undefined,
-            });
+            })
           }
         }
-      } catch (notificationError: any) {
-        // Logger l'erreur mais ne pas faire échouer la requête
-        console.error(
-          "Error sending notification for signalement:",
-          notificationError,
-        );
+      } catch (notificationError: unknown) {
+        console.error('Notification signalement:', notificationError)
       }
 
-      return updatedSignalement;
-    } catch (error: any) {
+      return updatedSignalement
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         throw createError({
           statusCode: 400,
-          message: `Validation error: ${error.errors
-            .map((e) => e.message)
-            .join(", ")}`,
-        });
+          message: `Validation error: ${error.issues.map((x) => x.message).join(', ')}`,
+        })
       }
+      const e = error as { statusCode?: number; message?: string }
       throw createError({
-        statusCode: error.statusCode || 500,
+        statusCode: e.statusCode || 500,
         message:
-          error.message || "An error occurred while updating the signalement",
-      });
+          e.message || 'An error occurred while updating the signalement',
+      })
     }
   }
 
-  throw createError({
-    statusCode: 405,
-    message: "Method not allowed",
-  });
-});
+  throw createError({ statusCode: 405, message: 'Method not allowed' })
+})

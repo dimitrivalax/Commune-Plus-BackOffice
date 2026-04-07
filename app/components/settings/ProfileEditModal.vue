@@ -2,7 +2,7 @@
 import * as z from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
 
-const { user: supabaseUser, supabase } = useSupabase();
+const { user: supabaseUser, updateUserProfile } = useSupabase();
 const toast = useToast();
 
 const isOpen = ref(false);
@@ -29,31 +29,25 @@ watch(
   () => supabaseUser.value,
   (user) => {
     if (user) {
-      const metadata = user.user_metadata || {};
-      state.first_name = metadata.first_name || "";
-      state.last_name = metadata.last_name || "";
-      state.avatar_url = metadata.avatar_url || "";
-      state.bio = metadata.bio || "";
+      const dn = (user.displayName || "").trim();
+      const parts = dn.split(/\s+/).filter(Boolean);
+      state.first_name = parts[0] || "";
+      state.last_name = parts.slice(1).join(" ") || "";
+      state.avatar_url = user.photoURL || "";
+      state.bio = "";
     }
   },
   { immediate: true },
 );
 
 async function onSubmit(event: FormSubmitEvent<ProfileSchema>) {
-  if (!supabase) return;
-
   loading.value = true;
   try {
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        first_name: event.data.first_name,
-        last_name: event.data.last_name,
-        avatar_url: event.data.avatar_url,
-        bio: event.data.bio,
-      },
+    await updateUserProfile({
+      displayName:
+        `${event.data.first_name} ${event.data.last_name}`.trim(),
+      photoURL: event.data.avatar_url || null,
     });
-
-    if (error) throw error;
 
     toast.add({
       title: "Succès",

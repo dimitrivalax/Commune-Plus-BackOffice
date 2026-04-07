@@ -1,110 +1,94 @@
 import type { Utilisateur } from '~/types'
-import { requireAuth } from '../utils/supabase-auth'
-import { requireCurrentUserProfile } from '../utils/supabase-auth'
+import { requireAuth, requireCurrentUserProfile } from '../utils/firebase-auth'
+import { getAdminFirestore } from '../utils/firebase-admin-app'
+import { chunkArray, docWithId } from '../utils/firestore-serialize'
+import { FieldPath } from 'firebase-admin/firestore'
+import { listUtilisateursWithLastSignIn } from '../utils/list-utilisateurs'
 
 export default eventHandler(async (event) => {
-  const { supabase, user } = await requireAuth(event)
+  await requireAuth(event)
   const profile = await requireCurrentUserProfile(event)
 
   if (profile.role !== 'administrateur') {
     throw createError({
       statusCode: 403,
-      message: 'Accès réservé aux administrateurs'
+      message: 'Accès réservé aux administrateurs',
     })
   }
 
   try {
-    console.log('Fetching utilisateurs for user:', user.id)
-    // Utiliser la fonction RPC pour récupérer les utilisateurs avec leur dernière connexion
-    const { data: utilisateursData, error: utilisateursError }
-      = await supabase.rpc('get_utilisateurs_with_last_sign_in')
-
-    if (utilisateursError) {
-      throw createError({
-        statusCode: 500,
-        message: `Error fetching utilisateurs: ${utilisateursError.message}`
-      })
-    }
-
-    console.log('Found utilisateurs:', utilisateursData?.length || 0)
+    console.log('Fetching utilisateurs for admin')
+    const utilisateursData = await listUtilisateursWithLastSignIn()
 
     if (!utilisateursData || utilisateursData.length === 0) {
       return []
     }
 
-    // Ensuite, récupérer les associations utilisateur_commune pour chaque utilisateur
-    const utilisateurIds = utilisateursData.map(u => u.id)
+    const utilisateurIds = utilisateursData.map((u) => u.id as string)
+    const db = getAdminFirestore()
+    const assocByUser = new Map<string, { commune_id: string }[]>()
 
-    const { data: associationsData, error: associationsError } = await supabase
-      .from('utilisateur_commune')
-      .select('utilisateur_id, commune_id')
-      .in('utilisateur_id', utilisateurIds)
-
-    console.log(
-      'Found associations:',
-      associationsData?.length || 0,
-      'Error:',
-      associationsError?.message
-    )
-
-    // Récupérer les communes associées
-    const communeIds = associationsData
-      ? [...new Set(associationsData.map((a: any) => a.commune_id))]
-      : []
-
-    let communesData: any[] = []
-    if (communeIds.length > 0) {
-      const { data: communes, error: communesError } = await supabase
-        .from('commune')
-        .select('id, name, postal_code, email')
-        .in('id', communeIds)
-
-      if (!communesError && communes) {
-        communesData = communes
+    for (const ch of chunkArray(utilisateurIds, 30)) {
+      const snap = await db
+        .collection('utilisateur_commune')
+        .where('utilisateur_id', 'in', ch)
+        .get()
+      for (const doc of snap.docs) {
+        const uid = doc.get('utilisateur_id') as string
+        const communeId = doc.get('commune_id') as string
+        if (!assocByUser.has(uid)) assocByUser.set(uid, [])
+        assocByUser.get(uid)!.push({ commune_id: communeId })
       }
-      console.log(
-        'Found communes:',
-        communesData.length,
-        'Error:',
-        communesError?.message
-      )
     }
 
-    // Créer un map pour associer rapidement les communes aux utilisateurs
-    const communesByUtilisateurId = new Map<string, any[]>()
+    const communeIds = [
+      ...new Set(
+        [...assocByUser.values()]
+          .flat()
+          .map((a) => a.commune_id)
+          .filter(Boolean),
+      ),
+    ]
 
-    if (associationsData) {
-      associationsData.forEach((assoc: any) => {
-        if (!communesByUtilisateurId.has(assoc.utilisateur_id)) {
-          communesByUtilisateurId.set(assoc.utilisateur_id, [])
-        }
-        const commune = communesData.find(c => c.id === assoc.commune_id)
-        if (commune) {
-          communesByUtilisateurId.get(assoc.utilisateur_id)!.push(commune)
-        }
-      })
+    const communesData: Record<string, unknown>[] = []
+    for (const ch of chunkArray(communeIds, 30)) {
+      const snap = await db
+        .collection('commune')
+        .where(FieldPath.documentId(), 'in', ch)
+        .get()
+      for (const d of snap.docs) {
+        const row = docWithId(d.id, d.data())
+        if (row) communesData.push(row)
+      }
     }
 
-    // Transformer les données pour avoir un format plus simple
-    // last_sign_in_at est déjà inclus dans les données récupérées par la fonction SQL
-    const utilisateurs = utilisateursData.map((utilisateur: any) => {
-      const communes = communesByUtilisateurId.get(utilisateur.id) || []
+    const communesByUtilisateurId = new Map<string, typeof communesData>()
+    for (const [utilId, assocs] of assocByUser) {
+      const list: typeof communesData = []
+      for (const a of assocs) {
+        const c = communesData.find((x) => x.id === a.commune_id)
+        if (c) list.push(c)
+      }
+      communesByUtilisateurId.set(utilId, list)
+    }
 
+    const utilisateurs = utilisateursData.map((utilisateur: Record<string, unknown>) => {
+      const communes = communesByUtilisateurId.get(utilisateur.id as string) || []
       return {
         ...utilisateur,
         is_active: utilisateur.is_active !== false,
         last_sign_in_at: utilisateur.last_sign_in_at || null,
-        communes
+        communes,
       }
     })
 
-    console.log('Returning utilisateurs:', utilisateurs.length)
-    return utilisateurs as Utilisateur[]
-  } catch (error: any) {
+    return utilisateurs as unknown as Utilisateur[]
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     console.error('Error in utilisateurs API:', error)
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'An error occurred while fetching utilisateurs'
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred while fetching utilisateurs',
     })
   }
 })

@@ -1,182 +1,151 @@
-import { createClient } from "@supabase/supabase-js";
-import type { User, SupabaseClient } from "@supabase/supabase-js";
+/**
+ * Authentification Firebase (nom conservé useSupabase pour limiter les changements dans les vues).
+ */
 import { createSharedComposable } from "@vueuse/core";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  sendPasswordResetEmail,
+  confirmPasswordReset,
+  updateProfile,
+  type User,
+} from "firebase/auth";
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 
-let supabase: SupabaseClient | null = null;
+let firebaseApp: FirebaseApp | null = null;
 
-const getSupabaseClient = (): SupabaseClient | null => {
-  if (supabase) {
-    return supabase;
+function getClientApp(): FirebaseApp {
+  if (firebaseApp) return firebaseApp;
+  const config = useRuntimeConfig();
+  const firebaseConfig = {
+    apiKey: config.public.firebaseApiKey || "",
+    authDomain: config.public.firebaseAuthDomain || "",
+    projectId: config.public.firebaseProjectId || "",
+    storageBucket: config.public.firebaseStorageBucket || "",
+    messagingSenderId: config.public.firebaseMessagingSenderId || "",
+    appId: config.public.firebaseAppId || "",
+  };
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    console.warn("Firebase client credentials missing in runtimeConfig.public");
   }
+  firebaseApp = getApps().length
+    ? getApps()[0]!
+    : initializeApp(firebaseConfig);
+  return firebaseApp;
+}
 
-  try {
-    const config = useRuntimeConfig();
-    const supabaseUrl = config.public.supabaseUrl || "";
-    const supabaseAnonKey = config.public.supabaseAnonKey || "";
+function getClientAuth() {
+  return getAuth(getClientApp());
+}
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.warn(
-        "Supabase credentials are missing. Please check your environment variables.",
-      );
-      return null;
-    }
-
-    supabase = createClient(supabaseUrl, supabaseAnonKey);
-    return supabase;
-  } catch (error) {
-    console.error("Error initializing Supabase client:", error);
-    return null;
-  }
-};
+/** Session compatible ancien code Supabase : access_token = ID token Firebase. */
+export interface CompatibleSession {
+  access_token: string;
+  user: User;
+}
 
 const _useSupabase = () => {
-  const user = useState<User | null>("supabase_user", () => null);
-  const session = useState<any>("supabase_session", () => null);
+  const user = useState<User | null>("firebase_user", () => null);
+  const idToken = useState<string | null>("firebase_id_token", () => null);
 
-  const client = getSupabaseClient();
+  const session = computed<CompatibleSession | null>(() => {
+    if (!user.value || !idToken.value) return null;
+    return { access_token: idToken.value, user: user.value };
+  });
 
-  const signUp = async (
-    email: string,
-    password: string,
-    metadata?: Record<string, any>,
-  ) => {
-    if (!client) {
-      throw new Error("Supabase is not configured");
+  async function refreshIdToken(): Promise<void> {
+    const u = getClientAuth().currentUser;
+    if (!u) {
+      idToken.value = null;
+      user.value = null;
+      return;
     }
+    idToken.value = await u.getIdToken();
+    user.value = u;
+  }
 
-    const { data, error } = await client.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata,
-      },
+  if (import.meta.client) {
+    onAuthStateChanged(getClientAuth(), async (u) => {
+      user.value = u;
+      if (u) {
+        try {
+          idToken.value = await u.getIdToken();
+        } catch {
+          idToken.value = null;
+        }
+      } else {
+        idToken.value = null;
+      }
     });
+  }
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  };
+  const supabase = null as null;
 
   const signIn = async (email: string, password: string) => {
-    if (!client) {
-      throw new Error("Supabase is not configured");
-    }
-
-    const { data, error } = await client.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    user.value = data.user;
-    session.value = data.session;
-
-    return data;
+    await signInWithEmailAndPassword(getClientAuth(), email, password);
+    await refreshIdToken();
   };
 
   const signOut = async () => {
-    if (!client) {
-      throw new Error("Supabase is not configured");
-    }
-
-    // scope: 'local' évite l'appel POST /auth/v1/logout qui peut renvoyer 403
-    // si le token est expiré ; la session est quand même effacée côté client.
-    const { error } = await client.auth.signOut({ scope: "local" });
-
-    if (error) {
-      throw error;
-    }
-
+    await firebaseSignOut(getClientAuth());
     user.value = null;
-    session.value = null;
-  };
-
-  const getCurrentUser = async () => {
-    if (!client) {
-      return null;
-    }
-
-    const {
-      data: { user: currentUser },
-    } = await client.auth.getUser();
-    user.value = currentUser;
-    return currentUser;
+    idToken.value = null;
   };
 
   const getSession = async () => {
-    if (!client) {
+    const u = getClientAuth().currentUser;
+    user.value = u;
+    if (!u) {
+      idToken.value = null;
       return null;
     }
-
-    const {
-      data: { session: currentSession },
-    } = await client.auth.getSession();
-    session.value = currentSession;
-    if (currentSession) {
-      user.value = currentSession.user;
-    }
-    return currentSession;
+    idToken.value = await u.getIdToken();
+    return session.value;
   };
 
-  // Initialiser la session si on est côté client
-  if (import.meta.client) {
-    getSession().catch(() => {
-      // Ignorer les erreurs silencieusement
-    });
-
-    // Écouter les changements d'authentification
-    if (client) {
-      client.auth.onAuthStateChange((_event, newSession) => {
-        session.value = newSession;
-        user.value = newSession?.user ?? null;
-      });
-    }
-  }
+  const getCurrentUser = async () => {
+    const u = getClientAuth().currentUser;
+    user.value = u;
+    return u;
+  };
 
   const resetPassword = async (email: string) => {
-    if (!client) {
-      throw new Error("Supabase is not configured");
-    }
-
-    const { error } = await client.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login?type=recovery`,
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    await sendPasswordResetEmail(getClientAuth(), email, {
+      url: `${origin}/login`,
+      handleCodeInApp: true,
     });
-
-    if (error) {
-      throw error;
-    }
   };
 
-  const updatePassword = async (password: string) => {
-    if (!client) {
-      throw new Error("Supabase is not configured");
+  const updatePassword = async (newPassword: string, oobCode?: string) => {
+    const code =
+      oobCode || (useRoute().query.oobCode as string | undefined);
+    if (!code || typeof code !== "string") {
+      throw new Error("Code de réinitialisation manquant");
     }
-
-    const { error } = await client.auth.updateUser({
-      password,
-    });
-
-    if (error) {
-      throw error;
-    }
+    await confirmPasswordReset(getClientAuth(), code, newPassword);
   };
 
   return {
-    supabase: client,
+    supabase,
     user: readonly(user),
-    session: readonly(session),
-    signUp,
+    session,
     signIn,
     signOut,
     getCurrentUser,
     getSession,
     resetPassword,
     updatePassword,
+    updateUserProfile: async (data: {
+      displayName?: string;
+      photoURL?: string | null;
+    }) => {
+      const u = getClientAuth().currentUser;
+      if (!u) throw new Error("Non connecté");
+      await updateProfile(u, data);
+    },
   };
 };
 

@@ -5,14 +5,11 @@ export const useApiAuth = () => {
   const { session } = useSupabase()
 
   const getAuthHeaders = (): Record<string, string> => {
-    const currentSession = session.value
-    if (!currentSession?.access_token) {
-      return {}
+    const token = session.value?.access_token
+    if (!token) {
+      return {} as Record<string, string>
     }
-
-    return {
-      Authorization: `Bearer ${currentSession.access_token}`
-    }
+    return { Authorization: `Bearer ${token}` }
   }
 
   return {

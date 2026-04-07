@@ -1,8 +1,8 @@
 import {
-  getAuthenticatedSupabaseClient,
-  getAuthenticatedSupabaseClientFromToken,
-  getCurrentUserProfileFromAuth
-} from '../../utils/supabase-auth'
+  getAuthenticatedUidForRequest,
+  getAuthenticatedUidFromToken,
+  getCurrentUserProfileFromUid,
+} from '../../utils/firebase-auth'
 import { uploadGalleryImage } from '../../utils/cloudinary'
 
 export default eventHandler(async (event) => {
@@ -27,22 +27,21 @@ export default eventHandler(async (event) => {
     }
   }
 
-  // Auth : token dans le formulaire (fallback pour FormData) ou header/cookie
   const auth = tokenFromForm
-    ? await getAuthenticatedSupabaseClientFromToken(tokenFromForm)
-    : await getAuthenticatedSupabaseClient(event)
+    ? await getAuthenticatedUidFromToken(tokenFromForm)
+    : await getAuthenticatedUidForRequest(event)
   if (!auth) {
     throw createError({
       statusCode: 401,
-      message: 'Unauthorized: Authentication required'
+      message: 'Unauthorized: Authentication required',
     })
   }
 
-  const profile = await getCurrentUserProfileFromAuth(auth)
+  const profile = await getCurrentUserProfileFromUid(auth.uid)
   if (!profile) {
     throw createError({
       statusCode: 404,
-      message: 'Profil utilisateur non trouvé'
+      message: 'Profil utilisateur non trouvé',
     })
   }
 
@@ -53,10 +52,9 @@ export default eventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Fichier manquant' })
   }
 
-  // Galerie globale "commune-plus" réservée aux administrateurs (notifications / informations générales)
   const isGlobalGallery = communeId === 'commune-plus'
-  const canAccess =
-    isGlobalGallery
+  const canAccess
+    = isGlobalGallery
       ? profile.role === 'administrateur'
       : profile.role === 'administrateur' || profile.communeIds.includes(communeId)
   if (!canAccess) {

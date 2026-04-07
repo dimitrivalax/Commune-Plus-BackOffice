@@ -4,8 +4,8 @@ Ce dossier contient les Architecture Decision Records (ADR) et la documentation 
 
 ## Fichiers
 
-- **README-BACKOFFICE-NOTIFICATIONS.md** : Documentation du système de notifications pour le BackOffice (signalements et réservations)
-- **README-SIGNALEMENT-NOTIFICATIONS.md** : Documentation du système de notifications push pour les signalements côté mobile
+- `README-BACKOFFICE-NOTIFICATIONS.md` : architecture des notifications BackOffice (UI + persistance locale).
+- `README-SIGNALEMENT-NOTIFICATIONS.md` : flux des notifications push de signalements (mobile <-> BackOffice <-> FCM).
 
 ## Qu'est-ce qu'un ADR ?
 

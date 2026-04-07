@@ -10,19 +10,50 @@ runConfig:
 # Environment variables (valeurs issues de .env).
 # Pour les secrets sensibles, préférer Cloud Secret Manager et "secret: NOM" en prod.
 env:
-  # Supabase
-  - variable: SUPABASE_URL
-    value: "https://shirnwmttaufgnbboyyu.supabase.co"
+  # Firebase (client BackOffice)
+  - variable: NUXT_PUBLIC_FIREBASE_API_KEY
+    secret: NUXT_PUBLIC_FIREBASE_API_KEY
     availability:
       - BUILD
       - RUNTIME
-  - variable: NUXT_PUBLIC_SUPABASE_URL
-    value: "https://shirnwmttaufgnbboyyu.supabase.co"
+  - variable: NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    secret: NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN
     availability:
       - BUILD
       - RUNTIME
-  - variable: NUXT_PUBLIC_SUPABASE_ANON_KEY
-    secret: NUXT_PUBLIC_SUPABASE_ANON_KEY
+  - variable: NUXT_PUBLIC_FIREBASE_PROJECT_ID
+    secret: NUXT_PUBLIC_FIREBASE_PROJECT_ID
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    secret: NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    secret: NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_APP_ID
+    secret: NUXT_PUBLIC_FIREBASE_APP_ID
+    availability:
+      - BUILD
+      - RUNTIME
+  # Firebase Admin (serveur)
+  - variable: FIREBASE_SERVICE_ACCOUNT_JSON
+    secret: FIREBASE_SERVICE_ACCOUNT_JSON
+    availability:
+      - RUNTIME
+  - variable: NODE_OPTIONS
+    value: "--max-old-space-size=4096"
+    availability:
+      - BUILD
+  - variable: APP_URL
+    value: "https://backoffice.commune-plus.fr"
+    availability:
+      - RUNTIME
 
   # Cloudinary
   - variable: CLOUDINARY_CLOUD_NAME
@@ -39,24 +70,6 @@ env:
     secret: CLOUDINARY_API_KEY
   - variable: CLOUDINARY_API_SECRET
     secret: CLOUDINARY_API_SECRET
-
-  # SMTP Infomaniak
-  - variable: SMTP_HOST
-    value: "mail.infomaniak.com"
-    availability:
-      - RUNTIME
-  - variable: SMTP_PORT
-    value: "465"
-    availability:
-      - RUNTIME
-  - variable: SMTP_USER
-    value: "contact@commune-plus.fr"
-    availability:
-      - RUNTIME
-  - variable: SMTP_FROM_EMAIL
-    value: "contact@commune-plus.fr"
-    availability:
-      - RUNTIME
 
   # PostHog
   - variable: POSTHOG_API_KEY
@@ -80,7 +93,7 @@ env:
     availability:
       - RUNTIME
 
-  # FCM (notifications push) — compte de service Firebase (JSON complet, pas google-services.json)
+  # FCM fallback (si FIREBASE_SERVICE_ACCOUNT_JSON n'est pas utilisé)
   - variable: FCM_SERVICE_ACCOUNT_JSON
     secret: FCM_SERVICE_ACCOUNT_JSON
     availability:

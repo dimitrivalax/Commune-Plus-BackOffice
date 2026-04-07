@@ -1,70 +1,50 @@
-import { getSupabaseAdminClient } from "../../utils/supabase-auth";
-import { z } from "zod";
-import { sendPropositionNotification } from "../../utils/send-proposition-notification";
+import { z } from 'zod'
+import { getAdminFirestore } from '../../utils/firebase-admin-app'
+import { sendPropositionNotification } from '../../utils/send-proposition-notification'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
 
 const notifySchema = z.object({
   proposition_id: z.string().uuid(),
-  type: z.enum(["vote", "comment"]),
+  type: z.enum(['vote', 'comment']),
   comment_content: z.string().optional(),
-});
+})
 
 export default eventHandler(async (event) => {
-  setResponseHeaders(event, corsHeaders);
-  const body = await readBody(event);
-  const validatedData = notifySchema.parse(body);
-  const supabase = getSupabaseAdminClient();
+  setResponseHeaders(event, corsHeaders)
+  const body = await readBody(event)
+  const validatedData = notifySchema.parse(body)
+  const db = getAdminFirestore()
 
-  if (!supabase) {
-    throw createError({
-      statusCode: 500,
-      message: "Supabase admin client not initialized",
-    });
+  const pref = db.collection('proposition').doc(validatedData.proposition_id)
+  const psnap = await pref.get()
+  if (!psnap.exists) {
+    throw createError({ statusCode: 404, message: 'Proposition not found' })
   }
+  const pdata = psnap.data() || {};
+  const proposition = { id: psnap.id, ...pdata } as Record<string, unknown>;
 
-  // 1. Récupérer les infos de la doléance
-  const { data: proposition, error: propError } = await supabase
-    .from("propositions")
-    .select("*")
-    .eq("id", validatedData.proposition_id)
-    .single();
-
-  if (propError || !proposition) {
-    throw createError({
-      statusCode: 404,
-      message: "Proposition not found",
-    });
-  }
-
-  // 2. Préparer le contenu de la notification
-  let title = "";
-  let messageBody = "";
-
-  if (validatedData.type === "vote") {
-    title = "Nouveau vote !";
-    messageBody = `Quelqu'un a voté pour votre doléance : "${proposition.name}"`;
+  let title = ''
+  let messageBody = ''
+  if (validatedData.type === 'vote') {
+    title = 'Nouveau vote !'
+    messageBody = `Quelqu'un a voté pour votre proposition : "${String(proposition.name ?? '')}"`
   } else {
-    title = "Nouveau commentaire";
-    messageBody = `Quelqu'un a commenté votre doléance : "${proposition.name}"`;
-    if (validatedData.comment_content) {
-      // Optionnel: ajouter un aperçu du commentaire
-    }
+    title = 'Nouveau commentaire'
+    messageBody = `Quelqu'un a commenté votre proposition : "${String(proposition.name ?? '')}"`
   }
 
-  // 3. Envoyer la notification (utilisant l'utilitaire server)
   const result = await sendPropositionNotification({
-    supabase,
-    propositionId: proposition.id,
-    userId: proposition.user_id,
+    propositionId: String(proposition.id),
+    userId: (proposition.user_id as string | undefined) ?? null,
     title,
     body: messageBody,
     type: validatedData.type,
-  });
+  })
 
-  return result;
-});
+  return result
+})

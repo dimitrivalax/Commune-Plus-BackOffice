@@ -53,9 +53,10 @@ const user = computed(() => {
     };
   }
 
-  const metadata = supabaseUser.value.user_metadata || {};
-  const firstName = metadata.first_name || "";
-  const lastName = metadata.last_name || "";
+  const dn = (supabaseUser.value.displayName || "").trim();
+  const parts = dn.split(/\s+/).filter(Boolean);
+  const firstName = parts[0] || "";
+  const lastName = parts.slice(1).join(" ") || "";
   const fullName =
     `${firstName} ${lastName}`.trim() ||
     supabaseUser.value.email ||

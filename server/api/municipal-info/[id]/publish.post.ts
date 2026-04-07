@@ -1,16 +1,14 @@
-import { requireAuth } from '../../../utils/supabase-auth'
-import { getCurrentUserProfile } from '../../../utils/supabase-auth'
+import { requireAuth, getCurrentUserProfile } from '../../../utils/firebase-auth'
+import { getAdminFirestore } from '../../../utils/firebase-admin-app'
+import { docWithId } from '../../../utils/firestore-serialize'
 import { getFCMAccessToken, getFCMProjectId } from '../../../utils/fcm-auth'
+import {
+  deactivatePushTokenByValue,
+  fetchPushTokensForPublish,
+} from '../../../utils/push-tokens-db'
 
-/**
- * API endpoint pour publier une information municipale et envoyer une push notification
- * - Sans global: à tous les utilisateurs qui ont cette commune en favoris
- * - Avec global: à tous les utilisateurs de toutes les communes (réservé aux administrateurs)
- *
- * Utilise l'API FCM v1 avec authentification OAuth 2.0
- */
 export default eventHandler(async (event) => {
-  const { supabase } = await requireAuth(event)
+  await requireAuth(event)
   const profile = await getCurrentUserProfile(event)
 
   const id = getRouterParam(event, 'id')
@@ -21,64 +19,46 @@ export default eventHandler(async (event) => {
     if (profile?.role !== 'administrateur') {
       throw createError({
         statusCode: 403,
-        message: 'Accès réservé aux administrateurs'
+        message: 'Accès réservé aux administrateurs',
       })
     }
   } else if (!bodyCommuneId) {
     throw createError({
       statusCode: 400,
-      message: 'commune_id is required'
+      message: 'commune_id is required',
     })
   }
 
   try {
-    // Vérifier la configuration FCM
     let accessToken: string
     let projectId: string
-
     try {
       accessToken = await getFCMAccessToken()
       projectId = await getFCMProjectId()
-    } catch (error: any) {
-      console.warn('FCM not configured:', error.message)
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error)
+      console.warn('FCM not configured:', msg)
       return {
         success: false,
-        message: 'FCM non configuré. Veuillez configurer FCM_SERVICE_ACCOUNT_JSON ou FCM_SERVICE_ACCOUNT_PATH',
-        tokens_sent: 0
+        message:
+          'FCM non configuré. Variables FCM_SERVICE_ACCOUNT_JSON ou FCM_SERVICE_ACCOUNT_PATH',
+        tokens_sent: 0,
       }
     }
 
-    // Récupérer l'information municipale
-    const { data: info, error: infoError } = await supabase
-      .from('municipal_info')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (infoError || !info) {
+    const db = getAdminFirestore()
+    const infoSnap = await db.collection('municipal_info').doc(id!).get()
+    if (!infoSnap.exists) {
       throw createError({
         statusCode: 404,
-        message: 'Information municipale non trouvée'
+        message: 'Information municipale non trouvée',
       })
     }
+    const info = docWithId(infoSnap.id, infoSnap.data())!
 
-    // Récupérer les tokens de push : tous si global, sinon pour la commune
-    let tokensQuery = supabase
-      .from('push_tokens')
-      .select('token, platform, user_id')
-      .eq('is_active', true)
-    if (!isGlobal) {
-      tokensQuery = tokensQuery.eq('commune_id', bodyCommuneId)
-    }
-    const { data: pushTokens, error: tokensError } = await tokensQuery
-
-    if (tokensError) {
-      console.error('Error fetching push tokens:', tokensError)
-      throw createError({
-        statusCode: 500,
-        message: `Error fetching push tokens: ${tokensError.message}`
-      })
-    }
+    const pushTokens = await fetchPushTokensForPublish(
+      isGlobal ? undefined : bodyCommuneId,
+    )
 
     if (!pushTokens || pushTokens.length === 0) {
       return {
@@ -86,84 +66,64 @@ export default eventHandler(async (event) => {
         message: isGlobal
           ? 'Aucun token de push trouvé'
           : 'Aucun token de push trouvé pour cette commune',
-        tokens_sent: 0
+        tokens_sent: 0,
       }
     }
 
-    // Préparer le message de notification
-    const notificationTitle = info.category
-    const notificationBody = info.title
+    const notificationTitle = String(info.category || '')
+    const notificationBody = String(info.title || '')
 
-    // Séparer les tokens par plateforme
     const androidTokens = pushTokens
-      .filter(t => t.platform === 'android')
-      .map(t => t.token)
-
+      .filter((t) => t.platform === 'android')
+      .map((t) => t.token)
     const iosTokens = pushTokens
-      .filter(t => t.platform === 'ios')
-      .map(t => t.token)
+      .filter((t) => t.platform === 'ios')
+      .map((t) => t.token)
+    const allTokens = [...androidTokens, ...iosTokens]
 
     let sentCount = 0
     const errors: string[] = []
 
-    // Utiliser l'API FCM v1 pour envoyer les notifications
-    // L'API v1 nécessite d'envoyer une notification par token (pas de batch)
-    const allTokens = [...androidTokens, ...iosTokens]
-
     for (const token of allTokens) {
       try {
         const platform = androidTokens.includes(token) ? 'android' : 'ios'
-
-        // Construire le message selon la plateforme
-        // IMPORTANT: Pour Android, toutes les valeurs dans 'data' doivent être des strings
-        // Pour que l'app s'ouvre quand elle est fermée, on doit utiliser à la fois 'notification' et 'data'
-        const message: any = {
+        const message: Record<string, unknown> = {
           message: {
-            token: token,
+            token,
             notification: {
               title: notificationTitle,
-              body: notificationBody
+              body: notificationBody,
             },
-            // Les données doivent être des strings pour Android
-            // Ces données seront disponibles même quand l'app est fermée
             data: {
               type: 'municipal_info',
               info_id: String(info.id),
-              commune_id: String(info.commune_id ?? '')
+              commune_id: String(info.commune_id ?? ''),
             },
             android: {
               priority: 'high',
-              // Pour Android, on doit spécifier le canal de notification
               notification: {
                 sound: 'default',
                 icon: 'ic_notification',
                 channel_id: 'default',
-                // Tag pour regrouper les notifications similaires
-                tag: `info_${info.id}`
-                // Note: click_action n'est plus utilisé dans FCM v1
-                // Les données dans 'data' seront automatiquement transmises à l'app
-                // Capacitor gère automatiquement l'ouverture de l'app quand elle est fermée
-              }
-            }
-          }
+                tag: `info_${info.id}`,
+              },
+            },
+          },
         }
 
-        // Configuration spécifique iOS
         if (platform === 'ios') {
-          message.message.apns = {
-            headers: {
-              'apns-priority': '10'
-            },
+          ;(message.message as Record<string, unknown>).apns = {
+            headers: { 'apns-priority': '10' },
             payload: {
               aps: {
                 sound: 'default',
                 badge: 1,
                 alert: {
                   title: notificationTitle,
-                  body: notificationBody
-                }
-              }
-            }
+                  body: notificationBody,
+                },
+              },
+            },
           }
         }
 
@@ -172,51 +132,50 @@ export default eventHandler(async (event) => {
           {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json'
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
             },
-            body: JSON.stringify(message)
-          }
+            body: JSON.stringify(message),
+          },
         )
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }))
-          const errorMessage = errorData.error?.message || `HTTP ${response.status}`
+          const errorData = await response
+            .json()
+            .catch(() => ({ error: { message: 'Unknown error' } }))
+          const errorMessage =
+            (errorData as { error?: { message?: string } }).error?.message
+            || `HTTP ${response.status}`
 
-          // Vérifier si le token est invalide
-          if (errorMessage.includes('NOT_FOUND')
+          if (
+            errorMessage.includes('NOT_FOUND')
             || errorMessage.includes('INVALID_ARGUMENT')
-            || errorMessage.includes('UNREGISTERED')) {
-            // Désactiver le token invalide
-            await supabase
-              .from('push_tokens')
-              .update({ is_active: false })
-              .eq('token', token)
-
-            errors.push(`Token ${token.substring(0, 20)}...: ${errorMessage}`)
-          } else {
-            errors.push(`Token ${token.substring(0, 20)}...: ${errorMessage}`)
+            || errorMessage.includes('UNREGISTERED')
+          ) {
+            await deactivatePushTokenByValue(token)
           }
+          errors.push(`Token ${token.substring(0, 20)}...: ${errorMessage}`)
         } else {
           sentCount++
         }
-      } catch (error: any) {
-        console.error(`Error sending notification to token ${token.substring(0, 20)}...:`, error)
-        errors.push(`Token ${token.substring(0, 20)}...: ${error.message}`)
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error)
+        errors.push(`Token ${token.substring(0, 20)}...: ${msg}`)
       }
     }
 
     return {
       success: true,
-      message: `Notifications envoyées avec succès`,
+      message: 'Notifications envoyées avec succès',
       tokens_sent: sentCount,
       tokens_found: pushTokens.length,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; message?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'An error occurred while publishing'
+      statusCode: e.statusCode || 500,
+      message: e.message || 'An error occurred while publishing',
     })
   }
 })
