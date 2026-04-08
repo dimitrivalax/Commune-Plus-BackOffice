@@ -3,6 +3,7 @@ import { createSharedComposable } from '@vueuse/core'
 
 const MAX_ITEMS = 50
 const POLL_MS = 25000
+const STORAGE_KEY = 'commune-plus:backoffice:notifications'
 
 type BackofficeNotificationRow = {
   id: string | number
@@ -23,40 +24,6 @@ const DEFAULT_SENDER: User = {
   email: 'notifications@commune.plus',
   status: 'subscribed',
   location: '',
-}
-
-type BackofficeNotificationRow = {
-  id: string
-  type: 'signalement' | 'reservation'
-  entity_id: string
-  title: string
-  message: string
-  is_read: boolean
-  created_at: string
-  read_at: string | null
-}
-
-function rowToNotification(row: BackofficeNotificationRow): Notification {
-  const icon =
-    row.type === 'signalement' ? 'i-lucide-alert-circle' : 'i-lucide-calendar'
-  const sender: User = {
-    id: 0,
-    name: row.title,
-    email: '',
-    avatar: { icon },
-    status: 'subscribed',
-    location: '',
-  }
-  return {
-    id: row.id,
-    unread: !row.is_read,
-    sender,
-    body: row.message,
-    date: row.created_at,
-    type: row.type,
-    entity_id: row.entity_id,
-    title: row.title,
-  }
 }
 
 function saveToStorage(notifications: unknown) {
