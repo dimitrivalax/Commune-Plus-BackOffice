@@ -11,7 +11,7 @@ function logFirebaseAdminProjectId(sa: Record<string, unknown>) {
       ? 'FCM_SERVICE_ACCOUNT_JSON'
       : 'unknown'
   console.info(
-    `[firebase-admin] initialized with project_id="${projectId}" database_id="${databaseId}" (source=${source})`,
+    `[firebase-admin] initialized with project_id="${projectId}" database_id="${databaseId}"`
   )
 }
 
