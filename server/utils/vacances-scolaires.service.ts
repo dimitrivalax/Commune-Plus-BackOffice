@@ -5,6 +5,8 @@
 
 const API_BASE =
   'https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records';
+const FALLBACK_CSV_URL =
+  'https://raw.githubusercontent.com/AntoineAugusti/vacances-scolaires/master/data.csv';
 
 /** Zone A, B ou C (métropole). Corse = B pour le calendrier. */
 export type ZoneScolaire = 'A' | 'B' | 'C';
@@ -33,6 +35,14 @@ export interface VacancesByCodePostalResult {
   vacances: VacancesRecord[];
   error?: string;
 }
+
+const FALLBACK_ZONE_COLUMN: Record<ZoneScolaire, string> = {
+  A: 'vacances_zone_a',
+  B: 'vacances_zone_b',
+  C: 'vacances_zone_c',
+};
+
+let fallbackCacheByZone: Record<ZoneScolaire, VacancesRecord[]> | null = null;
 
 // Département (numéro ou 2A/2B) → zone (depuis 2016)
 const DEPARTEMENT_TO_ZONE: Record<string, ZoneScolaire> = {
@@ -78,10 +88,127 @@ export async function fetchVacancesScolaires(
   let where = `zones="${zoneLabel}" and population="${population}"`;
   if (anneeScolaire) where += ` and annee_scolaire="${anneeScolaire}"`;
   const params = new URLSearchParams({ where, limit: String(limit) });
-  const res = await fetch(`${API_BASE}?${params}`);
-  if (!res.ok) throw new Error(`API vacances: ${res.status}`);
+  const res = await fetch(`${API_BASE}?${params}`, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'Commune-Plus-BackOffice/1.0',
+    },
+  });
+  if (!res.ok) {
+    const fallback = await fetchVacancesScolairesFromFallback(zone, options);
+    if (fallback.length > 0) return fallback;
+    throw new Error(`API vacances: ${res.status}`);
+  }
   const data = (await res.json()) as { results?: VacancesRecord[] };
   return data.results ?? [];
+}
+
+function toSchoolYear(dateStr: string): string {
+  const d = new Date(dateStr);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth() + 1;
+  return month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+}
+
+function parseFallbackCsvToRecords(csvContent: string, zone: ZoneScolaire): VacancesRecord[] {
+  const zoneColumn = FALLBACK_ZONE_COLUMN[zone];
+  const lines = csvContent.split('\n').filter(Boolean);
+  if (lines.length < 2) return [];
+
+  const headers = lines[0]!.split(',').map((v) => v.trim());
+  const dateIndex = headers.indexOf('date');
+  const zoneIndex = headers.indexOf(zoneColumn);
+  const nameIndex = headers.indexOf('nom_vacances');
+  if (dateIndex < 0 || zoneIndex < 0 || nameIndex < 0) return [];
+
+  const records: VacancesRecord[] = [];
+  let currentStart: string | null = null;
+  let currentEnd: string | null = null;
+  let currentName: string | null = null;
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i]!.split(',');
+    const date = String(cols[dateIndex] || '').trim();
+    const isVacances = String(cols[zoneIndex] || '').trim().toLowerCase() === 'true';
+    const name = String(cols[nameIndex] || '').trim() || 'Vacances scolaires';
+
+    if (isVacances) {
+      if (!currentStart) {
+        currentStart = `${date}T00:00:00.000Z`;
+        currentEnd = `${date}T23:59:59.999Z`;
+        currentName = name;
+      } else if (currentName === name) {
+        currentEnd = `${date}T23:59:59.999Z`;
+      } else {
+        records.push({
+          description: currentName || 'Vacances scolaires',
+          population: 'Élèves',
+          start_date: currentStart,
+          end_date: currentEnd || currentStart,
+          location: 'France',
+          zones: `Zone ${zone}`,
+          annee_scolaire: toSchoolYear(currentStart),
+        });
+        currentStart = `${date}T00:00:00.000Z`;
+        currentEnd = `${date}T23:59:59.999Z`;
+        currentName = name;
+      }
+      continue;
+    }
+
+    if (currentStart) {
+      records.push({
+        description: currentName || 'Vacances scolaires',
+        population: 'Élèves',
+        start_date: currentStart,
+        end_date: currentEnd || currentStart,
+        location: 'France',
+        zones: `Zone ${zone}`,
+        annee_scolaire: toSchoolYear(currentStart),
+      });
+      currentStart = null;
+      currentEnd = null;
+      currentName = null;
+    }
+  }
+
+  if (currentStart) {
+    records.push({
+      description: currentName || 'Vacances scolaires',
+      population: 'Élèves',
+      start_date: currentStart,
+      end_date: currentEnd || currentStart,
+      location: 'France',
+      zones: `Zone ${zone}`,
+      annee_scolaire: toSchoolYear(currentStart),
+    });
+  }
+
+  return records;
+}
+
+async function fetchVacancesScolairesFromFallback(
+  zone: ZoneScolaire,
+  options: FetchVacancesOptions = {},
+): Promise<VacancesRecord[]> {
+  if (!fallbackCacheByZone) {
+    const res = await fetch(FALLBACK_CSV_URL, {
+      headers: { Accept: 'text/csv' },
+    });
+    if (!res.ok) return [];
+    const csv = await res.text();
+    fallbackCacheByZone = {
+      A: parseFallbackCsvToRecords(csv, 'A'),
+      B: parseFallbackCsvToRecords(csv, 'B'),
+      C: parseFallbackCsvToRecords(csv, 'C'),
+    };
+  }
+
+  let out = fallbackCacheByZone[zone] || [];
+  if (options.anneeScolaire) {
+    out = out.filter((v) => v.annee_scolaire === options.anneeScolaire);
+  }
+  return out.slice(0, options.limit ?? 100);
 }
 
 /** Récupère la zone et les vacances pour un code postal. */

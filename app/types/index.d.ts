@@ -129,6 +129,17 @@ export interface ReservationSalle {
     nom: string;
     adresse: string;
   };
+  recurrence_summary?: {
+    total: number;
+    createdCount: number;
+    conflictCount: number;
+    skippedVacancesCount: number;
+    conflicts: Array<{
+      date: string;
+      start_time: string;
+      end_time: string;
+    }>;
+  };
 }
 
 export interface Utilisateur {

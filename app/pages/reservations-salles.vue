@@ -22,6 +22,16 @@ const authHeaders = computed(() => {
 const { getAuthHeaders } = useApiAuth()
 
 type ViewType = 'day' | 'week' | 'month'
+type VacancesRecord = {
+  description: string
+  start_date: string
+  end_date: string
+}
+type VacancesResponse = {
+  zone: 'A' | 'B' | 'C' | null
+  error?: string
+  vacances: VacancesRecord[]
+}
 
 const currentView = ref<ViewType>('week')
 const currentDate = ref(new Date())
@@ -45,6 +55,7 @@ const { data: salles, refresh: refreshSalles } = await useFetch<Salle[]>('/api/s
 watch(currentCommune, () => {
   refreshSalles()
   refreshReservations()
+  refreshVacances()
 })
 
 // Calculer la plage de dates selon la vue
@@ -78,6 +89,37 @@ const { data: reservations, status, refresh: refreshReservations } = await useFe
     commune_id: currentCommune.value?.id
   }))
 })
+
+const {
+  data: vacancesResponse,
+  refresh: refreshVacances,
+} = await useFetch<VacancesResponse>('/api/vacances-scolaires', {
+  lazy: true,
+  immediate: false,
+  headers: authHeaders,
+  query: computed(() => {
+    const codePostal = currentCommune.value?.postal_code
+    if (!codePostal) return {}
+    return {
+      code_postal: codePostal,
+      date_debut: dateRange.value.start.toISOString(),
+      date_fin: dateRange.value.end.toISOString(),
+    }
+  }),
+})
+
+watch(
+  [
+    () => currentCommune.value?.postal_code,
+    () => dateRange.value.start.getTime(),
+    () => dateRange.value.end.getTime(),
+  ],
+  ([postalCode]) => {
+    if (!postalCode) return
+    refreshVacances()
+  },
+  { immediate: true },
+)
 
 provide('refresh-reservations-salles', refreshReservations)
 
@@ -266,6 +308,29 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
   }
   addModal.value?.openModal()
 }
+
+function isDayInVacances(day: Date): boolean {
+  const vacances = vacancesResponse.value?.vacances
+  if (!vacances?.length) return false
+  const dayTime = day.getTime()
+  return vacances.some((vacance) => {
+    const start = new Date(vacance.start_date).getTime()
+    const end = new Date(vacance.end_date).getTime()
+    return !Number.isNaN(start) && !Number.isNaN(end) && dayTime >= start && dayTime <= end
+  })
+}
+
+function getVacancesDescriptionForDay(day: Date): string | null {
+  const vacances = vacancesResponse.value?.vacances
+  if (!vacances?.length) return null
+  const dayTime = day.getTime()
+  const match = vacances.find((vacance) => {
+    const start = new Date(vacance.start_date).getTime()
+    const end = new Date(vacance.end_date).getTime()
+    return !Number.isNaN(start) && !Number.isNaN(end) && dayTime >= start && dayTime <= end
+  })
+  return match?.description || null
+}
 </script>
 
 <template>
@@ -344,10 +409,25 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
             }}
           </h2>
         </div>
+        <UBadge
+          v-if="vacancesResponse?.zone"
+          color="neutral"
+          variant="soft"
+          :label="`Zone scolaire ${vacancesResponse.zone}`"
+        />
       </div>
 
       <!-- Vue Jour -->
       <div v-if="currentView === 'day'" class="overflow-x-auto">
+        <div
+          v-if="isDayInVacances(currentDate)"
+          class="mb-3 p-2 border border-warning/40 rounded bg-warning/10 text-sm"
+        >
+          <span class="font-medium">Vacances scolaires</span>
+          <span v-if="getVacancesDescriptionForDay(currentDate)" class="text-muted">
+            - {{ getVacancesDescriptionForDay(currentDate) }}
+          </span>
+        </div>
         <div v-if="status === 'pending'" class="text-center py-8">
           <p class="text-muted">
             Chargement...
@@ -432,6 +512,9 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
               <div class="text-sm text-muted">
                 {{ format(day, 'd MMM', { locale: fr }) }}
               </div>
+              <div v-if="isDayInVacances(day)" class="mt-1">
+                <UBadge color="warning" variant="soft" label="Vacances" size="xs" />
+              </div>
             </div>
 
             <!-- Lignes de salles -->
@@ -500,10 +583,16 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
                     v-for="day in week"
                     :key="day.toString()"
                     class="p-1 min-h-[100px] border-r border-b border-default last:border-r-0"
-                    :class="{ 'bg-muted/20': !isSameMonth(day, currentDate) }"
+                    :class="{
+                      'bg-muted/20': !isSameMonth(day, currentDate),
+                      'bg-warning/10': isDayInVacances(day),
+                    }"
                   >
                     <div class="text-xs text-muted mb-1" :class="{ 'font-bold text-primary': isSameDay(day, new Date()) }">
                       {{ format(day, 'd') }}
+                    </div>
+                    <div v-if="isDayInVacances(day)" class="mb-1">
+                      <UBadge color="warning" variant="soft" label="Vacances" size="xs" />
                     </div>
                     <div
                       v-for="reservation in getReservationsForSalleAndDay(salle.id, day)"
