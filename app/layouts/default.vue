@@ -57,17 +57,17 @@ const baseNavItems: NavigationMenuItem[] = [
     },
   },
   {
-    label: "Signalements",
-    icon: "i-lucide-alert-triangle",
-    to: "/signalements",
+    label: "Actualités",
+    icon: "i-lucide-info",
+    to: "/actualites",
     onSelect: () => {
       open.value = false;
     },
   },
   {
-    label: "Actualités",
-    icon: "i-lucide-info",
-    to: "/actualites",
+    label: "Planning des réservations",
+    icon: "i-lucide-calendar",
+    to: "/reservations-salles",
     onSelect: () => {
       open.value = false;
     },
@@ -81,9 +81,9 @@ const baseNavItems: NavigationMenuItem[] = [
     },
   },
   {
-    label: "Planning des réservations",
-    icon: "i-lucide-calendar",
-    to: "/reservations-salles",
+    label: "Signalements",
+    icon: "i-lucide-alert-triangle",
+    to: "/signalements",
     onSelect: () => {
       open.value = false;
     },

@@ -150,7 +150,7 @@ const columns: TableColumn<CommuneInformation>[] = [
   {
     accessorKey: 'ordre_affichage',
     header: 'Ordre',
-    cell: ({ row }) => String(row.original.ordre_affichage ?? 0)
+    cell: ({ row }) => String((row.original.ordre_affichage ?? 1))
   },
   {
     accessorKey: 'published',

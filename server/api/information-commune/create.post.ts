@@ -22,7 +22,7 @@ export default eventHandler(async (event) => {
     if (!communeId) {
       throw createError({
         statusCode: 400,
-        message: 'commune_id is required',
+        message: 'commune_id is required'
       })
     }
 
@@ -33,9 +33,9 @@ export default eventHandler(async (event) => {
       .where('commune_id', '==', communeId)
       .get()
     const maxOrder = existingSnap.docs.reduce((max, d) => {
-      const current = Number(d.get('ordre_affichage') ?? 0)
+      const current = Number(d.get('ordre_affichage') ?? 1)
       return Math.max(max, current)
-    }, -1)
+    }, 0)
     const ordreAffichage = maxOrder + 1
 
     await ref.set({
@@ -46,15 +46,15 @@ export default eventHandler(async (event) => {
       published: Boolean(body.published ?? false),
       commune_id: communeId,
       created_at: FieldValue.serverTimestamp(),
-      updated_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp()
     })
     const snap = await ref.get()
     return docWithId(snap.id, snap.data())
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while creating information commune',
+      message: e.message || 'An error occurred while creating information commune'
     })
   }
 })
