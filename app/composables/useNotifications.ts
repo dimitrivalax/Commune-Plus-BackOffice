@@ -36,6 +36,20 @@ function saveToStorage(notifications: unknown) {
   }
 }
 
+function loadFromStorage(): Notification[] {
+  if (import.meta.server) return []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.slice(0, MAX_ITEMS) as Notification[]
+  } catch {
+    // Ignore malformed storage data and start from empty state.
+    return []
+  }
+}
+
 function rowToNotification(row: BackofficeNotificationRow): Notification {
   return {
     id: row.id,
@@ -123,6 +137,7 @@ const _useNotifications = () => {
 
   function clearAll() {
     notifications.value = []
+    saveToStorage(notifications.value)
   }
 
   const unreadCount = computed(() => {
