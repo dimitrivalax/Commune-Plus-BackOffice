@@ -1,125 +1,50 @@
 <script setup lang="ts">
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, isSameDay, isSameMonth, isWithinInterval, parseISO, getHours, getMinutes, setHours, setMinutes } from 'date-fns'
+import { format, parseISO, setHours, setMinutes } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import type { ReservationSalle, Salle } from '~/types'
+import type { ReservationSalle } from '~/types'
 
 const UButton = resolveComponent('UButton')
 const UBadge = resolveComponent('UBadge')
 
-const toast = useToast()
-const { session } = useSupabase()
-
-const authHeaders = computed(() => {
-  const currentSession = session.value
-  if (!currentSession?.access_token) {
-    return {}
-  }
-  return {
-    Authorization: `Bearer ${currentSession.access_token}`
-  }
-})
-
-const { getAuthHeaders } = useApiAuth()
-
-type ViewType = 'day' | 'week' | 'month'
-type VacancesRecord = {
-  description: string
-  start_date: string
-  end_date: string
-}
-type VacancesResponse = {
-  zone: 'A' | 'B' | 'C' | null
-  error?: string
-  vacances: VacancesRecord[]
-}
-
-const currentView = ref<ViewType>('week')
-const currentDate = ref(new Date())
-
-const { currentCommune } = useCurrentCommune()
-
-const isReservationsMobileDisabled = computed(
-  () => currentCommune.value?.feature_reservations_salles === false,
-)
-
-// Charger les salles
-const { data: salles, refresh: refreshSalles } = await useFetch<Salle[]>('/api/salles', {
-  lazy: true,
-  headers: authHeaders,
-  query: computed(() => ({
-    commune_id: currentCommune.value?.id
-  }))
-})
-
-// Rafraîchir quand la commune change
-watch(currentCommune, () => {
-  refreshSalles()
-  refreshReservations()
-  refreshVacances()
-})
-
-// Calculer la plage de dates selon la vue
-const dateRange = computed(() => {
-  switch (currentView.value) {
-    case 'day':
-      return {
-        start: currentDate.value,
-        end: currentDate.value
-      }
-    case 'week':
-      return {
-        start: startOfWeek(currentDate.value, { locale: fr }),
-        end: endOfWeek(currentDate.value, { locale: fr })
-      }
-    case 'month':
-      return {
-        start: startOfMonth(currentDate.value),
-        end: endOfMonth(currentDate.value)
-      }
-  }
-})
-
-// Charger les réservations pour la période
-const { data: reservations, status, refresh: refreshReservations } = await useFetch<ReservationSalle[]>('/api/reservations-salles', {
-  lazy: true,
-  headers: authHeaders,
-  query: computed(() => ({
-    date_debut: dateRange.value.start.toISOString(),
-    date_fin: dateRange.value.end.toISOString(),
-    commune_id: currentCommune.value?.id
-  }))
-})
+const {
+  currentView,
+  currentDate,
+  selectedSalleIds,
+  addModalProps,
+  isReservationsMobileDisabled,
+  dateRange,
+  salles,
+  filteredReservations,
+  displayedSalles,
+  daysToShow,
+  weeksInMonth,
+  hours,
+  status,
+  vacancesResponse,
+  refreshReservations,
+  goToToday,
+  goToPrevious,
+  goToNext,
+  getReservationsForSalleAndDay,
+  getReservationsForDay,
+  getSalleName,
+  toggleSalleSelection,
+  getSalleColorClasses,
+  getReservationStatusLabel,
+  formatReservationDateTime,
+  isDayInVacances,
+  getVacancesDescriptionForDay
+} = await useReservationsSallesPageState()
 
 const {
-  data: vacancesResponse,
-  refresh: refreshVacances,
-} = await useFetch<VacancesResponse>('/api/vacances-scolaires', {
-  lazy: true,
-  immediate: false,
-  headers: authHeaders,
-  query: computed(() => {
-    const codePostal = currentCommune.value?.postal_code
-    if (!codePostal) return {}
-    return {
-      code_postal: codePostal,
-      date_debut: dateRange.value.start.toISOString(),
-      date_fin: dateRange.value.end.toISOString(),
-    }
-  }),
-})
-
-watch(
-  [
-    () => currentCommune.value?.postal_code,
-    () => dateRange.value.start.getTime(),
-    () => dateRange.value.end.getTime(),
-  ],
-  ([postalCode]) => {
-    if (!postalCode) return
-    refreshVacances()
-  },
-  { immediate: true },
-)
+  dayStartHour,
+  dayEndHour,
+  dayStartMinutes,
+  dayEndMinutes,
+  dayDurationMinutes,
+  getDayAgendaReservationsForSalle: getDayAgendaReservationsForSalleRaw,
+  getDayAgendaReservationStyle
+} = useReservationsSallesCalendar()
 
 provide('refresh-reservations-salles', refreshReservations)
 
@@ -127,164 +52,83 @@ const selectedReservation = ref<ReservationSalle | null>(null)
 const editModal = useTemplateRef<{ openModal: () => void }>('editModal')
 const deleteModal = useTemplateRef<{ openModal: () => void }>('deleteModal')
 const addModal = useTemplateRef<{ openModal: () => void }>('addModal')
+const printMode = ref<'view' | 'list'>('view')
 
-// Filtrer les réservations pour la période affichée
-const filteredReservations = computed(() => {
-  if (!reservations.value) return []
-  return reservations.value.filter((res) => {
-    const resStart = parseISO(res.date_debut)
-    const resEnd = parseISO(res.date_fin)
-    return isWithinInterval(resStart, dateRange.value)
-      || isWithinInterval(resEnd, dateRange.value)
-      || (resStart <= dateRange.value.start && resEnd >= dateRange.value.end)
-  })
+type PrintSalleGroup = {
+  salleId: string
+  reservations: ReservationSalle[]
+}
+
+type PrintDateGroup = {
+  dayKey: string
+  dayDate: Date
+  salles: PrintSalleGroup[]
+}
+
+const printDateLabel = computed(() => {
+  if (currentView.value === 'day') {
+    return format(currentDate.value, 'EEEE d MMMM yyyy', { locale: fr })
+  }
+  if (currentView.value === 'week') {
+    return `Semaine du ${format(dateRange.value.start, 'd MMMM yyyy', { locale: fr })}`
+  }
+  return format(currentDate.value, 'MMMM yyyy', { locale: fr })
 })
 
-// Grouper les réservations par salle
-const reservationsBySalle = computed(() => {
-  const grouped: Record<string, ReservationSalle[]> = {}
-  filteredReservations.value.forEach((res) => {
-    const salleId = res.salle_id
-    if (!grouped[salleId]) {
-      grouped[salleId] = []
+const selectedSallesLabel = computed(() => {
+  if (!displayedSalles.value.length) {
+    return 'Toutes les salles'
+  }
+  return displayedSalles.value.map(salle => salle.nom).join(', ')
+})
+
+const printListGroups = computed<PrintDateGroup[]>(() => {
+  const groupedByDay = new Map<string, Map<string, ReservationSalle[]>>()
+
+  for (const reservation of filteredReservations.value) {
+    const dateDebut = parseISO(reservation.date_debut)
+    const dayKey = format(dateDebut, 'yyyy-MM-dd')
+    if (!groupedByDay.has(dayKey)) {
+      groupedByDay.set(dayKey, new Map())
     }
-    grouped[salleId].push(res)
-  })
-  return grouped
+    const dayMap = groupedByDay.get(dayKey)!
+    if (!dayMap.has(reservation.salle_id)) {
+      dayMap.set(reservation.salle_id, [])
+    }
+    dayMap.get(reservation.salle_id)!.push(reservation)
+  }
+
+  return [...groupedByDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dayKey, sallesMap]) => ({
+      dayKey,
+      dayDate: parseISO(`${dayKey}T00:00:00`),
+      salles: [...sallesMap.entries()]
+        .map(([salleId, reservations]) => ({
+          salleId,
+          reservations: [...reservations].sort((a, b) => a.date_debut.localeCompare(b.date_debut))
+        }))
+        .sort((a, b) => getSalleName(a.salleId).localeCompare(getSalleName(b.salleId), 'fr'))
+    }))
 })
 
-// Obtenir les jours à afficher selon la vue
-const daysToShow = computed(() => {
-  switch (currentView.value) {
-    case 'day':
-      return [currentDate.value]
-    case 'week':
-      return eachDayOfInterval({
-        start: dateRange.value.start,
-        end: dateRange.value.end
-      })
-    case 'month':
-      // Pour la vue mois, afficher toutes les semaines du mois
-      const monthStart = startOfMonth(currentDate.value)
-      const monthEnd = endOfMonth(currentDate.value)
-      const weekStart = startOfWeek(monthStart, { locale: fr })
-      const weekEnd = endOfWeek(monthEnd, { locale: fr })
-      return eachDayOfInterval({
-        start: weekStart,
-        end: weekEnd
-      })
-  }
-})
-
-// Obtenir les semaines pour la vue mois
-const weeksInMonth = computed(() => {
-  if (currentView.value !== 'month') return []
-  const days = daysToShow.value
-  const weeks: Date[][] = []
-  for (let i = 0; i < days.length; i += 7) {
-    weeks.push(days.slice(i, i + 7))
-  }
-  return weeks
-})
-
-// Obtenir les heures de la journée (de 8h à 22h)
-const hours = computed(() => {
-  const h: number[] = []
-  for (let i = 8; i <= 22; i++) {
-    h.push(i)
-  }
-  return h
-})
-
-// Fonctions de navigation
-function goToToday() {
-  currentDate.value = new Date()
-}
-
-function goToPrevious() {
-  switch (currentView.value) {
-    case 'day':
-      currentDate.value = subDays(currentDate.value, 1)
-      break
-    case 'week':
-      currentDate.value = subWeeks(currentDate.value, 1)
-      break
-    case 'month':
-      currentDate.value = subMonths(currentDate.value, 1)
-      break
-  }
-}
-
-function goToNext() {
-  switch (currentView.value) {
-    case 'day':
-      currentDate.value = addDays(currentDate.value, 1)
-      break
-    case 'week':
-      currentDate.value = addWeeks(currentDate.value, 1)
-      break
-    case 'month':
-      currentDate.value = addMonths(currentDate.value, 1)
-      break
-  }
-}
-
-// Obtenir les réservations pour une salle et un jour donnés
-function getReservationsForSalleAndDay(salleId: string, day: Date): ReservationSalle[] {
-  return filteredReservations.value.filter((res) => {
-    if (res.salle_id !== salleId) return false
-    const resStart = parseISO(res.date_debut)
-    const resEnd = parseISO(res.date_fin)
-    return isSameDay(resStart, day) || isSameDay(resEnd, day)
-      || (resStart <= day && resEnd >= day)
-  })
-}
-
-// Calculer la position et la hauteur d'une réservation dans la vue jour/semaine
-function getReservationStatusClasses(reservation: ReservationSalle): string {
-  switch (reservation.status) {
-    case 'confirmée':
-      return 'bg-success/20 border-success hover:bg-success/35'
-    case 'refusée':
-      return 'bg-error/20 border-error hover:bg-error/35'
-    case 'en_attente':
-    default:
-      return 'bg-warning/20 border-warning hover:bg-warning/35'
-  }
-}
-
-function getReservationStyle(reservation: ReservationSalle, day: Date) {
-  const start = parseISO(reservation.date_debut)
-  const end = parseISO(reservation.date_fin)
-
-  // Si la réservation ne concerne pas ce jour, ne pas l'afficher
-  if (!isSameDay(start, day) && !isSameDay(end, day) && !(start <= day && end >= day)) {
-    return { display: 'none' }
-  }
-
-  const dayStart = setHours(day, 8)
-  const dayEnd = setHours(day, 23)
-
-  const actualStart = start < dayStart ? dayStart : start
-  const actualEnd = end > dayEnd ? dayEnd : end
-
-  const startMinutes = getHours(actualStart) * 60 + getMinutes(actualStart)
-  const endMinutes = getHours(actualEnd) * 60 + getMinutes(actualEnd)
-  const dayStartMinutes = 8 * 60 // 8h
-  const dayDuration = 15 * 60 // 15 heures (8h-23h)
-
-  const top = ((startMinutes - dayStartMinutes) / dayDuration) * 100
-  const height = ((endMinutes - startMinutes) / dayDuration) * 100
-
-  return {
-    top: `${top}%`,
-    height: `${height}%`
-  }
+function getDayAgendaReservationsForSalle(salleId: string, day: Date) {
+  return getDayAgendaReservationsForSalleRaw(filteredReservations.value, salleId, day)
 }
 
 function handleReservationClick(reservation: ReservationSalle) {
   selectedReservation.value = reservation
-  editModal.value?.openModal()
+  const modal = editModal.value as {
+    openModal?: () => void
+    $?: { exposed?: { openModal?: () => void } }
+  } | null
+  if (typeof modal?.openModal === 'function') {
+    modal.openModal()
+    return
+  }
+  if (typeof modal?.$?.exposed?.openModal === 'function') {
+    modal.$.exposed.openModal()
+  }
 }
 
 function handleDelete(reservation: ReservationSalle) {
@@ -292,15 +136,22 @@ function handleDelete(reservation: ReservationSalle) {
   deleteModal.value?.openModal()
 }
 
-const addModalProps = ref<{
-  salleId?: string
-  dateDebut?: Date
-  dateFin?: Date
-}>({})
+function handleDayColumnClick(event: MouseEvent, salleId: string, day: Date) {
+  const target = event.currentTarget as HTMLElement | null
+  if (!target) return
 
-function handleSlotClick(salleId: string, day: Date, hour: number) {
-  const startDate = setHours(setMinutes(day, 0), hour)
-  const endDate = setHours(setMinutes(day, 30), hour)
+  const rect = target.getBoundingClientRect()
+  if (rect.height <= 0) return
+
+  const relativeY = Math.min(Math.max(event.clientY - rect.top, 0), rect.height)
+  const minutesFromStart = Math.floor((relativeY / rect.height) * dayDurationMinutes)
+  const roundedMinutesFromStart = Math.floor(minutesFromStart / 30) * 30
+  const absoluteMinutes = Math.min(dayStartMinutes + roundedMinutesFromStart, dayEndMinutes - 30)
+  const hour = Math.floor(absoluteMinutes / 60)
+  const minutes = absoluteMinutes % 60
+
+  const startDate = setHours(setMinutes(day, minutes), hour)
+  const endDate = new Date(startDate.getTime() + 30 * 60 * 1000)
   addModalProps.value = {
     salleId,
     dateDebut: startDate,
@@ -309,27 +160,12 @@ function handleSlotClick(salleId: string, day: Date, hour: number) {
   addModal.value?.openModal()
 }
 
-function isDayInVacances(day: Date): boolean {
-  const vacances = vacancesResponse.value?.vacances
-  if (!vacances?.length) return false
-  const dayTime = day.getTime()
-  return vacances.some((vacance) => {
-    const start = new Date(vacance.start_date).getTime()
-    const end = new Date(vacance.end_date).getTime()
-    return !Number.isNaN(start) && !Number.isNaN(end) && dayTime >= start && dayTime <= end
-  })
-}
-
-function getVacancesDescriptionForDay(day: Date): string | null {
-  const vacances = vacancesResponse.value?.vacances
-  if (!vacances?.length) return null
-  const dayTime = day.getTime()
-  const match = vacances.find((vacance) => {
-    const start = new Date(vacance.start_date).getTime()
-    const end = new Date(vacance.end_date).getTime()
-    return !Number.isNaN(start) && !Number.isNaN(end) && dayTime >= start && dayTime <= end
-  })
-  return match?.description || null
+async function printPlanning(mode: 'view' | 'list') {
+  printMode.value = mode
+  await nextTick()
+  if (import.meta.client) {
+    window.print()
+  }
 }
 </script>
 
@@ -361,6 +197,20 @@ function getVacancesDescriptionForDay(day: Date): string | null {
               label="Mois"
               @click="currentView = 'month'"
             />
+            <UButton
+              icon="i-lucide-printer"
+              color="neutral"
+              variant="subtle"
+              label="Imprimer vue"
+              @click="printPlanning('view')"
+            />
+            <UButton
+              icon="i-lucide-file-text"
+              color="neutral"
+              variant="outline"
+              label="Imprimer liste"
+              @click="printPlanning('list')"
+            />
             <ReservationsSallesAddModal
               ref="addModal"
               :salle-id="addModalProps.salleId"
@@ -374,246 +224,184 @@ function getVacancesDescriptionForDay(day: Date): string | null {
     </template>
 
     <template #body>
-      <CommuneMobileFeatureDisabledBanner
-        v-if="isReservationsMobileDisabled"
-        feature="reservations"
-      />
-
-      <!-- Navigation -->
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <UButton
-            icon="i-lucide-chevron-left"
-            color="neutral"
-            variant="ghost"
-            @click="goToPrevious"
-          />
-          <UButton
-            label="Aujourd'hui"
-            color="neutral"
-            variant="subtle"
-            @click="goToToday"
-          />
-          <UButton
-            icon="i-lucide-chevron-right"
-            color="neutral"
-            variant="ghost"
-            @click="goToNext"
-          />
-          <h2 class="text-lg font-semibold ml-4">
-            {{ currentView === 'day'
-              ? format(currentDate, 'EEEE d MMMM yyyy', { locale: fr })
-              : currentView === 'week'
-                ? `Semaine du ${format(dateRange.start, 'd MMMM', { locale: fr })}`
-                : format(currentDate, 'MMMM yyyy', { locale: fr })
-            }}
-          </h2>
-        </div>
-        <UBadge
-          v-if="vacancesResponse?.zone"
-          color="neutral"
-          variant="soft"
-          :label="`Zone scolaire ${vacancesResponse.zone}`"
+      <div :class="printMode === 'list' ? 'print-mode-list' : 'print-mode-view'">
+        <CommuneMobileFeatureDisabledBanner
+          v-if="isReservationsMobileDisabled"
+          feature="reservations"
         />
-      </div>
 
-      <!-- Vue Jour -->
-      <div v-if="currentView === 'day'" class="overflow-x-auto">
-        <div
-          v-if="isDayInVacances(currentDate)"
-          class="mb-3 p-2 border border-warning/40 rounded bg-warning/10 text-sm"
-        >
-          <span class="font-medium">Vacances scolaires</span>
-          <span v-if="getVacancesDescriptionForDay(currentDate)" class="text-muted">
-            - {{ getVacancesDescriptionForDay(currentDate) }}
-          </span>
-        </div>
-        <div v-if="status === 'pending'" class="text-center py-8">
-          <p class="text-muted">
-            Chargement...
+        <div class="print-only print-header mb-4">
+          <h1 class="text-xl font-bold">
+            Planning des réservations de salles
+          </h1>
+          <p class="text-sm">
+            Période: {{ printDateLabel }}
+          </p>
+          <p class="text-sm">
+            Salles: {{ selectedSallesLabel }}
+          </p>
+          <p class="text-sm">
+            Date d'impression: {{ format(new Date(), 'dd/MM/yyyy HH:mm') }}
           </p>
         </div>
-        <div v-else-if="!salles || salles.length === 0" class="text-center py-8">
-          <p class="text-muted">
-            Aucune salle disponible
-          </p>
-        </div>
-        <div v-else class="border border-default rounded-lg">
-          <div class="grid" :style="{ gridTemplateColumns: `200px repeat(${salles.length}, 1fr)` }">
-            <!-- En-tête heures -->
-            <div class="border-r border-b border-default p-2 bg-elevated/50 font-medium">
-              Heures
-            </div>
-            <div
-              v-for="salle in salles"
-              :key="salle.id"
-              class="border-b border-default p-2 bg-elevated/50 font-medium text-center"
-            >
-              {{ salle.nom }}
-            </div>
 
-            <!-- Lignes d'heures -->
-            <template v-for="hour in hours" :key="hour">
-              <div class="border-r border-b border-default p-2 text-sm text-muted">
-                {{ hour }}h
-              </div>
-              <div
+        <div class="print-view-content">
+          <div class="non-print-controls flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <UButton
+                icon="i-lucide-chevron-left"
+                color="neutral"
+                variant="ghost"
+                @click="goToPrevious"
+              />
+              <UButton
+                label="Aujourd'hui"
+                color="neutral"
+                variant="subtle"
+                @click="goToToday"
+              />
+              <UButton
+                icon="i-lucide-chevron-right"
+                color="neutral"
+                variant="ghost"
+                @click="goToNext"
+              />
+              <h2 class="text-lg font-semibold ml-4">
+                {{ currentView === 'day'
+                  ? format(currentDate, 'EEEE d MMMM yyyy', { locale: fr })
+                  : currentView === 'week'
+                    ? `Semaine du ${format(dateRange.start, 'd MMMM', { locale: fr })}`
+                    : format(currentDate, 'MMMM yyyy', { locale: fr })
+                }}
+              </h2>
+            </div>
+            <UBadge
+              v-if="vacancesResponse?.zone"
+              color="neutral"
+              variant="soft"
+              :label="`Zone scolaire ${vacancesResponse.zone}`"
+            />
+          </div>
+
+          <div v-if="salles?.length" class="non-print-salles mb-4 p-3 border border-default rounded-lg bg-elevated/20">
+            <div class="text-sm font-medium mb-2">
+              Salles affichées
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <label
                 v-for="salle in salles"
-                :key="`${salle.id}-${hour}`"
-                class="border-b border-default relative min-h-[60px]"
-                @click="handleSlotClick(salle.id, currentDate, hour)"
+                :key="`filter-${salle.id}`"
+                class="flex items-center gap-2 text-sm"
               >
-                <div
-                  v-for="reservation in getReservationsForSalleAndDay(salle.id, currentDate)"
-                  :key="reservation.id"
-                  :style="getReservationStyle(reservation, currentDate)"
-                  class="absolute left-0 right-0 mx-1 border rounded p-1 text-xs cursor-pointer z-10"
-                  :class="getReservationStatusClasses(reservation)"
-                  @click.stop="handleReservationClick(reservation)"
+                <input
+                  :checked="selectedSalleIds.includes(salle.id)"
+                  type="checkbox"
+                  class="rounded border-default"
+                  @change="toggleSalleSelection(salle.id, ($event.target as HTMLInputElement).checked)"
                 >
-                  <div class="font-medium">
-                    {{ reservation.prenom }} {{ reservation.nom }}
-                  </div>
-                  <div class="text-xs text-muted">
-                    {{ format(parseISO(reservation.date_debut), 'HH:mm') }} -
-                    {{ format(parseISO(reservation.date_fin), 'HH:mm') }}
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-      </div>
-
-      <!-- Vue Semaine -->
-      <div v-if="currentView === 'week'" class="overflow-x-auto">
-        <div v-if="status === 'pending'" class="text-center py-8">
-          <p class="text-muted">
-            Chargement...
-          </p>
-        </div>
-        <div v-else-if="!salles || salles.length === 0" class="text-center py-8">
-          <p class="text-muted">
-            Aucune salle disponible
-          </p>
-        </div>
-        <div v-else class="border border-default rounded-lg">
-          <div class="grid" :style="{ gridTemplateColumns: `200px repeat(${daysToShow.length}, 1fr)` }">
-            <!-- En-tête -->
-            <div class="border-r border-b border-default p-2 bg-elevated/50 font-medium">
-              Salles
+                <span
+                  class="inline-flex items-center gap-2 px-2 py-1 border rounded"
+                  :class="getSalleColorClasses(salle.id)"
+                >
+                  {{ salle.nom }}
+                </span>
+              </label>
             </div>
-            <div
-              v-for="day in daysToShow"
-              :key="day.toString()"
-              class="border-b border-default p-2 bg-elevated/50 font-medium text-center"
+          </div>
+
+          <ReservationsSallesViewsDayView
+            v-if="currentView === 'day'"
+            :current-date="currentDate"
+            :status="status"
+            :salles="salles"
+            :displayed-salles="displayedSalles"
+            :hours="hours"
+            :day-start-hour="dayStartHour"
+            :day-end-hour="dayEndHour"
+            :is-day-in-vacances="isDayInVacances"
+            :get-vacances-description-for-day="getVacancesDescriptionForDay"
+            :get-day-agenda-reservations-for-salle="getDayAgendaReservationsForSalle"
+            :get-day-agenda-reservation-style="getDayAgendaReservationStyle"
+            :get-salle-color-classes="getSalleColorClasses"
+            :get-salle-name="getSalleName"
+            :format-reservation-date-time="formatReservationDateTime"
+            :get-reservation-status-label="getReservationStatusLabel"
+            @reservation-click="handleReservationClick"
+            @day-column-click="handleDayColumnClick"
+          />
+
+          <ReservationsSallesViewsWeekView
+            v-if="currentView === 'week'"
+            :status="status"
+            :salles="salles"
+            :displayed-salles="displayedSalles"
+            :days-to-show="daysToShow"
+            :is-day-in-vacances="isDayInVacances"
+            :get-reservations-for-salle-and-day="getReservationsForSalleAndDay"
+            :get-salle-color-classes="getSalleColorClasses"
+            :get-salle-name="getSalleName"
+            :format-reservation-date-time="formatReservationDateTime"
+            :get-reservation-status-label="getReservationStatusLabel"
+            @reservation-click="handleReservationClick"
+          />
+
+          <ReservationsSallesViewsMonthView
+            v-if="currentView === 'month'"
+            :current-date="currentDate"
+            :status="status"
+            :salles="salles"
+            :displayed-salles="displayedSalles"
+            :days-to-show="daysToShow"
+            :weeks-in-month="weeksInMonth"
+            :is-day-in-vacances="isDayInVacances"
+            :get-reservations-for-day="getReservationsForDay"
+            :get-salle-name="getSalleName"
+            :get-salle-color-classes="getSalleColorClasses"
+            :format-reservation-date-time="formatReservationDateTime"
+            :get-reservation-status-label="getReservationStatusLabel"
+            @reservation-click="handleReservationClick"
+          />
+        </div>
+        <section class="print-only print-list mt-6">
+          <template v-if="printListGroups.length > 0">
+            <article
+              v-for="dayGroup in printListGroups"
+              :key="dayGroup.dayKey"
+              class="print-day-group mb-6"
             >
-              <div>{{ format(day, 'EEEE', { locale: fr }) }}</div>
-              <div class="text-sm text-muted">
-                {{ format(day, 'd MMM', { locale: fr }) }}
-              </div>
-              <div v-if="isDayInVacances(day)" class="mt-1">
-                <UBadge color="warning" variant="soft" label="Vacances" size="xs" />
-              </div>
-            </div>
+              <h2 class="text-base font-semibold mb-2">
+                {{ format(dayGroup.dayDate, 'EEEE d MMMM yyyy', { locale: fr }) }}
+              </h2>
 
-            <!-- Lignes de salles -->
-            <template v-for="salle in salles" :key="salle.id">
-              <div class="border-r border-b border-default p-2 font-medium">
-                {{ salle.nom }}
-              </div>
               <div
-                v-for="day in daysToShow"
-                :key="`${salle.id}-${day.toString()}`"
-                class="border-b border-default p-2 min-h-[100px] relative"
+                v-for="salleGroup in dayGroup.salles"
+                :key="`${dayGroup.dayKey}-${salleGroup.salleId}`"
+                class="print-salle-group mb-3"
               >
-                <div
-                  v-for="reservation in getReservationsForSalleAndDay(salle.id, day)"
-                  :key="reservation.id"
-                  class="mb-1 p-2 border rounded text-xs cursor-pointer"
-                  :class="getReservationStatusClasses(reservation)"
-                  @click="handleReservationClick(reservation)"
-                >
-                  <div class="font-medium">
-                    {{ reservation.prenom }} {{ reservation.nom }}
-                  </div>
-                  <div class="text-xs text-muted">
-                    {{ format(parseISO(reservation.date_debut), 'HH:mm') }} -
-                    {{ format(parseISO(reservation.date_fin), 'HH:mm') }}
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-      </div>
-
-      <!-- Vue Mois -->
-      <div v-if="currentView === 'month'" class="overflow-x-auto">
-        <div v-if="status === 'pending'" class="text-center py-8">
-          <p class="text-muted">
-            Chargement...
-          </p>
-        </div>
-        <div v-else-if="!salles || salles.length === 0" class="text-center py-8">
-          <p class="text-muted">
-            Aucune salle disponible
-          </p>
-        </div>
-        <div v-else class="space-y-4">
-          <template v-for="salle in salles" :key="salle.id">
-            <div class="border border-default rounded-lg">
-              <div class="p-2 bg-elevated/50 font-medium border-b border-default">
-                {{ salle.nom }}
-              </div>
-              <!-- En-tête des jours de la semaine -->
-              <div class="grid" :style="{ gridTemplateColumns: `repeat(7, 1fr)` }">
-                <div
-                  v-for="day in daysToShow.slice(0, 7)"
-                  :key="day.toString()"
-                  class="p-2 bg-elevated/30 font-medium text-center border-r border-b border-default last:border-r-0"
-                >
-                  {{ format(day, 'EEE', { locale: fr }) }}
-                </div>
-              </div>
-              <!-- Semaines du mois -->
-              <template v-for="(week, weekIndex) in weeksInMonth" :key="weekIndex">
-                <div class="grid" :style="{ gridTemplateColumns: `repeat(7, 1fr)` }">
-                  <div
-                    v-for="day in week"
-                    :key="day.toString()"
-                    class="p-1 min-h-[100px] border-r border-b border-default last:border-r-0"
-                    :class="{
-                      'bg-muted/20': !isSameMonth(day, currentDate),
-                      'bg-warning/10': isDayInVacances(day),
-                    }"
+                <h3 class="text-sm font-semibold mb-1">
+                  {{ getSalleName(salleGroup.salleId) }}
+                </h3>
+                <ul class="pl-4 list-disc">
+                  <li
+                    v-for="reservation in salleGroup.reservations"
+                    :key="reservation.id"
+                    class="text-sm mb-1"
                   >
-                    <div class="text-xs text-muted mb-1" :class="{ 'font-bold text-primary': isSameDay(day, new Date()) }">
-                      {{ format(day, 'd') }}
-                    </div>
-                    <div v-if="isDayInVacances(day)" class="mb-1">
-                      <UBadge color="warning" variant="soft" label="Vacances" size="xs" />
-                    </div>
-                    <div
-                      v-for="reservation in getReservationsForSalleAndDay(salle.id, day)"
-                      :key="reservation.id"
-                      class="mb-1 p-1 border rounded text-xs cursor-pointer"
-                      :class="getReservationStatusClasses(reservation)"
-                      @click="handleReservationClick(reservation)"
-                    >
-                      <div class="font-medium truncate">
-                        {{ reservation.prenom }} {{ reservation.nom }}
-                      </div>
-                      <div class="text-xs text-muted">
-                        {{ format(parseISO(reservation.date_debut), 'HH:mm') }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </div>
+                    {{ format(parseISO(reservation.date_debut), 'HH:mm') }} - {{ format(parseISO(reservation.date_fin), 'HH:mm') }}
+                    - {{ reservation.prenom }} {{ reservation.nom }}
+                    <span v-if="reservation.nom_association">
+                      ({{ reservation.nom_association }})
+                    </span>
+                    - {{ getReservationStatusLabel(reservation.status) }}
+                  </li>
+                </ul>
+              </div>
+            </article>
           </template>
-        </div>
+          <p v-else class="text-sm">
+            Aucune réservation sur la période sélectionnée.
+          </p>
+        </section>
       </div>
     </template>
   </UDashboardPanel>
@@ -625,3 +413,67 @@ function getVacancesDescriptionForDay(day: Date): string | null {
   />
   <ReservationsSallesDeleteModal ref="deleteModal" :reservation="selectedReservation" />
 </template>
+
+<style scoped>
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  :global(body) {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  :global(.udashboard-navbar),
+  :global(.udashboard-sidebar-collapse),
+  :global(.u-button),
+  :global(.u-tooltip-content),
+  :global(.u-modal),
+  :global(.notification-bell) {
+    display: none !important;
+  }
+
+  /* Hide the dashboard panel top header row in print. */
+  :global(#dashboard-panel-reservations-salles > div[data-slot='root']) {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .print-mode-view .print-list {
+    display: none !important;
+  }
+
+  .print-mode-list .print-view-content {
+    display: none !important;
+  }
+
+  .print-mode-list .print-header,
+  .print-mode-list .print-list {
+    display: block !important;
+  }
+
+  .print-header,
+  .print-day-group,
+  .print-salle-group {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .non-print-controls {
+    display: none !important;
+  }
+
+  .non-print-salles {
+    display: none !important;
+  }
+}
+</style>
