@@ -3,10 +3,12 @@ import {
   deactivatePushTokenByValue,
   fetchActivePushTokensByUserId,
 } from './push-tokens-db'
+import { capturePosthogEvent } from './posthog-server'
 
 interface SendPropositionNotificationOptions {
   propositionId: string
   userId: string | null
+  communeId?: string | null
   title: string
   body: string
   type: 'vote' | 'comment'
@@ -19,7 +21,8 @@ export async function sendPropositionNotification(
   tokens_sent: number
   errors?: string[]
 }> {
-  const { propositionId, userId, title, body, type } = options
+  const { propositionId, userId, communeId, title, body, type } = options
+  const notificationId = `proposition_${propositionId}_${type}_${Date.now()}`
 
   if (!userId) {
     console.log('No user_id found for proposition, skipping notification')
@@ -71,6 +74,9 @@ export async function sendPropositionNotification(
               type: 'proposition',
               proposition_id: String(propositionId),
               notification_type: type,
+              notification_id: notificationId,
+              campaign_key: notificationId,
+              commune_id: communeId ? String(communeId) : '',
             },
             android: {
               priority: 'high',
@@ -134,6 +140,16 @@ export async function sendPropositionNotification(
         errors.push(`Token ${token.substring(0, 10)}...: ${msg}`)
       }
     }
+
+    void capturePosthogEvent('notification_sent', {
+      notification_id: notificationId,
+      campaign_key: notificationId,
+      target_type: 'proposition',
+      target_id: String(propositionId),
+      commune_id: communeId ? String(communeId) : undefined,
+      sent_count: sentCount,
+      platform: 'mixed',
+    })
 
     return {
       success: true,

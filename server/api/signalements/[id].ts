@@ -103,6 +103,7 @@ export default eventHandler(async (event) => {
             await sendSignalementNotification({
               signalementId: id,
               userId: userId ?? null,
+              communeId: (existingSignalement.commune_id as string | undefined) ?? null,
               title: notificationTitle,
               body: notificationBody,
               type: notificationType,

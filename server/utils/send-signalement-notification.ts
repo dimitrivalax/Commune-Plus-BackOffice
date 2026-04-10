@@ -3,10 +3,12 @@ import {
   deactivatePushTokenByValue,
   fetchActivePushTokensByUserId,
 } from './push-tokens-db'
+import { capturePosthogEvent } from './posthog-server'
 
 interface SendSignalementNotificationOptions {
   signalementId: string
   userId: string | null
+  communeId?: string | null
   title: string
   body: string
   type: 'status_change' | 'response_added'
@@ -20,7 +22,8 @@ export async function sendSignalementNotification(
   tokens_sent: number
   errors?: string[]
 }> {
-  const { signalementId, userId, title, body, type, newStatus } = options
+  const { signalementId, userId, communeId, title, body, type, newStatus } = options
+  const notificationId = `signalement_${signalementId}_${type}_${Date.now()}`
 
   if (!userId) {
     console.log('No user_id found for signalement, skipping notification')
@@ -75,6 +78,9 @@ export async function sendSignalementNotification(
               type: 'signalement',
               signalement_id: String(signalementId),
               notification_type: type,
+              notification_id: notificationId,
+              campaign_key: notificationId,
+              commune_id: communeId ? String(communeId) : '',
               ...(newStatus ? { status: String(newStatus) } : {}),
             } as Record<string, string>,
             android: {
@@ -141,6 +147,16 @@ export async function sendSignalementNotification(
         errors.push(`Token ${token.substring(0, 20)}...: ${msg}`)
       }
     }
+
+    void capturePosthogEvent('notification_sent', {
+      notification_id: notificationId,
+      campaign_key: notificationId,
+      target_type: 'signalement',
+      target_id: String(signalementId),
+      commune_id: communeId ? String(communeId) : undefined,
+      sent_count: sentCount,
+      platform: 'mixed',
+    })
 
     return {
       success: true,

@@ -125,6 +125,7 @@ export default eventHandler(async (event) => {
         void sendReservationNotification({
           reservationId: String(data.id),
           userEmail: String(data.email),
+          communeId: (salleData.commune_id as string | undefined) ?? null,
           userName: String(data.name),
           salleName: String(salleData.nom),
           date: displayDate,

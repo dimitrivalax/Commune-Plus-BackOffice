@@ -16,6 +16,8 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    posthogProjectId: process.env.POSTHOG_PROJECT_ID || '',
+    posthogPersonalApiKey: process.env.POSTHOG_PERSONAL_API_KEY || '',
     public: {
       firebaseApiKey: process.env.NUXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || '',
       firebaseAuthDomain: process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',

@@ -41,6 +41,7 @@ export default eventHandler(async (event) => {
   const result = await sendPropositionNotification({
     propositionId: String(proposition.id),
     userId: (proposition.user_id as string | undefined) ?? null,
+    communeId: (proposition.commune_id as string | undefined) ?? null,
     title,
     body: messageBody,
     type: validatedData.type,

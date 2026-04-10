@@ -6,6 +6,7 @@ import {
   deactivatePushTokenByValue,
   fetchPushTokensForPublish,
 } from '../../../utils/push-tokens-db'
+import { capturePosthogEvent } from '../../../utils/posthog-server'
 
 export default eventHandler(async (event) => {
   await requireAuth(event)
@@ -72,6 +73,7 @@ export default eventHandler(async (event) => {
 
     const notificationTitle = String(info.category || '')
     const notificationBody = String(info.title || '')
+    const campaignKey = `actualite_${String(info.id)}_${Date.now()}`
 
     const androidTokens = pushTokens
       .filter((t) => t.platform === 'android')
@@ -98,6 +100,8 @@ export default eventHandler(async (event) => {
               type: 'actualite',
               info_id: String(info.id),
               commune_id: String(info.commune_id ?? ''),
+              notification_id: campaignKey,
+              campaign_key: campaignKey,
             },
             android: {
               priority: 'high',
@@ -163,6 +167,17 @@ export default eventHandler(async (event) => {
         errors.push(`Token ${token.substring(0, 20)}...: ${msg}`)
       }
     }
+
+    void capturePosthogEvent('notification_sent', {
+      notification_id: campaignKey,
+      campaign_key: campaignKey,
+      target_type: 'actualite',
+      target_id: String(info.id),
+      commune_id: String(info.commune_id ?? ''),
+      sent_count: sentCount,
+      platform: 'mixed',
+      is_global: Boolean(isGlobal),
+    })
 
     return {
       success: true,

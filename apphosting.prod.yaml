@@ -82,6 +82,14 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  - variable: POSTHOG_PROJECT_ID
+    secret: POSTHOG_PROJECT_ID
+    availability:
+      - RUNTIME
+  - variable: POSTHOG_PERSONAL_API_KEY
+    secret: POSTHOG_PERSONAL_API_KEY
+    availability:
+      - RUNTIME
 
   # Resend
   - variable: RESEND_API_KEY

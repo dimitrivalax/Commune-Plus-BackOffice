@@ -4,10 +4,12 @@ import {
   deactivatePushTokenByValue,
   fetchActivePushTokensByEmail,
 } from './push-tokens-db'
+import { capturePosthogEvent } from './posthog-server'
 
 interface SendReservationNotificationOptions {
   reservationId: string
   userEmail: string
+  communeId?: string | null
   userName: string
   salleName: string
   date: string
@@ -27,6 +29,7 @@ export async function sendReservationNotification(
   const {
     reservationId,
     userEmail,
+    communeId,
     userName,
     salleName,
     date,
@@ -48,6 +51,7 @@ export async function sendReservationNotification(
     tokens_sent: 0,
     errors: [] as string[],
   }
+  const notificationId = `reservation_${reservationId}_${status}_${Date.now()}`
 
   try {
     let accessToken: string | undefined
@@ -77,6 +81,9 @@ export async function sendReservationNotification(
                   type: 'reservation',
                   reservation_id: String(reservationId),
                   status: String(status),
+                  notification_id: notificationId,
+                  campaign_key: notificationId,
+                  commune_id: communeId ? String(communeId) : '',
                 },
                 android: {
                   priority: 'high',
@@ -175,6 +182,16 @@ export async function sendReservationNotification(
     console.error('Email sending failed:', error)
     result.errors.push(`Global email error: ${msg}`)
   }
+
+  void capturePosthogEvent('notification_sent', {
+    notification_id: notificationId,
+    campaign_key: notificationId,
+    target_type: 'reservation',
+    target_id: String(reservationId),
+    commune_id: communeId ? String(communeId) : undefined,
+    sent_count: result.tokens_sent,
+    platform: 'mixed',
+  })
 
   return result
 }

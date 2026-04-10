@@ -96,6 +96,14 @@ const baseNavItems: NavigationMenuItem[] = [
       open.value = false;
     },
   },
+  {
+    label: "Stats mobile",
+    icon: "i-lucide-chart-column",
+    to: "/stats-mobile",
+    onSelect: () => {
+      open.value = false;
+    },
+  },
 ];
 
 const adminOnlyNavItems: NavigationMenuItem[] = [
