@@ -167,6 +167,7 @@ export interface Commune {
   postal_code: string;
   email: string;
   logo_url?: string | null;
+  date_licence?: string | null;
   /** Réservation de salles visible dans l'app mobile (défaut true) */
   feature_reservations_salles?: boolean;
   /** Module Propositions dans l'app mobile (défaut true) */

@@ -12,6 +12,7 @@ const schema = z.object({
   postal_code: z.string().min(1, "Le code postal est requis"),
   email: z.string().email("Email invalide"),
   logo_url: z.string().url("URL invalide").optional().or(z.literal("")),
+  date_licence: z.string().optional().or(z.literal("")),
   feature_reservations_salles: z.boolean(),
   feature_propositions: z.boolean(),
 });
@@ -25,6 +26,7 @@ const state = reactive<Partial<Schema>>({
   postal_code: undefined,
   email: undefined,
   logo_url: undefined,
+  date_licence: undefined,
   feature_reservations_salles: true,
   feature_propositions: true,
 });
@@ -38,6 +40,7 @@ function resetForm() {
   state.postal_code = undefined;
   state.email = undefined;
   state.logo_url = undefined;
+  state.date_licence = undefined;
   state.feature_reservations_salles = true;
   state.feature_propositions = true;
 }
@@ -52,6 +55,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         postal_code: event.data.postal_code,
         email: event.data.email,
         logo_url: event.data.logo_url || null,
+        date_licence: event.data.date_licence || null,
         feature_reservations_salles: event.data.feature_reservations_salles,
         feature_propositions: event.data.feature_propositions,
       },
@@ -134,6 +138,14 @@ defineExpose({
           name="logo_url"
         >
           <UInput v-model="state.logo_url" class="w-full" />
+        </UFormField>
+
+        <UFormField
+          label="Date de licence"
+          name="date_licence"
+          help="Date de départ de la licence (format AAAA-MM-JJ)"
+        >
+          <UInput v-model="state.date_licence" type="date" class="w-full" />
         </UFormField>
 
         <div class="space-y-3 rounded-lg border border-default p-4">
