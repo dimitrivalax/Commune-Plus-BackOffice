@@ -1,6 +1,7 @@
 import { requireAuth, getCurrentUserProfile } from '../../../utils/firebase-auth'
 import { getAdminFirestore } from '../../../utils/firebase-admin-app'
 import { docWithId } from '../../../utils/firestore-serialize'
+import { FieldValue } from 'firebase-admin/firestore'
 import { getFCMAccessToken, getFCMProjectId } from '../../../utils/fcm-auth'
 import {
   deactivatePushTokenByValue,
@@ -48,7 +49,8 @@ export default eventHandler(async (event) => {
     }
 
     const db = getAdminFirestore()
-    const infoSnap = await db.collection('actualite').doc(id!).get()
+    const infoRef = db.collection('actualite').doc(id!)
+    const infoSnap = await infoRef.get()
     if (!infoSnap.exists) {
       throw createError({
         statusCode: 404,
@@ -56,6 +58,20 @@ export default eventHandler(async (event) => {
       })
     }
     const info = docWithId(infoSnap.id, infoSnap.data())!
+    if (info.notification_sent_at) {
+      return {
+        success: true,
+        message: 'Notification déjà envoyée pour cette actualité',
+        tokens_sent: 0,
+      }
+    }
+
+    await infoRef.update({
+      publication_status: 'published',
+      published_at: new Date().toISOString(),
+      scheduled_publish_at: null,
+      updated_at: FieldValue.serverTimestamp(),
+    })
 
     const pushTokens = await fetchPushTokensForPublish(
       isGlobal ? undefined : bodyCommuneId,
@@ -177,6 +193,11 @@ export default eventHandler(async (event) => {
       sent_count: sentCount,
       platform: 'mixed',
       is_global: Boolean(isGlobal),
+    })
+
+    await infoRef.update({
+      notification_sent_at: new Date().toISOString(),
+      updated_at: FieldValue.serverTimestamp(),
     })
 
     return {

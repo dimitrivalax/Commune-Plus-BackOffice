@@ -9,6 +9,10 @@ export default eventHandler(async (event) => {
 
   try {
     const body = await readBody(event)
+    const scheduledPublishAt = typeof body.scheduled_publish_at === 'string' && body.scheduled_publish_at
+      ? body.scheduled_publish_at
+      : null
+    const nowIso = new Date().toISOString()
     const db = getAdminFirestore()
     const id = randomUUID()
     const ref = db.collection('actualite').doc(id)
@@ -20,6 +24,10 @@ export default eventHandler(async (event) => {
       category: body.category || null,
       image_url: body.image_url || null,
       commune_id: body.commune_id || null,
+      publication_status: scheduledPublishAt ? 'scheduled' : 'published',
+      scheduled_publish_at: scheduledPublishAt,
+      published_at: scheduledPublishAt ? null : nowIso,
+      notification_sent_at: null,
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
     })

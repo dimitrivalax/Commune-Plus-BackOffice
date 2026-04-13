@@ -14,6 +14,10 @@ export default eventHandler(async (event) => {
   try {
     if (method === 'PUT') {
       const body = await readBody(event)
+      const hasScheduledField = body.scheduled_publish_at !== undefined
+      const scheduledPublishAt = typeof body.scheduled_publish_at === 'string' && body.scheduled_publish_at
+        ? body.scheduled_publish_at
+        : null
       const patch: Record<string, unknown> = {
         title: body.title,
         content: body.content,
@@ -23,6 +27,18 @@ export default eventHandler(async (event) => {
       }
       if (body.event_date !== undefined) {
         patch.event_date = body.event_date
+      }
+      if (hasScheduledField) {
+        if (scheduledPublishAt) {
+          patch.scheduled_publish_at = scheduledPublishAt
+          patch.publication_status = 'scheduled'
+          patch.published_at = null
+          patch.notification_sent_at = null
+        } else {
+          patch.scheduled_publish_at = null
+          patch.publication_status = 'published'
+          patch.published_at = new Date().toISOString()
+        }
       }
       await ref.update(patch)
       const snap = await ref.get()

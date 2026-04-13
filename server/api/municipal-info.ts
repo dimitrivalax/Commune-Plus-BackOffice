@@ -32,6 +32,19 @@ export default eventHandler(async (event) => {
       .map((d) => docWithId(d.id, d.data()))
       .filter(Boolean) as Record<string, unknown>[]
 
+    rows = rows.map((row) => {
+      const status = typeof row.publication_status === 'string'
+        ? row.publication_status
+        : 'published'
+      return {
+        ...row,
+        publication_status: status,
+        scheduled_publish_at: row.scheduled_publish_at ?? null,
+        published_at: row.published_at ?? null,
+        notification_sent_at: row.notification_sent_at ?? null,
+      }
+    })
+
     if (category) {
       rows = rows.filter((r) => r.category === category)
     }

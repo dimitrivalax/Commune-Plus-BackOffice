@@ -31,6 +31,8 @@ const schema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
   content: z.string().min(1, 'Le contenu est requis'),
   event_date: z.string().optional(),
+  is_scheduled: z.boolean().default(false),
+  scheduled_publish_local: z.string().optional(),
   category: z.string().optional(),
   image_url: z
     .union([z.string().url('URL invalide'), z.literal(''), z.undefined()])
@@ -46,10 +48,38 @@ function toDateOnly(isoOrDate: string | null | undefined): string | undefined {
   return isoOrDate.split('T')[0]
 }
 
+function toLocalDatetimeInput(isoOrDate: string | null | undefined): string | undefined {
+  if (!isoOrDate) return undefined
+  const parsed = new Date(isoOrDate)
+  if (Number.isNaN(parsed.getTime())) return undefined
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`
+}
+
+function ceilToNextHour(date: Date): Date {
+  const rounded = new Date(date)
+  rounded.setMinutes(0, 0, 0)
+  if (date.getMinutes() !== 0 || date.getSeconds() !== 0 || date.getMilliseconds() !== 0) {
+    rounded.setHours(rounded.getHours() + 1)
+  }
+  return rounded
+}
+
+function normalizeHourlyLocalInput(value: string | undefined): string | undefined {
+  if (!value)
+    return undefined
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime()))
+    return undefined
+  return toLocalDatetimeInput(ceilToNextHour(parsed))
+}
+
 const state = reactive<Partial<Schema>>({
   title: undefined,
   content: '',
   event_date: undefined,
+  is_scheduled: false,
+  scheduled_publish_local: undefined,
   category: undefined,
   image_url: undefined
 })
@@ -61,6 +91,8 @@ watch(
       state.title = newInfo.title
       state.content = newInfo.content
       state.event_date = toDateOnly(newInfo.event_date ?? null) ?? undefined
+      state.is_scheduled = newInfo.publication_status === 'scheduled'
+      state.scheduled_publish_local = toLocalDatetimeInput(newInfo.scheduled_publish_at)
       state.category = newInfo.category || undefined
       state.image_url = newInfo.image_url || undefined
     }
@@ -74,6 +106,10 @@ const { getAuthHeaders } = useApiAuth()
 const { currentCommune } = useCurrentCommune()
 const { publish, isPublishing } = usePublishMunicipalInfo({ onSuccess: () => refresh?.() })
 
+function normalizeScheduledPublishLocal() {
+  state.scheduled_publish_local = normalizeHourlyLocalInput(state.scheduled_publish_local)
+}
+
 const emit = defineEmits<{
   delete: [info: MunicipalInfo]
 }>()
@@ -82,6 +118,30 @@ const galleryCommuneId = computed(() => props.info?.commune_id ?? currentCommune
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!props.info) return
+
+  let scheduledPublishAt: string | null = null
+  if (event.data.is_scheduled) {
+    const normalizedLocal = normalizeHourlyLocalInput(event.data.scheduled_publish_local)
+    if (!normalizedLocal) {
+      toast.add({
+        title: 'Erreur',
+        description: 'Veuillez sélectionner une heure de publication.',
+        color: 'error'
+      })
+      return
+    }
+    state.scheduled_publish_local = normalizedLocal
+    const parsed = new Date(normalizedLocal)
+    if (Number.isNaN(parsed.getTime())) {
+      toast.add({
+        title: 'Erreur',
+        description: 'La date de publication programmée est invalide.',
+        color: 'error'
+      })
+      return
+    }
+    scheduledPublishAt = parsed.toISOString()
+  }
 
   try {
     await $fetch(`/api/municipal-info/${props.info.id}`, {
@@ -92,7 +152,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         content: event.data.content,
         event_date: event.data.event_date || null,
         category: event.data.category || null,
-        image_url: event.data.image_url || null
+        image_url: event.data.image_url || null,
+        scheduled_publish_at: scheduledPublishAt
       }
     })
 
@@ -134,6 +195,9 @@ function openModal(info?: MunicipalInfo) {
   if (targetInfo) {
     state.title = targetInfo.title
     state.content = targetInfo.content
+    state.event_date = toDateOnly(targetInfo.event_date ?? null) ?? undefined
+    state.is_scheduled = targetInfo.publication_status === 'scheduled'
+    state.scheduled_publish_local = toLocalDatetimeInput(targetInfo.scheduled_publish_at)
     state.category = targetInfo.category || undefined
     state.image_url = targetInfo.image_url || undefined
     open.value = true
@@ -172,6 +236,27 @@ defineExpose({
           name="event_date"
         >
           <UInput v-model="state.event_date" type="date" class="w-full" />
+        </UFormField>
+
+        <UFormField
+          label="Publication programmée"
+          name="is_scheduled"
+        >
+          <div class="space-y-2">
+            <UCheckbox
+              v-model="state.is_scheduled"
+              label="Programmer la publication"
+            />
+            <UInput
+              v-if="state.is_scheduled"
+              v-model="state.scheduled_publish_local"
+              type="datetime-local"
+              :step="3600"
+              class="w-full"
+              @change="normalizeScheduledPublishLocal"
+              @blur="normalizeScheduledPublishLocal"
+            />
+          </div>
         </UFormField>
 
         <UFormField
@@ -241,7 +326,7 @@ defineExpose({
               type="submit"
             />
             <UButton
-              label="Publier"
+              label="Publier maintenant"
               color="success"
               variant="solid"
               icon="i-lucide-send"

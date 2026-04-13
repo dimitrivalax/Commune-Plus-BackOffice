@@ -8,7 +8,16 @@
   "scripts": {
     "build": "tsc",
     "clean": "rimraf lib",
+    "predeploy": "npm run build",
     "deploy": "firebase deploy --only functions",
+    "predeploy:dev": "npm run build",
+    "deploy:dev": "firebase deploy --only functions --project commune-plus-dev",
+    "predeploy:prod": "npm run build",
+    "deploy:prod": "firebase deploy --only functions --project commune-plus",
+    "predeploy:alert:dev": "npm run build",
+    "deploy:alert:dev": "firebase deploy --only functions:notifyLicenceExpiry --project commune-plus-dev",
+    "predeploy:alert:prod": "npm run build",
+    "deploy:alert:prod": "firebase deploy --only functions:notifyLicenceExpiry --project commune-plus",
     "serve": "npm run build && firebase emulators:start --only functions"
   },
   "dependencies": {

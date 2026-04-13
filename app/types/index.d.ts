@@ -96,6 +96,10 @@ export interface MunicipalInfo {
   image_url: string | null;
   commune_id: string | null;
   event_date: string | null;
+  publication_status: "draft" | "scheduled" | "published";
+  scheduled_publish_at: string | null;
+  published_at: string | null;
+  notification_sent_at: string | null;
   created_at: string;
   updated_at: string;
 }

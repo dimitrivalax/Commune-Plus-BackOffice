@@ -14,6 +14,40 @@ const UBadge = resolveComponent('UBadge')
 
 const sortableHeader = useSortableTableHeader<MunicipalInfo>()
 
+function getPublicationStatusLabel(info: MunicipalInfo): string {
+  switch (info.publication_status) {
+    case 'scheduled':
+      return 'Programmée'
+    case 'published':
+      return 'Publiée'
+    default:
+      return 'Brouillon'
+  }
+}
+
+function getPublicationStatusColor(info: MunicipalInfo): 'warning' | 'success' | 'neutral' {
+  switch (info.publication_status) {
+    case 'scheduled':
+      return 'warning'
+    case 'published':
+      return 'success'
+    default:
+      return 'neutral'
+  }
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value)
+    return '-'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime()))
+    return '-'
+  return parsed.toLocaleString('fr-FR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  })
+}
+
 function compareInfosForSort(a: MunicipalInfo, b: MunicipalInfo, columnId: string, desc: boolean): number {
   const dir = desc ? -1 : 1
   let cmp = 0
@@ -27,6 +61,12 @@ function compareInfosForSort(a: MunicipalInfo, b: MunicipalInfo, columnId: strin
       break
     case 'event_date':
       cmp = compareOptionalIsoDateNullsLast(a.event_date, b.event_date)
+      break
+    case 'publication_status':
+      cmp = compareLocaleFr(getPublicationStatusLabel(a), getPublicationStatusLabel(b))
+      break
+    case 'scheduled_publish_at':
+      cmp = compareOptionalIsoDateNullsLast(a.scheduled_publish_at, b.scheduled_publish_at)
       break
     case 'created_at':
       cmp = compareIsoDateStrings(a.created_at, b.created_at)
@@ -91,7 +131,7 @@ function getRowItems(row: MunicipalInfo) {
       }
     },
     {
-      label: 'Publier',
+      label: row.publication_status === 'scheduled' ? 'Publier maintenant' : 'Publier',
       icon: 'i-lucide-send',
       onSelect() {
         publish(row)
@@ -198,6 +238,38 @@ const columns: TableColumn<MunicipalInfo>[] = [
         date.toLocaleDateString('fr-FR')
       )
     }
+  },
+  {
+    accessorKey: 'publication_status',
+    header: sortableHeader('Statut'),
+    cell: ({ row }) => h(
+      UBadge,
+      {
+        variant: 'subtle',
+        color: getPublicationStatusColor(row.original),
+        class: 'cursor-pointer',
+        onClick: (e: Event) => {
+          e.stopPropagation()
+          handleRowClick(row.original)
+        }
+      },
+      () => getPublicationStatusLabel(row.original)
+    )
+  },
+  {
+    accessorKey: 'scheduled_publish_at',
+    header: sortableHeader('Publication prévue'),
+    cell: ({ row }) => h(
+      'span',
+      {
+        class: 'text-sm cursor-pointer',
+        onClick: (e: Event) => {
+          e.stopPropagation()
+          handleRowClick(row.original)
+        }
+      },
+      formatDateTime(row.original.scheduled_publish_at)
+    )
   },
   {
     accessorKey: 'created_at',
