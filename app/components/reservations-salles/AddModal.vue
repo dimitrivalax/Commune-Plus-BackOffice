@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import type { ReservationSalle, Salle } from '~/types'
+import type { Salle } from '~/types'
 
 const props = defineProps<{
   salleId?: string
@@ -42,10 +42,25 @@ const open = ref(false)
 
 type Schema = z.output<typeof schema>
 
+function getDefaultDateTimeRange() {
+  const dateDebut = new Date()
+  dateDebut.setMinutes(0, 0, 0)
+
+  const dateFin = new Date(dateDebut)
+  dateFin.setHours(dateFin.getHours() + 1)
+
+  return {
+    dateDebut: formatDateTimeLocal(dateDebut),
+    dateFin: formatDateTimeLocal(dateFin)
+  }
+}
+
+const initialDateTimeRange = getDefaultDateTimeRange()
+
 const state = reactive<Partial<Schema>>({
   salle_id: props.salleId || undefined,
-  date_debut: props.dateDebut ? formatDateTimeLocal(props.dateDebut) : undefined,
-  date_fin: props.dateFin ? formatDateTimeLocal(props.dateFin) : undefined,
+  date_debut: props.dateDebut ? formatDateTimeLocal(props.dateDebut) : initialDateTimeRange.dateDebut,
+  date_fin: props.dateFin ? formatDateTimeLocal(props.dateFin) : initialDateTimeRange.dateFin,
   nom: undefined,
   prenom: undefined,
   email: undefined,
@@ -66,7 +81,7 @@ defineExpose({
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-reservations-salles')
-const { getAuthHeaders } = useApiAuth()
+const reservationsSallesService = useReservationsSallesService()
 const recurrenceSummary = ref<{
   total: number
   createdCount: number
@@ -74,6 +89,7 @@ const recurrenceSummary = ref<{
   skippedVacancesCount: number
   conflicts: Array<{ date: string, start_time: string, end_time: string }>
 } | null>(null)
+const isSubmitting = ref(false)
 const estimatedOccurrences = ref(1)
 const estimatedSkippedVacances = ref(0)
 
@@ -114,35 +130,20 @@ watch(
     if (!state.salle_id) {
       return
     }
+    const salleId = state.salle_id
 
     const timer = setTimeout(async () => {
       try {
-        const withVacancesPromise = $fetch<{
-          total: number
-          estimated: number
-          skippedVacancesCount: number
-        }>('/api/reservations-salles/recurrence-preview', {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: {
-            salle_id: state.salle_id,
-            date_debut: new Date(state.date_debut!).toISOString(),
-            inclure_vacances_scolaires: true
-          }
+        const withVacancesPromise = reservationsSallesService.previewRecurrence({
+          salle_id: salleId,
+          date_debut: new Date(state.date_debut!).toISOString(),
+          inclure_vacances_scolaires: true
         })
 
-        const withoutVacancesPromise = $fetch<{
-          total: number
-          estimated: number
-          skippedVacancesCount: number
-        }>('/api/reservations-salles/recurrence-preview', {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: {
-            salle_id: state.salle_id,
-            date_debut: new Date(state.date_debut!).toISOString(),
-            inclure_vacances_scolaires: false
-          }
+        const withoutVacancesPromise = reservationsSallesService.previewRecurrence({
+          salle_id: salleId,
+          date_debut: new Date(state.date_debut!).toISOString(),
+          inclure_vacances_scolaires: false
         })
 
         const [withVacances, withoutVacances] = await Promise.all([
@@ -173,19 +174,21 @@ watch(
 )
 
 // Charger les salles pour le select
-const { data: salles, refresh: refreshSalles } = await useFetch<Salle[]>('/api/salles', {
-  lazy: true,
-  headers: getAuthHeaders()
-})
+const { data: salles, refresh: refreshSalles } = await useAsyncData<Salle[]>(
+  'reservations-salles-add-modal-salles',
+  () => reservationsSallesService.getSalles(),
+  { immediate: false, default: () => [] }
+)
 
 // Recharger les salles quand le modal s'ouvre
 watch(() => open.value, async (isOpen) => {
   if (isOpen) {
     await refreshSalles()
+    const defaultDateTimeRange = getDefaultDateTimeRange()
     // Réinitialiser avec les props quand le modal s'ouvre
     state.salle_id = props.salleId || undefined
-    state.date_debut = props.dateDebut ? formatDateTimeLocal(props.dateDebut) : undefined
-    state.date_fin = props.dateFin ? formatDateTimeLocal(props.dateFin) : undefined
+    state.date_debut = props.dateDebut ? formatDateTimeLocal(props.dateDebut) : defaultDateTimeRange.dateDebut
+    state.date_fin = props.dateFin ? formatDateTimeLocal(props.dateFin) : defaultDateTimeRange.dateFin
     state.nom = undefined
     state.prenom = undefined
     state.email = undefined
@@ -222,28 +225,27 @@ watch(() => props.dateFin, (newVal) => {
 })
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+
   try {
     recurrenceSummary.value = null
 
-    const response = await $fetch('/api/reservations-salles/create', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: {
-        salle_id: event.data.salle_id,
-        date_debut: new Date(event.data.date_debut).toISOString(),
-        date_fin: new Date(event.data.date_fin).toISOString(),
-        nom: event.data.nom,
-        prenom: event.data.prenom,
-        email: event.data.email,
-        telephone: event.data.telephone,
-        is_association: event.data.is_association ?? false,
-        nom_association: event.data.is_association ? (event.data.nom_association || null) : null,
-        reservation_recurrente: event.data.is_association ? (event.data.reservation_recurrente ?? false) : false,
-        inclure_vacances_scolaires: event.data.is_association && event.data.reservation_recurrente
-          ? (event.data.inclure_vacances_scolaires ?? false)
-          : false
-      }
-    }) as ReservationSalle
+    const response = await reservationsSallesService.createReservation({
+      salle_id: event.data.salle_id,
+      date_debut: new Date(event.data.date_debut).toISOString(),
+      date_fin: new Date(event.data.date_fin).toISOString(),
+      nom: event.data.nom,
+      prenom: event.data.prenom,
+      email: event.data.email,
+      telephone: event.data.telephone,
+      is_association: event.data.is_association ?? false,
+      nom_association: event.data.is_association ? (event.data.nom_association || null) : null,
+      reservation_recurrente: event.data.is_association ? (event.data.reservation_recurrente ?? false) : false,
+      inclure_vacances_scolaires: event.data.is_association && event.data.reservation_recurrente
+        ? (event.data.inclure_vacances_scolaires ?? false)
+        : false
+    })
 
     if (response?.recurrence_summary) {
       recurrenceSummary.value = response.recurrence_summary
@@ -260,10 +262,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       })
     }
 
+    const defaultDateTimeRange = getDefaultDateTimeRange()
     // Réinitialiser le formulaire
     state.salle_id = props.salleId || undefined
-    state.date_debut = props.dateDebut ? formatDateTimeLocal(props.dateDebut) : undefined
-    state.date_fin = props.dateFin ? formatDateTimeLocal(props.dateFin) : undefined
+    state.date_debut = props.dateDebut ? formatDateTimeLocal(props.dateDebut) : defaultDateTimeRange.dateDebut
+    state.date_fin = props.dateFin ? formatDateTimeLocal(props.dateFin) : defaultDateTimeRange.dateFin
     state.nom = undefined
     state.prenom = undefined
     state.email = undefined
@@ -273,9 +276,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     state.reservation_recurrente = false
     state.inclure_vacances_scolaires = false
 
-    if (!response?.recurrence_summary) {
-      open.value = false
-    }
+    open.value = false
 
     if (refresh) {
       refresh()
@@ -287,6 +288,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       description: e.data?.message || e.message || 'Une erreur est survenue lors de la création',
       color: 'error'
     })
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
@@ -450,13 +453,16 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             label="Annuler"
             color="neutral"
             variant="subtle"
+            :disabled="isSubmitting"
             @click="open = false"
           />
           <UButton
-            label="Créer"
+            :label="isSubmitting ? 'Création...' : 'Créer'"
             color="primary"
             variant="solid"
             type="submit"
+            :loading="isSubmitting"
+            :disabled="isSubmitting"
           />
         </div>
       </UForm>

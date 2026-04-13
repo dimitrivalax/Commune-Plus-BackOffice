@@ -196,7 +196,11 @@ async function getVacancesForSalleCommune(salleData: Record<string, unknown>, an
     getVacancesByCodePostal(commune.postal_code, { anneeScolaire: labelPrev, limit: 200 }),
     getVacancesByCodePostal(commune.postal_code, { anneeScolaire: labelCurrent, limit: 200 }),
   ])
-  const merged = [...(resPrev.vacances || []), ...(resCurrent.vacances || [])]
+  let merged = [...(resPrev.vacances || []), ...(resCurrent.vacances || [])]
+  if (merged.length === 0) {
+    const fallback = await getVacancesByCodePostal(commune.postal_code, { limit: 500 })
+    merged = fallback.vacances || []
+  }
 
   const unique = new Map<string, VacancesRecord>()
   for (const v of merged) {
