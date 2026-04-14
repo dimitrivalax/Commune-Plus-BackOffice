@@ -9,6 +9,7 @@ const props = defineProps<{
 const emits = defineEmits<{
   close: [];
   update: [proposition: Proposition];
+  duplicated: [proposition: Proposition];
 }>();
 
 const toast = useToast();
@@ -20,7 +21,14 @@ const fullProposition = ref<Proposition | null>(null);
 const loading = ref(false);
 const newComment = ref("");
 const isSubmittingComment = ref(false);
+const isSaving = ref(false);
+const isDeleting = ref(false);
+const isDuplicating = ref(false);
 const isImageModalOpen = ref(false);
+const isDeletingCommentId = ref<string | null>(null);
+const editName = ref("");
+const editDescription = ref("");
+const editCommentsPublic = ref(true);
 
 const authHeaders = computed(() => {
   const currentSession = session.value;
@@ -41,6 +49,9 @@ const fetchDetails = async () => {
       },
     );
     fullProposition.value = data;
+    editName.value = data.name ?? "";
+    editDescription.value = data.description ?? "";
+    editCommentsPublic.value = data.comments_public !== false;
   } catch (error) {
     console.error("Error fetching proposition details:", error);
   } finally {
@@ -113,6 +124,109 @@ const submitMairieComment = async () => {
 
 const isMairieComment = (comment: { user_firstname: string; user_email?: string }) =>
   comment.user_firstname === "Mairie" || comment.user_email === "mairie@commune";
+
+const saveProposition = async () => {
+  isSaving.value = true;
+  try {
+    const updated = await $fetch<Proposition>(`/api/propositions/${props.proposition.id}`, {
+      method: "PUT",
+      body: {
+        name: editName.value.trim(),
+        description: editDescription.value.trim(),
+        comments_public: editCommentsPublic.value,
+      },
+      headers: authHeaders.value,
+    });
+    emits("update", updated);
+    fullProposition.value = { ...fullProposition.value, ...updated };
+    toast.add({
+      title: "Proposition mise à jour",
+      icon: "i-lucide-check-circle",
+      color: "success",
+    });
+  } catch (error: any) {
+    toast.add({
+      title: "Erreur",
+      description: error?.data?.message || error.message || "Enregistrement impossible",
+      icon: "i-lucide-alert-circle",
+      color: "error",
+    });
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+const deleteProposition = async () => {
+  isDeleting.value = true;
+  try {
+    await $fetch(`/api/propositions/${props.proposition.id}`, {
+      method: "DELETE",
+      headers: authHeaders.value,
+    });
+    emits("close");
+    toast.add({
+      title: "Proposition supprimée",
+      icon: "i-lucide-check-circle",
+      color: "success",
+    });
+  } catch (error: any) {
+    toast.add({
+      title: "Erreur",
+      description: error?.data?.message || error.message || "Suppression impossible",
+      icon: "i-lucide-alert-circle",
+      color: "error",
+    });
+  } finally {
+    isDeleting.value = false;
+  }
+};
+
+const deleteComment = async (commentId: string) => {
+  isDeletingCommentId.value = commentId;
+  try {
+    await $fetch(`/api/propositions/${props.proposition.id}/comments/${commentId}`, {
+      method: "DELETE",
+      headers: authHeaders.value,
+    });
+    await fetchDetails();
+  } finally {
+    isDeletingCommentId.value = null;
+  }
+};
+
+const duplicateProposition = async () => {
+  const communeId = fullProposition.value?.commune_id ?? props.proposition.commune_id;
+  if (!communeId) return;
+  isDuplicating.value = true;
+  try {
+    const duplicate = await $fetch<Proposition>("/api/propositions", {
+      method: "POST",
+      headers: authHeaders.value,
+      body: {
+        commune_id: communeId,
+        name: `${editName.value.trim()} (copie)`,
+        description: editDescription.value.trim(),
+        photo_url: fullProposition.value?.photo_url ?? props.proposition.photo_url ?? null,
+        comments_public: editCommentsPublic.value,
+      },
+    });
+    emits("duplicated", duplicate);
+    toast.add({
+      title: "Proposition dupliquée",
+      icon: "i-lucide-copy-plus",
+      color: "success",
+    });
+  } catch (error: any) {
+    toast.add({
+      title: "Erreur",
+      description: error?.data?.message || error.message || "Duplication impossible",
+      icon: "i-lucide-alert-circle",
+      color: "error",
+    });
+  } finally {
+    isDuplicating.value = false;
+  }
+};
 </script>
 
 <template>
@@ -162,6 +276,42 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
     </div>
 
     <div class="min-h-0 flex-1 p-4 sm:p-6 overflow-y-auto space-y-6">
+      <div class="space-y-3 p-4 border border-default rounded-lg bg-default/20">
+        <h3 class="font-semibold text-highlighted">Gestion de la proposition</h3>
+        <UInput v-model="editName" placeholder="Titre" />
+        <UTextarea v-model="editDescription" :rows="4" placeholder="Description" />
+        <UCheckbox v-model="editCommentsPublic" label="Commentaires utilisateurs publics" />
+        <div class="flex justify-between gap-2">
+          <div class="flex gap-2">
+            <UButton
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-copy-plus"
+              label="Dupliquer"
+              :loading="isDuplicating"
+              :disabled="!editName.trim() || !editDescription.trim()"
+              @click="duplicateProposition"
+            />
+            <UButton
+              color="error"
+              variant="outline"
+              icon="i-lucide-trash-2"
+              label="Supprimer"
+              :loading="isDeleting"
+              @click="deleteProposition"
+            />
+          </div>
+          <UButton
+            color="primary"
+            icon="i-lucide-save"
+            label="Enregistrer"
+            :loading="isSaving"
+            :disabled="!editName.trim() || !editDescription.trim()"
+            @click="saveProposition"
+          />
+        </div>
+      </div>
+
       <div>
         <h1 class="text-2xl font-bold text-highlighted mb-4">
           {{ proposition.name }}
@@ -204,9 +354,19 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
                   {{ comment.user_lastname }}</span>
                 <p v-if="!isMairieComment(comment)" class="text-xs text-muted">{{ comment.user_email }}</p>
               </div>
-              <span class="text-xs text-muted">{{
-                format(new Date(comment.created_at), "dd/MM/yyyy HH:mm")
-                }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-muted">{{
+                  format(new Date(comment.created_at), "dd/MM/yyyy HH:mm")
+                  }}</span>
+                <UButton
+                  icon="i-lucide-trash-2"
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  :loading="isDeletingCommentId === comment.id"
+                  @click="deleteComment(comment.id)"
+                />
+              </div>
             </div>
             <p class="text-sm text-toned">{{ comment.content }}</p>
           </div>
@@ -216,9 +376,9 @@ const isMairieComment = (comment: { user_firstname: string; user_email?: string 
         </div>
 
         <div class="mt-4 pt-4 border-t border-default">
-          <h4 class="font-medium text-highlighted mb-2">Répondre en tant que mairie</h4>
+          <h4 class="font-medium text-highlighted mb-2">Commenter en tant que mairie</h4>
           <p class="text-xs text-muted mb-2">
-            Votre réponse sera affichée sous le nom « Mairie {{ currentCommune?.name ?? '…' }} ».
+            Votre commentaire sera affiché sous le nom « Mairie {{ currentCommune?.name ?? '…' }} ».
           </p>
             <UTextarea v-model="newComment" placeholder="Saisissez votre commentaire..." :rows="3"
               :disabled="isSubmittingComment" class="w-full" />

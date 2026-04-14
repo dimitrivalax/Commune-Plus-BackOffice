@@ -146,6 +146,25 @@ export function getEffectiveCommuneIdForRequest(
   return profile.communeIds.length > 0 ? profile.communeIds[0] : undefined
 }
 
+export function assertCanManageCommune(
+  profile: CurrentUserProfile,
+  communeId: string | undefined,
+) {
+  if (!communeId) {
+    throw createError({
+      statusCode: 400,
+      message: 'commune_id requis',
+    })
+  }
+  if (profile.role === 'administrateur') return
+  if (!profile.communeIds.includes(communeId)) {
+    throw createError({
+      statusCode: 403,
+      message: 'Accès refusé pour cette commune',
+    })
+  }
+}
+
 /** Timestamp serveur pour champs updated_at / created_at. */
 export function serverTimestamp() {
   return FieldValue.serverTimestamp()

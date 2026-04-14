@@ -192,6 +192,7 @@ export interface Proposition {
   user_email: string;
   votes_count: number;
   is_archived: boolean;
+  comments_public?: boolean;
   created_at: string;
   updated_at: string;
   comments?: PropositionComment[];
@@ -203,6 +204,8 @@ export interface PropositionComment {
   user_firstname: string;
   user_lastname: string;
   user_email: string;
+  author_type?: "user" | "commune";
   content: string;
   created_at: string;
+  updated_at?: string;
 }

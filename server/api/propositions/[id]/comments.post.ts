@@ -1,6 +1,10 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { randomUUID } from 'node:crypto'
-import { requireAuth } from '../../../utils/firebase-auth'
+import {
+  requireAuth,
+  requireCurrentUserProfile,
+  assertCanManageCommune,
+} from '../../../utils/firebase-auth'
 import { getAdminFirestore } from '../../../utils/firebase-admin-app'
 import { docWithId } from '../../../utils/firestore-serialize'
 import { z } from 'zod'
@@ -11,6 +15,7 @@ const bodySchema = z.object({
 
 export default eventHandler(async (event) => {
   await requireAuth(event)
+  const profile = await requireCurrentUserProfile(event)
   const id = getRouterParam(event, 'id')
   if (!id) {
     throw createError({
@@ -29,6 +34,7 @@ export default eventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Proposition not found' })
   }
   const communeId = psnap.get('commune_id') as string
+  assertCanManageCommune(profile, communeId)
   const csnap = await db.collection('commune').doc(communeId).get()
   const communeName = csnap.exists ? String(csnap.get('name') || '') : ''
   if (!communeName) {
@@ -41,8 +47,10 @@ export default eventHandler(async (event) => {
     user_firstname: 'Mairie',
     user_lastname: communeName,
     user_email: 'mairie@commune',
+    author_type: 'commune',
     content: content.trim(),
     created_at: FieldValue.serverTimestamp(),
+    updated_at: FieldValue.serverTimestamp(),
   })
   const created = await cref.get()
   return docWithId(created.id, created.data())
