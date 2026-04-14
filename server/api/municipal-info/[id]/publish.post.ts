@@ -40,12 +40,11 @@ export default eventHandler(async (event) => {
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error)
       console.warn('FCM not configured:', msg)
-      return {
-        success: false,
+      throw createError({
+        statusCode: 503,
         message:
           'FCM non configuré. Variables FCM_SERVICE_ACCOUNT_JSON ou FCM_SERVICE_ACCOUNT_PATH',
-        tokens_sent: 0,
-      }
+      })
     }
 
     const db = getAdminFirestore()
@@ -58,13 +57,13 @@ export default eventHandler(async (event) => {
       })
     }
     const info = docWithId(infoSnap.id, infoSnap.data())!
-    if (info.notification_sent_at) {
-      return {
-        success: true,
-        message: 'Notification déjà envoyée pour cette actualité',
-        tokens_sent: 0,
-      }
-    }
+    // if (info.notification_sent_at) {
+    //   return {
+    //     success: true,
+    //     message: 'Notification déjà envoyée pour cette actualité',
+    //     tokens_sent: 0,
+    //   }
+    // }
 
     await infoRef.update({
       publication_status: 'published',
@@ -195,10 +194,22 @@ export default eventHandler(async (event) => {
       is_global: Boolean(isGlobal),
     })
 
-    await infoRef.update({
-      notification_sent_at: new Date().toISOString(),
-      updated_at: FieldValue.serverTimestamp(),
-    })
+    if (sentCount > 0) {
+      await infoRef.update({
+        notification_sent_at: new Date().toISOString(),
+        updated_at: FieldValue.serverTimestamp(),
+      })
+    }
+
+    if (sentCount === 0) {
+      return {
+        success: false,
+        message: 'Aucune notification n’a pu être envoyée',
+        tokens_sent: 0,
+        tokens_found: pushTokens.length,
+        errors: errors.length > 0 ? errors : undefined,
+      }
+    }
 
     return {
       success: true,

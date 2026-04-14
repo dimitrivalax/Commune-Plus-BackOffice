@@ -7,6 +7,14 @@ export interface UsePublishMunicipalInfoOptions {
   global?: boolean
 }
 
+interface PublishResponse {
+  success: boolean
+  message?: string
+  tokens_sent?: number
+  tokens_found?: number
+  errors?: string[]
+}
+
 /**
  * Composable réutilisable pour publier une information municipale et envoyer les notifications.
  * Utilisable depuis la page des actualités (menu ligne), le modal d'édition, ou la page Notifications (global).
@@ -34,18 +42,35 @@ export const usePublishMunicipalInfo = (options: UsePublishMunicipalInfoOptions 
 
     isPublishing.value = true
     try {
-      await $fetch(`/api/municipal-info/${info.id}/publish`, {
+      const response = await $fetch<PublishResponse>(`/api/municipal-info/${info.id}/publish`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: isGlobal ? { global: true } : { commune_id: info.commune_id || currentCommune.value?.id }
       })
-      toast.add({
-        title: 'Succès',
-        description: isGlobal
-          ? 'La notification a été envoyée à tous les utilisateurs'
-          : 'La notification a été envoyée aux utilisateurs',
-        color: 'success'
-      })
+
+      if (!response.success) {
+        throw createError({
+          statusCode: 500,
+          message: response.message || 'Aucune notification n’a pu être envoyée'
+        })
+      }
+
+      if (!response.tokens_sent || response.tokens_sent === 0) {
+        toast.add({
+          title: 'Aucun envoi',
+          description: response.message || 'Aucun token actif trouvé pour cette publication.',
+          color: 'warning'
+        })
+      } else {
+        toast.add({
+          title: 'Succès',
+          description: isGlobal
+            ? `${response.tokens_sent} notification(s) envoyée(s) à tous les utilisateurs`
+            : `${response.tokens_sent} notification(s) envoyée(s) aux utilisateurs`,
+          color: 'success'
+        })
+      }
+
       options.onSuccess?.()
     } catch (error: unknown) {
       const message = error instanceof Error

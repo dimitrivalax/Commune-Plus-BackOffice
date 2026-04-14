@@ -133,6 +133,7 @@ export default eventHandler(async (event) => {
   `)
 
   let notificationsRows: StatsRow[] = []
+  let uniqueNotificationClicksTotal = 0
   try {
     notificationsRows = await queryPosthogHogQL(`
       SELECT
@@ -172,9 +173,20 @@ export default eventHandler(async (event) => {
       ORDER BY unique_clicks DESC, sent_events DESC
       LIMIT 20
     `)
+
+    const uniqueNotificationClicksRows = await queryPosthogHogQL(`
+      SELECT count(DISTINCT distinct_id) AS total
+      FROM events
+      WHERE event = 'notification_clicked'
+        AND ${timeFilter}
+        AND ${mobileFilter}
+        ${communeFilter}
+    `)
+    uniqueNotificationClicksTotal = toNumber(uniqueNotificationClicksRows[0]?.total)
   } catch (error) {
     console.warn('[stats-mobile] notifications_performance fallback to empty:', error)
     notificationsRows = []
+    uniqueNotificationClicksTotal = 0
   }
 
   const actualiteIds = topActualitesRows
@@ -250,10 +262,7 @@ export default eventHandler(async (event) => {
       0,
     ),
     signalements_count: toNumber(signalementRows[0]?.total),
-    unique_notification_clicks: notifications.reduce(
-      (sum, item) => sum + item.unique_clicks,
-      0,
-    ),
+    unique_notification_clicks: uniqueNotificationClicksTotal,
   }
 
   return {

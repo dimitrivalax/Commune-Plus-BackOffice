@@ -168,7 +168,7 @@ const isLoading = computed(() => status.value === 'pending')
           </UFormField>
         </div>
 
-        <div class="grid gap-3 md:grid-cols-4">
+        <div class="grid gap-3 md:grid-cols-3">
           <UCard>
             <template #header>Vues uniques actualites</template>
             <div class="text-2xl font-semibold">
@@ -187,15 +187,9 @@ const isLoading = computed(() => status.value === 'pending')
               {{ kpis?.signalements_count ?? 0 }}
             </div>
           </UCard>
-          <UCard>
-            <template #header>Clics uniques notifications</template>
-            <div class="text-2xl font-semibold">
-              {{ kpis?.unique_notification_clicks ?? 0 }}
-            </div>
-          </UCard>
         </div>
 
-        <div class="grid gap-3 md:grid-cols-2">
+        <div class="grid gap-3 md:grid-cols-1">
           <UCard>
             <template #header>Top actualites (vues uniques)</template>
             <ul v-if="topActualites.length > 0" class="space-y-2">
@@ -210,7 +204,8 @@ const isLoading = computed(() => status.value === 'pending')
             </ul>
             <p v-else class="text-sm text-muted">Aucune donnee.</p>
           </UCard>
-
+        </div>
+        <div class="grid gap-3 md:grid-cols-1">
           <UCard>
             <template #header>Top propositions (vues uniques)</template>
             <ul v-if="topPropositions.length > 0" class="space-y-2">
