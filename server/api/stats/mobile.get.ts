@@ -209,48 +209,70 @@ export default eventHandler(async (event) => {
     loadTitles('proposition', [...new Set([...propositionIds, ...notificationPropositionIds])]),
   ])
 
-  const topActualites = topActualitesRows.map((row: StatsRow) => {
-    const id = String(row.actualite_id || '')
-    return {
-      id,
-      title: actualiteTitles.get(id) || id || 'Actualite inconnue',
-      unique_views: toNumber(row.unique_views),
-    }
-  })
+  const topActualites = topActualitesRows
+    .map((row: StatsRow) => {
+      const id = String(row.actualite_id || '')
+      const title = actualiteTitles.get(id)
+      if (!title) return null
+      return {
+        id,
+        title,
+        unique_views: toNumber(row.unique_views),
+      }
+    })
+    .filter((item): item is { id: string, title: string, unique_views: number } => item !== null)
 
-  const topPropositions = topPropositionsRows.map((row: StatsRow) => {
-    const id = String(row.proposition_id || '')
-    return {
-      id,
-      title: propositionTitles.get(id) || id || 'Proposition inconnue',
-      unique_views: toNumber(row.unique_views),
-    }
-  })
+  const topPropositions = topPropositionsRows
+    .map((row: StatsRow) => {
+      const id = String(row.proposition_id || '')
+      const title = propositionTitles.get(id)
+      if (!title) return null
+      return {
+        id,
+        title,
+        unique_views: toNumber(row.unique_views),
+      }
+    })
+    .filter((item): item is { id: string, title: string, unique_views: number } => item !== null)
 
-  const notifications = notificationsRows.map((row: StatsRow) => {
+  const notifications = notificationsRows
+    .map((row: StatsRow) => {
     const targetType = String(row.target_type || 'other')
     const targetId = String(row.target_id || '')
     const sentTotal = toNumber(row.sent_events, 0)
     const uniqueClicks = toNumber(row.unique_clicks)
     const ctr = sentTotal > 0 ? Math.round((uniqueClicks / sentTotal) * 1000) / 10 : 0
 
-    const targetTitle
+      const targetTitle
       = targetType === 'actualite'
-        ? actualiteTitles.get(targetId) || targetId
+        ? actualiteTitles.get(targetId)
         : targetType === 'proposition'
-          ? propositionTitles.get(targetId) || targetId
+          ? propositionTitles.get(targetId)
           : targetId || 'N/A'
 
-    return {
-      notification_id: String(row.notification_id || ''),
-      target_type: targetType,
-      target_id: targetId,
-      target_title: targetTitle,
-      sent_total: sentTotal,
-      unique_clicks: uniqueClicks,
-      ctr_percent: ctr,
+    if (!targetTitle) {
+      return null
     }
-  })
+
+      return {
+        notification_id: String(row.notification_id || ''),
+        target_type: targetType,
+        target_id: targetId,
+        target_title: targetTitle,
+        sent_total: sentTotal,
+        unique_clicks: uniqueClicks,
+        ctr_percent: ctr,
+      }
+    })
+    .filter((item): item is {
+      notification_id: string
+      target_type: string
+      target_id: string
+      target_title: string
+      sent_total: number
+      unique_clicks: number
+      ctr_percent: number
+    } => item !== null)
 
   const kpis = {
     unique_actualites_views: topActualites.reduce(
