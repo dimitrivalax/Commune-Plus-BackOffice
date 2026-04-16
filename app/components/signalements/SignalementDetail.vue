@@ -1,171 +1,154 @@
 <script setup lang="ts">
-import { format } from "date-fns";
-import type { Signalement } from "~/types";
+import { format } from 'date-fns'
+import type { Signalement } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const props = defineProps<{
-  signalement: Signalement;
-}>();
+  signalement: Signalement
+}>()
 
 const emits = defineEmits<{
-  close: [];
-  update: [signalement: Signalement];
-}>();
+  close: []
+  update: [signalement: Signalement]
+}>()
 
-const toast = useToast();
-const { session } = useSupabase();
+const toast = useToast()
+const { updateSignalement: updateSignalementRequest } = useSignalementsService()
 
-const localStatus = ref<Signalement["status"]>(props.signalement.status);
-const localReponse = ref<string | null>(props.signalement.reponse);
-const isSaving = ref(false);
-const isImageModalOpen = ref(false);
-
-const authHeaders = computed(() => {
-  const currentSession = session.value;
-  if (!currentSession?.access_token) {
-    return {};
-  }
-  return {
-    Authorization: `Bearer ${currentSession.access_token}`,
-  };
-});
+const localStatus = ref<Signalement['status']>(props.signalement.status)
+const localReponse = ref<string | null>(props.signalement.reponse)
+const isSaving = ref(false)
+const isImageModalOpen = ref(false)
 
 watch(
   () => props.signalement,
   (newSignalement) => {
-    localStatus.value = newSignalement.status;
-    localReponse.value = newSignalement.reponse;
+    localStatus.value = newSignalement.status
+    localReponse.value = newSignalement.reponse
   },
-  { immediate: true },
-);
+  { immediate: true }
+)
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "en_attente":
-      return "warning";
-    case "en_cours":
-      return "info";
-    case "traite":
-      return "success";
-    case "archive":
-      return "neutral";
+    case 'en_attente':
+      return 'warning'
+    case 'en_cours':
+      return 'info'
+    case 'traite':
+      return 'success'
+    case 'archive':
+      return 'neutral'
     default:
-      return "neutral";
+      return 'neutral'
   }
-};
+}
 
 const getStatusLabel = (status: string) => {
   switch (status) {
-    case "en_attente":
-      return "En Attente";
-    case "en_cours":
-      return "En cours";
-    case "traite":
-      return "Traité";
-    case "archive":
-      return "Archivé";
+    case 'en_attente':
+      return 'En Attente'
+    case 'en_cours':
+      return 'En cours'
+    case 'traite':
+      return 'Traité'
+    case 'archive':
+      return 'Archivé'
     default:
-      return status;
+      return status
   }
-};
+}
 
 const statusOptions = computed(() => [
-  { label: "En Attente", value: "en_attente" },
-  { label: "En cours", value: "en_cours" },
-  { label: "Traité", value: "traite" },
-  { label: "Archivé", value: "archive" },
-]);
+  { label: 'En Attente', value: 'en_attente' },
+  { label: 'En cours', value: 'en_cours' },
+  { label: 'Traité', value: 'traite' },
+  { label: 'Archivé', value: 'archive' }
+])
 
 const hasChanges = computed(() => {
   return (
-    localStatus.value !== props.signalement.status ||
-    localReponse.value !== props.signalement.reponse
-  );
-});
+    localStatus.value !== props.signalement.status
+    || localReponse.value !== props.signalement.reponse
+  )
+})
 
 const updateSignalement = async () => {
   // Ne rien faire si rien n'a changé
   if (!hasChanges.value) {
-    return;
+    return
   }
 
-  isSaving.value = true;
+  isSaving.value = true
   try {
     const updateBody: {
-      status?: Signalement["status"];
-      reponse?: string | null;
-    } = {};
+      status?: Signalement['status']
+      reponse?: string | null
+    } = {}
 
     if (localStatus.value !== props.signalement.status) {
-      updateBody.status = localStatus.value;
+      updateBody.status = localStatus.value
     }
 
     if (localReponse.value !== props.signalement.reponse) {
-      updateBody.reponse = localReponse.value || null;
+      updateBody.reponse = localReponse.value || null
     }
 
-    const updated = await $fetch<Signalement>(
-      `/api/signalements/${props.signalement.id}`,
-      {
-        method: "PUT",
-        body: updateBody,
-        headers: authHeaders.value,
-      },
-    );
+    const updated = await updateSignalementRequest(props.signalement.id, updateBody)
 
     // Émettre l'événement pour mettre à jour le signalement dans le parent
-    emits("update", updated);
+    emits('update', updated)
 
     toast.add({
-      title: "Modifications enregistrées",
-      description: "Le signalement a été mis à jour avec succès",
-      icon: "i-lucide-check-circle",
-      color: "success",
-    });
-  } catch (error: any) {
+      title: 'Modifications enregistrées',
+      description: 'Le signalement a été mis à jour avec succès',
+      icon: 'i-lucide-check-circle',
+      color: 'success'
+    })
+  } catch (error: unknown) {
     toast.add({
-      title: "Erreur",
-      description:
-        error.message || "Impossible de mettre à jour le signalement",
-      icon: "i-lucide-alert-circle",
-      color: "error",
-    });
+      title: 'Erreur',
+      description: getErrorMessage(error, 'Impossible de mettre à jour le signalement'),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
   } finally {
-    isSaving.value = false;
+    isSaving.value = false
   }
-};
+}
 
-const updateStatus = async (newStatus: Signalement["status"]) => {
-  localStatus.value = newStatus;
-  await updateSignalement();
-};
+const updateStatus = async (newStatus: Signalement['status']) => {
+  localStatus.value = newStatus
+  await updateSignalement()
+}
 
 const dropdownItems = computed(() => [
   [
     {
-      label: "Marquer comme En Attente",
-      icon: "i-lucide-clock",
-      onSelect: () => updateStatus("en_attente"),
+      label: 'Marquer comme En Attente',
+      icon: 'i-lucide-clock',
+      onSelect: () => updateStatus('en_attente')
     },
     {
-      label: "Marquer comme En cours",
-      icon: "i-lucide-play-circle",
-      onSelect: () => updateStatus("en_cours"),
+      label: 'Marquer comme En cours',
+      icon: 'i-lucide-play-circle',
+      onSelect: () => updateStatus('en_cours')
     },
     {
-      label: "Marquer comme Traité",
-      icon: "i-lucide-check-circle",
-      onSelect: () => updateStatus("traite"),
+      label: 'Marquer comme Traité',
+      icon: 'i-lucide-check-circle',
+      onSelect: () => updateStatus('traite')
     },
     {
-      label: "Marquer comme Archivé",
-      icon: "i-lucide-archive",
-      onSelect: () => updateStatus("archive"),
-    },
-  ],
-]);
+      label: 'Marquer comme Archivé',
+      icon: 'i-lucide-archive',
+      onSelect: () => updateStatus('archive')
+    }
+  ]
+])
 
-const { displayAddress, showLocalisation, isResolvingAddress } =
-  useSignalementAddress(toRef(props, "signalement"));
+const { displayAddress, showLocalisation, isResolvingAddress }
+  = useSignalementAddress(toRef(props, 'signalement'))
 </script>
 
 <template>
@@ -173,7 +156,7 @@ const { displayAddress, showLocalisation, isResolvingAddress } =
     id="signalement-2"
     :ui="{
       root: 'relative flex flex-col min-w-0 h-full !min-h-0 overflow-hidden shrink',
-      body: 'flex flex-col gap-4 sm:gap-6 flex-1 min-h-0 overflow-hidden p-0',
+      body: 'flex flex-col gap-4 sm:gap-6 flex-1 min-h-0 overflow-hidden p-0'
     }"
   >
     <UDashboardNavbar title="Détail du signalement" :toggle="false">
@@ -235,32 +218,40 @@ const { displayAddress, showLocalisation, isResolvingAddress } =
 
     <div class="min-h-0 flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
       <div v-if="signalement.description">
-        <h3 class="font-semibold text-highlighted mb-2">Description</h3>
+        <h3 class="font-semibold text-highlighted mb-2">
+          Description
+        </h3>
         <p class="whitespace-pre-wrap">
           {{ signalement.description }}
         </p>
       </div>
 
       <div v-if="signalement.reponse">
-        <h3 class="font-semibold text-highlighted mb-2">Réponse</h3>
+        <h3 class="font-semibold text-highlighted mb-2">
+          Réponse
+        </h3>
         <p class="whitespace-pre-wrap">
           {{ signalement.reponse }}
         </p>
       </div>
 
       <div v-if="showLocalisation">
-        <h3 class="font-semibold text-highlighted mb-2">Localisation</h3>
+        <h3 class="font-semibold text-highlighted mb-2">
+          Localisation
+        </h3>
         <p class="mb-2">
           <span v-if="isResolvingAddress" class="text-muted">
             Résolution de l'adresse…
           </span>
-          <template v-else> 📍 {{ displayAddress }} </template>
+          <template v-else>
+            📍 {{ displayAddress }}
+          </template>
         </p>
         <p
           v-if="
-            signalement.address?.trim() &&
-            signalement.latitude != null &&
-            signalement.longitude != null
+            signalement.address?.trim()
+              && signalement.latitude != null
+              && signalement.longitude != null
           "
           class="text-muted text-sm"
         >
@@ -283,13 +274,15 @@ const { displayAddress, showLocalisation, isResolvingAddress } =
       </div>
 
       <div v-if="signalement.photo_url">
-        <h3 class="font-semibold text-highlighted mb-2">Photo</h3>
+        <h3 class="font-semibold text-highlighted mb-2">
+          Photo
+        </h3>
         <img
           :src="signalement.photo_url"
           :alt="`Photo du signalement ${signalement.id}`"
           class="h-48 w-48 object-cover rounded-lg border border-default cursor-pointer hover:opacity-90 transition-opacity"
           @click="isImageModalOpen = true"
-        />
+        >
         <p
           v-if="signalement.comment"
           class="mt-3 text-muted italic whitespace-pre-wrap"

@@ -26,34 +26,7 @@ const selectedTab = ref('all')
 const viewMode = ref<'table' | 'map'>('table')
 const searchQuery = ref('')
 
-const { currentCommune } = useCurrentCommune()
-const { session } = useSupabase()
-
-const signalements = ref<Signalement[]>([])
-const signalementsPending = ref(false)
-
-async function fetchSignalements() {
-  const token = session.value?.access_token
-  if (!token) return
-  signalementsPending.value = true
-  try {
-    const data = await $fetch<Signalement[]>('/api/signalements', {
-      query: { commune_id: currentCommune.value?.id },
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    signalements.value = data ?? []
-  } catch (e) {
-    signalements.value = []
-  } finally {
-    signalementsPending.value = false
-  }
-}
-
-watch([() => session.value?.access_token, currentCommune], () => {
-  if (import.meta.client && session.value?.access_token) {
-    fetchSignalements()
-  }
-}, { immediate: true })
+const { signalements, signalementsPending } = useSignalementsList()
 
 function signalementMatchesSearch(s: Signalement, q: string) {
   if (!q)
