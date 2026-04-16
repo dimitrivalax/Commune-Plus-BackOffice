@@ -5,11 +5,6 @@ import { getFirestore } from 'firebase-admin/firestore'
 function logFirebaseAdminProjectId(sa: Record<string, unknown>) {
   const projectId = String(sa.project_id || '').trim() || '<missing>'
   const databaseId = process.env.FIREBASE_DATABASE_NAME || '(default)'
-  const source = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-    ? 'FIREBASE_SERVICE_ACCOUNT_JSON'
-    : process.env.FCM_SERVICE_ACCOUNT_JSON
-      ? 'FCM_SERVICE_ACCOUNT_JSON'
-      : 'unknown'
   console.info(
     `[firebase-admin] initialized with project_id="${projectId}" database_id="${databaseId}"`
   )
@@ -22,7 +17,7 @@ function loadServiceAccountJson(): Record<string, unknown> {
       || ''
   if (!raw.trim()) {
     throw new Error(
-      'Missing FIREBASE_SERVICE_ACCOUNT_JSON (or FCM_SERVICE_ACCOUNT_JSON) for Firebase Admin',
+      'Missing FIREBASE_SERVICE_ACCOUNT_JSON (or FCM_SERVICE_ACCOUNT_JSON) for Firebase Admin'
     )
   }
   let jsonToParse = raw.trim()
@@ -49,7 +44,7 @@ export function getFirebaseAdminApp(): App {
   const sa = loadServiceAccountJson()
   logFirebaseAdminProjectId(sa)
   app = initializeApp({
-    credential: cert(sa as Parameters<typeof cert>[0]),
+    credential: cert(sa as Parameters<typeof cert>[0])
   })
   return app
 }

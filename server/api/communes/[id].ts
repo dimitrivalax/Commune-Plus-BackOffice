@@ -1,7 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import {
   requireAuth,
-  requireCurrentUserProfile,
+  requireCurrentUserProfile
 } from '../../utils/firebase-auth'
 import { getAdminFirestore } from '../../utils/firebase-admin-app'
 import { docWithId } from '../../utils/firestore-serialize'
@@ -20,14 +20,14 @@ export default eventHandler(async (event) => {
     if (!isGlobalAdmin) {
       throw createError({
         statusCode: 403,
-        message: 'La suppression est réservée aux administrateurs globaux',
+        message: 'La suppression est réservée aux administrateurs globaux'
       })
     }
   } else if (method === 'GET' || method === 'PUT') {
     if (!isGlobalAdmin && !isAssociated) {
       throw createError({
         statusCode: 403,
-        message: "Vous n'avez pas la permission d'accéder à cette commune",
+        message: 'Vous n\'avez pas la permission d\'accéder à cette commune'
       })
     }
   }
@@ -54,7 +54,7 @@ export default eventHandler(async (event) => {
         date_licence: body.date_licence ?? null,
         feature_reservations_salles: body.feature_reservations_salles,
         feature_propositions: body.feature_propositions,
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       })
       const snap = await ref.get()
       return docWithId(snap.id, snap.data())
@@ -67,10 +67,10 @@ export default eventHandler(async (event) => {
 
     throw createError({ statusCode: 405, message: 'Method not allowed' })
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred',
+      message: e.message || 'An error occurred'
     })
   }
 })

@@ -61,14 +61,19 @@ const today = new Date()
             class="p-1 month-day-cell border-r border-b border-default last:border-r-0"
             :class="{
               'bg-muted/20': !isSameMonth(day, currentDate),
-              'bg-warning/10': isDayInVacances(day),
+              'bg-warning/10': isDayInVacances(day)
             }"
           >
             <div class="text-xs text-muted mb-1" :class="{ 'font-bold text-primary': isSameDay(day, today) }">
               {{ format(day, 'd') }}
             </div>
             <div v-if="isDayInVacances(day)" class="mb-1">
-              <UBadge color="warning" variant="soft" label="Vacances" size="xs" />
+              <UBadge
+                color="warning"
+                variant="soft"
+                label="Vacances"
+                size="xs"
+              />
             </div>
             <UTooltip
               v-for="reservation in getReservationsForDay(day)"

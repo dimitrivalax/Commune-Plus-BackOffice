@@ -2,7 +2,7 @@ import { getFCMAccessToken, getFCMProjectId } from './fcm-auth'
 import { sendEmail } from './emails'
 import {
   deactivatePushTokenByValue,
-  fetchActivePushTokensByEmail,
+  fetchActivePushTokensByEmail
 } from './push-tokens-db'
 import { capturePosthogEvent } from './posthog-server'
 
@@ -19,7 +19,7 @@ interface SendReservationNotificationOptions {
 }
 
 export async function sendReservationNotification(
-  options: SendReservationNotificationOptions,
+  options: SendReservationNotificationOptions
 ): Promise<{
   push_success: boolean
   email_success: boolean
@@ -35,7 +35,7 @@ export async function sendReservationNotification(
     date,
     startTime,
     endTime,
-    status,
+    status
   } = options
 
   const title
@@ -49,7 +49,7 @@ export async function sendReservationNotification(
     push_success: false,
     email_success: false,
     tokens_sent: 0,
-    errors: [] as string[],
+    errors: [] as string[]
   }
   const notificationId = `reservation_${reservationId}_${status}_${Date.now()}`
 
@@ -83,31 +83,31 @@ export async function sendReservationNotification(
                   status: String(status),
                   notification_id: notificationId,
                   campaign_key: notificationId,
-                  commune_id: communeId ? String(communeId) : '',
+                  commune_id: communeId ? String(communeId) : ''
                 },
                 android: {
                   priority: 'high',
                   notification: {
                     sound: 'default',
                     channel_id: 'default',
-                    tag: `reservation_${reservationId}`,
-                  },
-                },
-              },
+                    tag: `reservation_${reservationId}`
+                  }
+                }
+              }
             }
 
             if (t.platform === 'ios') {
               ;(message.message as Record<string, unknown>).apns = {
                 headers: {
-                  'apns-topic': 'com.communeplus.app',
+                  'apns-topic': 'com.communeplus.app'
                 },
                 payload: {
                   aps: {
                     sound: 'default',
                     badge: 1,
-                    alert: { title, body },
-                  },
-                },
+                    alert: { title, body }
+                  }
+                }
               }
             }
 
@@ -116,11 +116,11 @@ export async function sendReservationNotification(
               {
                 method: 'POST',
                 headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(message),
-              },
+                body: JSON.stringify(message)
+              }
             )
 
             if (response.ok) {
@@ -170,7 +170,7 @@ export async function sendReservationNotification(
     const emailResult = await sendEmail({
       to: userEmail,
       subject: `[Commune Plus] ${title}`,
-      html: emailHtml,
+      html: emailHtml
     })
 
     result.email_success = emailResult.success
@@ -190,7 +190,7 @@ export async function sendReservationNotification(
     target_id: String(reservationId),
     commune_id: communeId ? String(communeId) : undefined,
     sent_count: result.tokens_sent,
-    platform: 'mixed',
+    platform: 'mixed'
   })
 
   return result

@@ -9,7 +9,7 @@ export default eventHandler(async (event) => {
   if (profile.role !== 'administrateur') {
     throw createError({
       statusCode: 403,
-      message: 'Accès réservé aux administrateurs',
+      message: 'Accès réservé aux administrateurs'
     })
   }
 
@@ -17,13 +17,13 @@ export default eventHandler(async (event) => {
     const db = getAdminFirestore()
     const snap = await db.collection('commune').orderBy('name').get()
     return snap.docs
-      .map((d) => docWithId(d.id, d.data()))
+      .map(d => docWithId(d.id, d.data()))
       .filter(Boolean)
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while fetching communes',
+      message: e.message || 'An error occurred while fetching communes'
     })
   }
 })

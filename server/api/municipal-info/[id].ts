@@ -23,7 +23,7 @@ export default eventHandler(async (event) => {
         content: body.content,
         category: body.category || null,
         image_url: body.image_url || null,
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       }
       if (body.event_date !== undefined) {
         patch.event_date = body.event_date
@@ -52,10 +52,10 @@ export default eventHandler(async (event) => {
 
     throw createError({ statusCode: 405, message: 'Method not allowed' })
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred',
+      message: e.message || 'An error occurred'
     })
   }
 })

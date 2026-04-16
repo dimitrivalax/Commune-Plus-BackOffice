@@ -22,8 +22,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
       await $fetch('/api/user/me', {
         headers: { Authorization: `Bearer ${session.access_token}` }
       })
-    } catch (e: any) {
-      const status = e?.statusCode ?? e?.status ?? e?.response?.status
+    } catch (error: unknown) {
+      const status
+        = typeof error === 'object' && error !== null
+          ? (error as { statusCode?: number, status?: number, response?: { status?: number } }).statusCode
+          ?? (error as { statusCode?: number, status?: number, response?: { status?: number } }).status
+          ?? (error as { statusCode?: number, status?: number, response?: { status?: number } }).response?.status
+          : undefined
       if (status === 403) {
         await signOut()
         return navigateTo({ path: '/login', query: { raison: 'desactive' } })

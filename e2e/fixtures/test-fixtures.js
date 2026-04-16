@@ -29,7 +29,8 @@ export const test = base.extend({
   settingsPage: async ({ page }, use) => {
     await use(new SettingsPage(page))
   },
-  backofficeCredentials: async ({}, use) => {
+  backofficeCredentials: async ({ browserName }, use) => {
+    void browserName
     await use({
       userEmail,
       userPassword,

@@ -1,7 +1,7 @@
 import {
   getCurrentUserProfile,
   getEffectiveCommuneIdForRequest,
-  requireAuth,
+  requireAuth
 } from '../utils/firebase-auth'
 import { getAdminFirestore } from '../utils/firebase-admin-app'
 import { docWithId } from '../utils/firestore-serialize'
@@ -23,21 +23,21 @@ export default eventHandler(async (event) => {
       .get()
 
     let rows = snap.docs
-      .map((d) => docWithId(d.id, d.data()))
+      .map(d => docWithId(d.id, d.data()))
       .filter(Boolean) as Record<string, unknown>[]
 
     if (communeId) {
-      rows = rows.filter((r) => r.commune_id === communeId)
+      rows = rows.filter(r => r.commune_id === communeId)
     } else if (profile?.role === 'utilisateur') {
       return []
     }
 
     return rows
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while fetching information commune',
+      message: e.message || 'An error occurred while fetching information commune'
     })
   }
 })

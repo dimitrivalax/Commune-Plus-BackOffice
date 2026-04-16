@@ -1,16 +1,16 @@
 <script setup lang="ts">
 defineProps<{
-  feature: "reservations" | "propositions";
-}>();
+  feature: 'reservations' | 'propositions'
+}>()
 
-const CONTACT_EMAIL = "contact@commune-plus.fr";
+const CONTACT_EMAIL = 'contact@commune-plus.fr'
 
 const leadText = {
   reservations:
-    "La fonctionnalité « Réservation de salles » est désactivée dans l’application mobile des citoyens.",
+    'La fonctionnalité « Réservation de salles » est désactivée dans l’application mobile des citoyens.',
   propositions:
-    "La fonctionnalité « Propositions » est désactivée dans l’application mobile des citoyens.",
-} as const;
+    'La fonctionnalité « Propositions » est désactivée dans l’application mobile des citoyens.'
+} as const
 </script>
 
 <template>

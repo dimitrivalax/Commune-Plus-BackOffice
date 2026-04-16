@@ -36,7 +36,7 @@ export default eventHandler(async (event) => {
         description: body.description,
         photo_url: body.photo_url || null,
         published: Boolean(body.published ?? false),
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       })
       const updated = await ref.get()
       return docWithId(updated.id, updated.data())
@@ -49,10 +49,10 @@ export default eventHandler(async (event) => {
 
     throw createError({ statusCode: 405, message: 'Method not allowed' })
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred',
+      message: e.message || 'An error occurred'
     })
   }
 })

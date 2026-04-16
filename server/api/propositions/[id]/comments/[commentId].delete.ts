@@ -1,7 +1,7 @@
 import {
   requireAuth,
   requireCurrentUserProfile,
-  assertCanManageCommune,
+  assertCanManageCommune
 } from '../../../../utils/firebase-auth'
 import { getAdminFirestore } from '../../../../utils/firebase-admin-app'
 

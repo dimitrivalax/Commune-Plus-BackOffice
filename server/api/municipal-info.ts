@@ -1,7 +1,7 @@
 import {
   requireAuth,
   getCurrentUserProfile,
-  getEffectiveCommuneIdForRequest,
+  getEffectiveCommuneIdForRequest
 } from '../utils/firebase-auth'
 import { getAdminFirestore } from '../utils/firebase-admin-app'
 import { docWithId } from '../utils/firestore-serialize'
@@ -29,7 +29,7 @@ export default eventHandler(async (event) => {
       .get()
 
     let rows = snap.docs
-      .map((d) => docWithId(d.id, d.data()))
+      .map(d => docWithId(d.id, d.data()))
       .filter(Boolean) as Record<string, unknown>[]
 
     rows = rows.map((row) => {
@@ -41,25 +41,25 @@ export default eventHandler(async (event) => {
         publication_status: status,
         scheduled_publish_at: row.scheduled_publish_at ?? null,
         published_at: row.published_at ?? null,
-        notification_sent_at: row.notification_sent_at ?? null,
+        notification_sent_at: row.notification_sent_at ?? null
       }
     })
 
     if (category) {
-      rows = rows.filter((r) => r.category === category)
+      rows = rows.filter(r => r.category === category)
     }
     if (communeId) {
-      rows = rows.filter((r) => r.commune_id === communeId)
+      rows = rows.filter(r => r.commune_id === communeId)
     } else if (profile?.role === 'utilisateur' && !isAdminNotifications) {
       return []
     }
 
     return rows
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while fetching municipal info',
+      message: e.message || 'An error occurred while fetching municipal info'
     })
   }
 })

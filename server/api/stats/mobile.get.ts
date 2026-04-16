@@ -1,6 +1,6 @@
 import {
   requireAuth,
-  requireCurrentUserProfile,
+  requireCurrentUserProfile
 } from '../../utils/firebase-auth'
 import { queryPosthogHogQL } from '../../utils/posthog-server'
 import { getAdminFirestore } from '../../utils/firebase-admin-app'
@@ -8,7 +8,7 @@ import { getAdminFirestore } from '../../utils/firebase-admin-app'
 type StatsRow = Record<string, unknown>
 
 function toSqlString(value: string) {
-  return `'${value.replace(/'/g, "\\'")}'`
+  return `'${value.replace(/'/g, '\\\'')}'`
 }
 
 function parseDateInput(value: string | undefined) {
@@ -31,7 +31,7 @@ function toNumber(value: unknown, fallback = 0) {
 async function loadTitles(collectionName: string, ids: string[]) {
   if (ids.length === 0) return new Map<string, string>()
   const db = getAdminFirestore()
-  const refs = ids.map((id) => db.collection(collectionName).doc(id))
+  const refs = ids.map(id => db.collection(collectionName).doc(id))
   const snaps = await db.getAll(...refs)
   const map = new Map<string, string>()
   for (const snap of snaps) {
@@ -40,7 +40,7 @@ async function loadTitles(collectionName: string, ids: string[]) {
     const title = String(
       (data.title as string | undefined)
       || (data.name as string | undefined)
-      || snap.id,
+      || snap.id
     )
     map.set(snap.id, title)
   }
@@ -60,10 +60,10 @@ export default eventHandler(async (event) => {
   defaultStart.setDate(now.getDate() - (period === '7d' ? 7 : 30))
 
   const startDate = parseDateInput(
-    typeof query.start === 'string' ? query.start : undefined,
+    typeof query.start === 'string' ? query.start : undefined
   ) || defaultStart
   const endDate = parseDateInput(
-    typeof query.end === 'string' ? query.end : undefined,
+    typeof query.end === 'string' ? query.end : undefined
   ) || now
 
   const isGlobalAdmin = profile.role === 'administrateur'
@@ -73,11 +73,11 @@ export default eventHandler(async (event) => {
   if (!isGlobalAdmin && communeId && !allowedCommuneIds.includes(communeId)) {
     throw createError({
       statusCode: 403,
-      message: "Vous n'avez pas la permission d'acceder a cette commune",
+      message: 'Vous n\'avez pas la permission d\'acceder a cette commune'
     })
   }
 
-  const mobileFilter = "coalesce(properties.platform, '') IN ('ios','android')"
+  const mobileFilter = 'coalesce(properties.platform, \'\') IN (\'ios\',\'android\')'
   const timeFilter = `timestamp >= toDateTime(${toSqlString(isoDateTime(startDate))}) AND timestamp <= toDateTime(${toSqlString(isoDateTime(endDate))})`
   const communeFilter = communeId
     ? `AND properties.commune_id = ${toSqlString(communeId)}`
@@ -190,23 +190,23 @@ export default eventHandler(async (event) => {
   }
 
   const actualiteIds = topActualitesRows
-    .map((row) => String(row.actualite_id || ''))
+    .map(row => String(row.actualite_id || ''))
     .filter(Boolean)
   const propositionIds = topPropositionsRows
-    .map((row) => String(row.proposition_id || ''))
+    .map(row => String(row.proposition_id || ''))
     .filter(Boolean)
   const notificationActualiteIds = notificationsRows
-    .filter((row) => String(row.target_type || '') === 'actualite')
-    .map((row) => String(row.target_id || ''))
+    .filter(row => String(row.target_type || '') === 'actualite')
+    .map(row => String(row.target_id || ''))
     .filter(Boolean)
   const notificationPropositionIds = notificationsRows
-    .filter((row) => String(row.target_type || '') === 'proposition')
-    .map((row) => String(row.target_id || ''))
+    .filter(row => String(row.target_type || '') === 'proposition')
+    .map(row => String(row.target_id || ''))
     .filter(Boolean)
 
   const [actualiteTitles, propositionTitles] = await Promise.all([
     loadTitles('actualite', [...new Set([...actualiteIds, ...notificationActualiteIds])]),
-    loadTitles('proposition', [...new Set([...propositionIds, ...notificationPropositionIds])]),
+    loadTitles('proposition', [...new Set([...propositionIds, ...notificationPropositionIds])])
   ])
 
   const topActualites = topActualitesRows
@@ -217,7 +217,7 @@ export default eventHandler(async (event) => {
       return {
         id,
         title,
-        unique_views: toNumber(row.unique_views),
+        unique_views: toNumber(row.unique_views)
       }
     })
     .filter((item): item is { id: string, title: string, unique_views: number } => item !== null)
@@ -230,29 +230,29 @@ export default eventHandler(async (event) => {
       return {
         id,
         title,
-        unique_views: toNumber(row.unique_views),
+        unique_views: toNumber(row.unique_views)
       }
     })
     .filter((item): item is { id: string, title: string, unique_views: number } => item !== null)
 
   const notifications = notificationsRows
     .map((row: StatsRow) => {
-    const targetType = String(row.target_type || 'other')
-    const targetId = String(row.target_id || '')
-    const sentTotal = toNumber(row.sent_events, 0)
-    const uniqueClicks = toNumber(row.unique_clicks)
-    const ctr = sentTotal > 0 ? Math.round((uniqueClicks / sentTotal) * 1000) / 10 : 0
+      const targetType = String(row.target_type || 'other')
+      const targetId = String(row.target_id || '')
+      const sentTotal = toNumber(row.sent_events, 0)
+      const uniqueClicks = toNumber(row.unique_clicks)
+      const ctr = sentTotal > 0 ? Math.round((uniqueClicks / sentTotal) * 1000) / 10 : 0
 
       const targetTitle
-      = targetType === 'actualite'
-        ? actualiteTitles.get(targetId)
-        : targetType === 'proposition'
-          ? propositionTitles.get(targetId)
-          : targetId || 'N/A'
+        = targetType === 'actualite'
+          ? actualiteTitles.get(targetId)
+          : targetType === 'proposition'
+            ? propositionTitles.get(targetId)
+            : targetId || 'N/A'
 
-    if (!targetTitle) {
-      return null
-    }
+      if (!targetTitle) {
+        return null
+      }
 
       return {
         notification_id: String(row.notification_id || ''),
@@ -261,7 +261,7 @@ export default eventHandler(async (event) => {
         target_title: targetTitle,
         sent_total: sentTotal,
         unique_clicks: uniqueClicks,
-        ctr_percent: ctr,
+        ctr_percent: ctr
       }
     })
     .filter((item): item is {
@@ -277,14 +277,14 @@ export default eventHandler(async (event) => {
   const kpis = {
     unique_actualites_views: topActualites.reduce(
       (sum, item) => sum + item.unique_views,
-      0,
+      0
     ),
     unique_propositions_views: topPropositions.reduce(
       (sum, item) => sum + item.unique_views,
-      0,
+      0
     ),
     signalements_count: toNumber(signalementRows[0]?.total),
-    unique_notification_clicks: uniqueNotificationClicksTotal,
+    unique_notification_clicks: uniqueNotificationClicksTotal
   }
 
   return {
@@ -293,11 +293,11 @@ export default eventHandler(async (event) => {
       period,
       start: startDate.toISOString(),
       end: endDate.toISOString(),
-      mobile_only: true,
+      mobile_only: true
     },
     kpis,
     top_actualites: topActualites,
     top_propositions: topPropositions,
-    notifications_performance: notifications,
+    notifications_performance: notifications
   }
 })

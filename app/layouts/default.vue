@@ -1,200 +1,200 @@
 <script setup lang="ts">
-import type { NavigationMenuItem } from "@nuxt/ui";
+import type { NavigationMenuItem } from '@nuxt/ui'
 
-const route = useRoute();
-const toast = useToast();
+const route = useRoute()
+const toast = useToast()
 
-const open = ref(false);
+const open = ref(false)
 
 const {
   currentCommune,
   userCommunes,
   userCommunesPending,
   setCurrentCommune,
-  refreshUserCommunes,
-} = useCurrentCommune();
-const { isAdministrator, refreshFromCache } = useCurrentUser();
+  refreshUserCommunes
+} = useCurrentCommune()
+const { isAdministrator, refreshFromCache } = useCurrentUser()
 
 const editCommuneModal = useTemplateRef<{ openModal: () => void }>(
-  "editCommuneModal",
-);
+  'editCommuneModal'
+)
 
-provide("refresh-communes", refreshUserCommunes);
+provide('refresh-communes', refreshUserCommunes)
 
 function openEditCommuneModal() {
-  editCommuneModal.value?.openModal();
+  editCommuneModal.value?.openModal()
 }
 
-provide("open-edit-commune", openEditCommuneModal);
+provide('open-edit-commune', openEditCommuneModal)
 
 // Gérer la sélection de la commune courante (réservé aux administrateurs)
 const selectedCommuneId = computed({
-  get: () => currentCommune.value?.id || "",
+  get: () => currentCommune.value?.id || '',
   set: (value: string) => {
-    const commune = userCommunes.value?.find((c) => c.id === value);
+    const commune = userCommunes.value?.find(c => c.id === value)
     if (commune) {
-      setCurrentCommune(commune);
+      setCurrentCommune(commune)
     }
-  },
-});
+  }
+})
 
 // Items du select (computed pour éviter recalculs et s'assurer que la liste est stable)
 const communeSelectItems = computed(() =>
-  (userCommunes.value || []).map((c) => ({
+  (userCommunes.value || []).map(c => ({
     label: `${c.name} (${c.postal_code})`,
-    value: c.id,
-  })),
-);
+    value: c.id
+  }))
+)
 
 // Liens de navigation : Utilisateurs et Communes uniquement pour les administrateurs
 const baseNavItems: NavigationMenuItem[] = [
   {
-    label: "Accueil",
-    icon: "i-lucide-house",
-    to: "/",
+    label: 'Accueil',
+    icon: 'i-lucide-house',
+    to: '/',
     onSelect: () => {
-      open.value = false;
-    },
+      open.value = false
+    }
   },
   {
-    label: "Actualités",
-    icon: "i-lucide-info",
-    to: "/actualites",
+    label: 'Actualités',
+    icon: 'i-lucide-info',
+    to: '/actualites',
     onSelect: () => {
-      open.value = false;
-    },
+      open.value = false
+    }
   },
   {
-    label: "Planning des réservations",
-    icon: "i-lucide-calendar",
-    to: "/reservations-salles",
+    label: 'Planning des réservations',
+    icon: 'i-lucide-calendar',
+    to: '/reservations-salles',
     onSelect: () => {
-      open.value = false;
-    },
+      open.value = false
+    }
   },
   {
-    label: "Salles",
-    icon: "i-lucide-building",
-    to: "/salles",
+    label: 'Salles',
+    icon: 'i-lucide-building',
+    to: '/salles',
     onSelect: () => {
-      open.value = false;
-    },
+      open.value = false
+    }
   },
   {
-    label: "Signalements",
-    icon: "i-lucide-alert-triangle",
-    to: "/signalements",
+    label: 'Signalements',
+    icon: 'i-lucide-alert-triangle',
+    to: '/signalements',
     onSelect: () => {
-      open.value = false;
-    },
+      open.value = false
+    }
   },
   {
-    label: "Propositions",
-    icon: "i-lucide-book",
-    to: "/propositions",
+    label: 'Propositions',
+    icon: 'i-lucide-book',
+    to: '/propositions',
     onSelect: () => {
-      open.value = false;
-    },
+      open.value = false
+    }
   },
   {
-    label: "Stats mobile",
-    icon: "i-lucide-chart-column",
-    to: "/stats-mobile",
+    label: 'Stats mobile',
+    icon: 'i-lucide-chart-column',
+    to: '/stats-mobile',
     onSelect: () => {
-      open.value = false;
-    },
-  },
-];
+      open.value = false
+    }
+  }
+]
 
 const adminOnlyNavItems: NavigationMenuItem[] = [
   {
-    label: "Notifications",
-    icon: "i-lucide-bell",
-    to: "/notifications",
+    label: 'Notifications',
+    icon: 'i-lucide-bell',
+    to: '/notifications',
     onSelect: () => {
-      open.value = false;
-    },
+      open.value = false
+    }
   },
   {
-    label: "Utilisateurs",
-    icon: "i-lucide-user-circle",
-    to: "/utilisateurs",
+    label: 'Utilisateurs',
+    icon: 'i-lucide-user-circle',
+    to: '/utilisateurs',
     onSelect: () => {
-      open.value = false;
-    },
+      open.value = false
+    }
   },
   {
-    label: "Communes",
-    icon: "i-lucide-map-pin",
-    to: "/communes",
+    label: 'Communes',
+    icon: 'i-lucide-map-pin',
+    to: '/communes',
     onSelect: () => {
-      open.value = false;
-    },
-  },
-];
+      open.value = false
+    }
+  }
+]
 
 const mainNavItems = computed(() =>
   isAdministrator.value
     ? [...baseNavItems, ...adminOnlyNavItems]
-    : baseNavItems,
-);
+    : baseNavItems
+)
 
-const links = computed<NavigationMenuItem[][]>(() => [[mainNavItems.value]]);
+const links = computed<NavigationMenuItem[][]>(() => [[mainNavItems.value]])
 
 const groups = computed(() => [
   {
-    id: "links",
-    label: "Aller à",
-    items: links.value.flat(),
+    id: 'links',
+    label: 'Aller à',
+    items: links.value.flat()
   },
   {
-    id: "code",
-    label: "Code",
+    id: 'code',
+    label: 'Code',
     items: [
       {
-        id: "source",
-        label: "Voir le code source de la page",
-        icon: "i-simple-icons-github",
-        to: `https://github.com/nuxt-ui-templates/dashboard/blob/main/app/pages${route.path === "/" ? "/index" : route.path}.vue`,
-        target: "_blank",
-      },
-    ],
-  },
-]);
+        id: 'source',
+        label: 'Voir le code source de la page',
+        icon: 'i-simple-icons-github',
+        to: `https://github.com/nuxt-ui-templates/dashboard/blob/main/app/pages${route.path === '/' ? '/index' : route.path}.vue`,
+        target: '_blank'
+      }
+    ]
+  }
+])
 
 onMounted(async () => {
-  refreshFromCache();
+  refreshFromCache()
 
-  const { hasDecided, accept, refuse } = useCookieConsent();
+  const { hasDecided, accept, refuse } = useCookieConsent()
   if (hasDecided.value) {
-    return;
+    return
   }
 
   toast.add({
     title:
-      "Nous utilisons des cookies internes pour améliorer votre expérience sur notre site web.",
+      'Nous utilisons des cookies internes pour améliorer votre expérience sur notre site web.',
     duration: 0,
     close: false,
     actions: [
       {
-        label: "Accepter",
-        color: "neutral",
-        variant: "outline",
+        label: 'Accepter',
+        color: 'neutral',
+        variant: 'outline',
         onClick: () => {
-          accept();
-        },
+          accept()
+        }
       },
       {
-        label: "Refuser",
-        color: "neutral",
-        variant: "ghost",
+        label: 'Refuser',
+        color: 'neutral',
+        variant: 'ghost',
         onClick: () => {
-          refuse();
-        },
-      },
-    ],
-  });
-});
+          refuse()
+        }
+      }
+    ]
+  })
+})
 </script>
 
 <template>
@@ -214,7 +214,7 @@ onMounted(async () => {
           rel="noopener noreferrer"
           class="mx-auto block w-fit rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          <img src="/logo.png" alt="Commune Plus" class="w-20 h-20" />
+          <img src="/logo.png" alt="Commune Plus" class="w-20 h-20">
         </a>
       </template>
 
@@ -269,7 +269,9 @@ onMounted(async () => {
               :items="communeSelectItems"
               placeholder="Sélectionner une commune"
             />
-            <div v-else class="py-2 text-sm text-muted">Aucune commune</div>
+            <div v-else class="py-2 text-sm text-muted">
+              Aucune commune
+            </div>
           </UFormField>
         </div>
 

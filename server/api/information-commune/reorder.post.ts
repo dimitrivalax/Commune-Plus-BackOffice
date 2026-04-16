@@ -36,7 +36,7 @@ export default eventHandler(async (event) => {
     .get()
 
   const rows = snap.docs
-    .map((d) => ({
+    .map(d => ({
       id: d.id,
       ordre_affichage: Number(d.get('ordre_affichage') ?? 0)
     }))

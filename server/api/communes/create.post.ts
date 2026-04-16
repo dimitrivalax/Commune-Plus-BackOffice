@@ -11,7 +11,7 @@ export default eventHandler(async (event) => {
   if (profile.role !== 'administrateur') {
     throw createError({
       statusCode: 403,
-      message: 'Accès réservé aux administrateurs',
+      message: 'Accès réservé aux administrateurs'
     })
   }
 
@@ -29,7 +29,7 @@ export default eventHandler(async (event) => {
       feature_reservations_salles: body.feature_reservations_salles !== false,
       feature_propositions: body.feature_propositions !== false,
       created_at: FieldValue.serverTimestamp(),
-      updated_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp()
     })
     const created = await ref.get()
     const row = docWithId(created.id, created.data())
@@ -38,11 +38,11 @@ export default eventHandler(async (event) => {
     }
     return row
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
       message:
-        e.message || 'Une erreur est survenue lors de la création de la commune',
+        e.message || 'Une erreur est survenue lors de la création de la commune'
     })
   }
 })

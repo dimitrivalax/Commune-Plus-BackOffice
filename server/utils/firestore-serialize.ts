@@ -17,7 +17,7 @@ export function serializeFirestoreData<T>(value: T): T {
     return value
   }
   if (Array.isArray(value)) {
-    return value.map((item) => serializeFirestoreData(item)) as T
+    return value.map(item => serializeFirestoreData(item)) as T
   }
   if (typeof value === 'object') {
     const out: Record<string, unknown> = {}
@@ -37,7 +37,7 @@ export function chunkArray<T>(arr: T[], size: number): T[][] {
 
 export function docWithId(
   id: string,
-  data: DocumentData | undefined,
+  data: DocumentData | undefined
 ): Record<string, unknown> | null {
   if (!data) return null
   const plain = { id, ...data } as Record<string, unknown>

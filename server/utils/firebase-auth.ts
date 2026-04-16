@@ -20,7 +20,7 @@ export async function requireAuth(event: H3Event): Promise<{ uid: string }> {
   if (!token) {
     throw createError({
       statusCode: 401,
-      message: 'Unauthorized: Authentication required',
+      message: 'Unauthorized: Authentication required'
     })
   }
   try {
@@ -29,13 +29,13 @@ export async function requireAuth(event: H3Event): Promise<{ uid: string }> {
   } catch {
     throw createError({
       statusCode: 401,
-      message: 'Unauthorized: Invalid token',
+      message: 'Unauthorized: Invalid token'
     })
   }
 }
 
 export async function getAuthenticatedUidForRequest(
-  event: H3Event,
+  event: H3Event
 ): Promise<{ uid: string } | null> {
   const token = getBearerToken(event)
   if (!token) return null
@@ -43,7 +43,7 @@ export async function getAuthenticatedUidForRequest(
 }
 
 export async function getAuthenticatedUidFromToken(
-  tokenRaw: string,
+  tokenRaw: string
 ): Promise<{ uid: string } | null> {
   const token = tokenRaw.replace(/^Bearer\s+/i, '').trim()
   if (!token) return null
@@ -77,7 +77,7 @@ async function loadProfileForUid(uid: string): Promise<CurrentUserProfile | null
   if (utilisateurData.is_active === false) {
     throw createError({
       statusCode: 403,
-      message: COMPTE_DESACTIVE_MESSAGE,
+      message: COMPTE_DESACTIVE_MESSAGE
     })
   }
 
@@ -88,13 +88,13 @@ async function loadProfileForUid(uid: string): Promise<CurrentUserProfile | null
     .get()
 
   const communeIds = assocSnap.docs
-    .map((d) => d.get('commune_id') as string)
+    .map(d => d.get('commune_id') as string)
     .filter(Boolean)
 
   return {
     utilisateurId,
     role: utilisateurData.role as UserProfileRole,
-    communeIds,
+    communeIds
   }
 }
 
@@ -102,7 +102,7 @@ async function loadProfileForUid(uid: string): Promise<CurrentUserProfile | null
  * Récupère le profil après requireAuth (par événement).
  */
 export async function getCurrentUserProfile(
-  event: H3Event,
+  event: H3Event
 ): Promise<CurrentUserProfile | null> {
   const token = getBearerToken(event)
   if (!token) return null
@@ -115,19 +115,19 @@ export async function getCurrentUserProfile(
 }
 
 export async function getCurrentUserProfileFromUid(
-  uid: string,
+  uid: string
 ): Promise<CurrentUserProfile | null> {
   return loadProfileForUid(uid)
 }
 
 export async function requireCurrentUserProfile(
-  event: H3Event,
+  event: H3Event
 ): Promise<CurrentUserProfile> {
   const profile = await getCurrentUserProfile(event)
   if (!profile) {
     throw createError({
       statusCode: 404,
-      message: 'Profil utilisateur non trouvé',
+      message: 'Profil utilisateur non trouvé'
     })
   }
   return profile
@@ -135,7 +135,7 @@ export async function requireCurrentUserProfile(
 
 export function getEffectiveCommuneIdForRequest(
   profile: CurrentUserProfile | null,
-  queryCommuneId: string | undefined,
+  queryCommuneId: string | undefined
 ): string | undefined {
   if (!profile) {
     return queryCommuneId
@@ -148,19 +148,19 @@ export function getEffectiveCommuneIdForRequest(
 
 export function assertCanManageCommune(
   profile: CurrentUserProfile,
-  communeId: string | undefined,
+  communeId: string | undefined
 ) {
   if (!communeId) {
     throw createError({
       statusCode: 400,
-      message: 'commune_id requis',
+      message: 'commune_id requis'
     })
   }
   if (profile.role === 'administrateur') return
   if (!profile.communeIds.includes(communeId)) {
     throw createError({
       statusCode: 403,
-      message: 'Accès refusé pour cette commune',
+      message: 'Accès refusé pour cette commune'
     })
   }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { format, isToday } from 'date-fns'
 import type { Signalement } from '~/types'
 
@@ -82,7 +82,7 @@ const isUnread = (signalement: Signalement) => {
     <div
       v-for="signalement in signalements"
       :key="signalement.id"
-      :ref="(el: any) => { if (el) signalementsRefs[signalement.id] = el }"
+      :ref="(el: Element | null) => { if (el) signalementsRefs[signalement.id] = el }"
     >
       <div
         class="p-4 sm:px-6 text-sm cursor-pointer border-l-2 transition-colors"

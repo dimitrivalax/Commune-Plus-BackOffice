@@ -2,14 +2,14 @@ import { requireAuth } from '../utils/firebase-auth'
 import {
   codePostalToZone,
   fetchVacancesScolaires,
-  type VacancesRecord,
+  type VacancesRecord
 } from '../utils/vacances-scolaires.service'
 
 function overlapsInterval(
   start: string,
   end: string,
   rangeStart?: string,
-  rangeEnd?: string,
+  rangeEnd?: string
 ): boolean {
   if (!rangeStart && !rangeEnd) return true
 
@@ -35,7 +35,7 @@ export default eventHandler(async (event) => {
   if (!codePostal) {
     throw createError({
       statusCode: 400,
-      message: 'Le code postal est requis',
+      message: 'Le code postal est requis'
     })
   }
 
@@ -44,7 +44,7 @@ export default eventHandler(async (event) => {
     return {
       zone: null,
       error: 'Zone inconnue pour ce code postal',
-      vacances: [],
+      vacances: []
     }
   }
 
@@ -73,19 +73,19 @@ export default eventHandler(async (event) => {
   let vacancesByYear: VacancesRecord[][]
   try {
     vacancesByYear = await Promise.all(
-      Array.from(schoolYears).map((anneeScolaire) =>
+      Array.from(schoolYears).map(anneeScolaire =>
         fetchVacancesScolaires(zone, {
           limit: 200,
-          anneeScolaire,
-        }),
-      ),
+          anneeScolaire
+        })
+      )
     )
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erreur inconnue'
     return {
       zone,
       error: message,
-      vacances: [],
+      vacances: []
     }
   }
 
@@ -97,13 +97,13 @@ export default eventHandler(async (event) => {
     }
   }
 
-  const vacances = Array.from(merged.values()).filter((vacance) =>
-    overlapsInterval(vacance.start_date, vacance.end_date, dateDebut, dateFin),
+  const vacances = Array.from(merged.values()).filter(vacance =>
+    overlapsInterval(vacance.start_date, vacance.end_date, dateDebut, dateFin)
   )
 
   return {
     zone,
     error: undefined,
-    vacances,
+    vacances
   }
 })

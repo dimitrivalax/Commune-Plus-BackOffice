@@ -16,7 +16,7 @@ function getUniqueByToken(rows: PushTokenRow[]): PushTokenRow[] {
 
 /** Tokens actifs pour un user_id (identifiant côté mobile). */
 export async function fetchActivePushTokensByUserId(
-  userId: string,
+  userId: string
 ): Promise<PushTokenRow[]> {
   const db = getAdminFirestore()
   const snap = await db
@@ -34,7 +34,7 @@ export async function fetchActivePushTokensByUserId(
 }
 
 export async function fetchActivePushTokensByEmail(
-  email: string,
+  email: string
 ): Promise<PushTokenRow[]> {
   const db = getAdminFirestore()
   const normalized = email.trim().toLowerCase()
@@ -54,7 +54,7 @@ export async function fetchActivePushTokensByEmail(
 
 /** Tokens pour publication d’info (une commune ou toutes). */
 export async function fetchPushTokensForPublish(
-  communeId?: string,
+  communeId?: string
 ): Promise<PushTokenRow[]> {
   const db = getAdminFirestore()
   const snap = communeId

@@ -4,7 +4,16 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+}
+
+interface ResendPayload {
+  from: string
+  to: string[]
+  subject: string
+  html: string
+  text: string
+  reply_to: string | string[]
 }
 
 serve(async (req) => {
@@ -23,7 +32,7 @@ serve(async (req) => {
       const errorMessage = 'RESEND_API_KEY is not configured. Please configure it in Supabase Dashboard > Settings > Edge Functions > Secrets.'
       console.error(errorMessage)
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: errorMessage,
           missingSecrets: ['RESEND_API_KEY'],
           hint: 'Configure RESEND_API_KEY in Supabase Dashboard > Settings > Edge Functions > Secrets'
@@ -45,7 +54,7 @@ serve(async (req) => {
 
     // Construire le contenu de l'email (ton personnel : la mairie reçoit comme si c'était l'habitant qui écrit)
     const emailSubject = `Signalement — ${signalementData.firstName} ${signalementData.lastName}`
-    
+
     // Version texte de l'email (rédigé à la première personne, au nom de l'habitant)
     let emailText = `Madame, Monsieur,
 
@@ -70,7 +79,7 @@ Ce mail a été créé avec la solution Commune Plus, l'application qui simplifi
 Si vous souhaitez en savoir plus : https://commune-plus.fr`
 
     // Version HTML de l'email (corps personnel, pied de page Commune Plus)
-    let emailHtml = `
+    const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -85,10 +94,12 @@ Si vous souhaitez en savoir plus : https://commune-plus.fr`
     ${signalementData.address ? `<p> ${signalementData.address}</p>` : ''}
     <p>${signalementData.description}</p>
     
-    ${signalementData.photoUrl ? `
+    ${signalementData.photoUrl
+      ? `
         <img src="${signalementData.photoUrl}" alt="Photo du signalement" style="max-width: 100%; height: auto; margin-top: 20px;">
         <a href="${signalementData.photoUrl}"  target="_blank">Voir la photo</a>
-      ` : ''}
+      `
+      : ''}
   </div>
   </div>
 
@@ -104,7 +115,7 @@ Si vous souhaitez en savoir plus : https://commune-plus.fr`
     `.trim()
 
     // Préparer les options d'envoi Resend
-    const resendPayload: any = {
+    const resendPayload: ResendPayload = {
       from: `${signalementData.firstName} ${signalementData.lastName} <${resendFromEmail}>`,
       to: [signalementData.mairieEmail],
       subject: emailSubject,
@@ -141,12 +152,12 @@ Si vous souhaitez en savoir plus : https://commune-plus.fr`
       JSON.stringify({ success: true, message: 'Email sent successfully' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to send email'
     console.error('Error sending email:', error)
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to send email' }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
-

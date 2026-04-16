@@ -33,10 +33,13 @@ async function onSubmit() {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error
+      ? error.message
+      : 'Une erreur est survenue lors de la suppression'
     toast.add({
       title: 'Erreur',
-      description: error.message || 'Une erreur est survenue lors de la suppression',
+      description: message,
       color: 'error'
     })
   }

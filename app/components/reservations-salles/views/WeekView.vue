@@ -53,7 +53,12 @@ const emit = defineEmits<{
             {{ format(day, 'd MMM', { locale: fr }) }}
           </div>
           <div v-if="isDayInVacances(day)" class="mt-1">
-            <UBadge color="warning" variant="soft" label="Vacances" size="xs" />
+            <UBadge
+              color="warning"
+              variant="soft"
+              label="Vacances"
+              size="xs"
+            />
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 import {
   requireAuth,
-  getCurrentUserProfile,
+  getCurrentUserProfile
 } from '../../utils/firebase-auth'
 import { getAdminFirestore } from '../../utils/firebase-admin-app'
 import { chunkArray, docWithId } from '../../utils/firestore-serialize'
@@ -13,7 +13,7 @@ export default eventHandler(async (event) => {
   if (!profile) {
     throw createError({
       statusCode: 404,
-      message: 'Utilisateur non trouvé',
+      message: 'Utilisateur non trouvé'
     })
   }
 
@@ -23,7 +23,7 @@ export default eventHandler(async (event) => {
     if (profile.role === 'administrateur') {
       const snap = await db.collection('commune').orderBy('name').get()
       return snap.docs
-        .map((d) => docWithId(d.id, d.data()))
+        .map(d => docWithId(d.id, d.data()))
         .filter(Boolean)
     }
 
@@ -46,11 +46,11 @@ export default eventHandler(async (event) => {
       String(a.name || '').localeCompare(String(b.name || ''), 'fr'))
     return all
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
       message:
-        e.message || 'An error occurred while fetching user communes',
+        e.message || 'An error occurred while fetching user communes'
     })
   }
 })

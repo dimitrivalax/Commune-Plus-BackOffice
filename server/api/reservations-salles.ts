@@ -2,13 +2,13 @@ import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
 import {
   requireAuth,
   getCurrentUserProfile,
-  getEffectiveCommuneIdForRequest,
+  getEffectiveCommuneIdForRequest
 } from '../utils/firebase-auth'
 import { getAdminFirestore } from '../utils/firebase-admin-app'
 import {
   chunkArray,
   docWithId,
-  serializeFirestoreData,
+  serializeFirestoreData
 } from '../utils/firestore-serialize'
 
 function mapReservationRow(res: Record<string, unknown>, salleInfo: Record<string, unknown>) {
@@ -67,8 +67,8 @@ function mapReservationRow(res: Record<string, unknown>, salleInfo: Record<strin
       id: salleInfo.id,
       nom: salleInfo.nom,
       adresse: salleInfo.adresse,
-      commune_id: salleInfo.commune_id,
-    },
+      commune_id: salleInfo.commune_id
+    }
   }
 }
 
@@ -95,7 +95,7 @@ export default eventHandler(async (event) => {
         .collection('salle')
         .where('commune_id', '==', communeId)
         .get()
-      salleIds = salaSnap.docs.map((d) => d.id)
+      salleIds = salaSnap.docs.map(d => d.id)
       if (salleIds.length === 0) return []
     }
 
@@ -113,12 +113,12 @@ export default eventHandler(async (event) => {
       resDocs.push(...snap.docs)
     }
 
-    let reservationsData = resDocs.map((d) =>
-      serializeFirestoreData({ id: d.id, ...d.data() }),
+    let reservationsData = resDocs.map(d =>
+      serializeFirestoreData({ id: d.id, ...d.data() })
     ) as Record<string, unknown>[]
 
     if (salleId) {
-      reservationsData = reservationsData.filter((r) => r.salle_id === salleId)
+      reservationsData = reservationsData.filter(r => r.salle_id === salleId)
     }
 
     if (dateDebut) {
@@ -142,8 +142,8 @@ export default eventHandler(async (event) => {
 
     const uniqueSalleIds = [
       ...new Set(
-        reservationsData.map((r) => r.salle_id as string).filter(Boolean),
-      ),
+        reservationsData.map(r => r.salle_id as string).filter(Boolean)
+      )
     ]
     const salleMap = new Map<string, Record<string, unknown>>()
     for (const sid of uniqueSalleIds) {
@@ -155,23 +155,23 @@ export default eventHandler(async (event) => {
     }
 
     const convertedReservations = reservationsData
-      .map((res) =>
-        mapReservationRow(res, salleMap.get(res.salle_id as string)!),
+      .map(res =>
+        mapReservationRow(res, salleMap.get(res.salle_id as string)!)
       )
-      .filter((x) => x !== null)
+      .filter(x => x !== null)
 
-    convertedReservations.sort((a: any, b: any) => {
-      const dateA = new Date(a.date_debut).getTime()
-      const dateB = new Date(b.date_debut).getTime()
+    convertedReservations.sort((a, b) => {
+      const dateA = new Date(String(a.date_debut)).getTime()
+      const dateB = new Date(String(b.date_debut)).getTime()
       return dateA - dateB
     })
 
     return convertedReservations
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while fetching reservations',
+      message: e.message || 'An error occurred while fetching reservations'
     })
   }
 })

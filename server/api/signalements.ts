@@ -2,7 +2,7 @@ import type { Signalement } from '~/types'
 import {
   requireAuth,
   getCurrentUserProfile,
-  getEffectiveCommuneIdForRequest,
+  getEffectiveCommuneIdForRequest
 } from '../utils/firebase-auth'
 import { getAdminFirestore } from '../utils/firebase-admin-app'
 import { docWithId } from '../utils/firestore-serialize'
@@ -35,14 +35,14 @@ export default eventHandler(async (event) => {
     }
 
     const rows = snap.docs
-      .map((d) => docWithId(d.id, d.data()))
+      .map(d => docWithId(d.id, d.data()))
       .filter(Boolean)
     return rows as unknown as Signalement[]
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while fetching signalements',
+      message: e.message || 'An error occurred while fetching signalements'
     })
   }
 })

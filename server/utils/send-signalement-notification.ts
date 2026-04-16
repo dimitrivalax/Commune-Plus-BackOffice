@@ -1,7 +1,7 @@
 import { getFCMAccessToken, getFCMProjectId } from './fcm-auth'
 import {
   deactivatePushTokenByValue,
-  fetchActivePushTokensByUserId,
+  fetchActivePushTokensByUserId
 } from './push-tokens-db'
 import { capturePosthogEvent } from './posthog-server'
 
@@ -16,7 +16,7 @@ interface SendSignalementNotificationOptions {
 }
 
 export async function sendSignalementNotification(
-  options: SendSignalementNotificationOptions,
+  options: SendSignalementNotificationOptions
 ): Promise<{
   success: boolean
   tokens_sent: number
@@ -30,7 +30,7 @@ export async function sendSignalementNotification(
     return {
       success: false,
       tokens_sent: 0,
-      errors: ['No user_id found for signalement'],
+      errors: ['No user_id found for signalement']
     }
   }
 
@@ -47,7 +47,7 @@ export async function sendSignalementNotification(
       return {
         success: false,
         tokens_sent: 0,
-        errors: ['FCM not configured'],
+        errors: ['FCM not configured']
       }
     }
 
@@ -58,11 +58,11 @@ export async function sendSignalementNotification(
     }
 
     const androidTokens = pushTokens
-      .filter((t) => t.platform === 'android')
-      .map((t) => t.token)
+      .filter(t => t.platform === 'android')
+      .map(t => t.token)
     const iosTokens = pushTokens
-      .filter((t) => t.platform === 'ios')
-      .map((t) => t.token)
+      .filter(t => t.platform === 'ios')
+      .map(t => t.token)
     const allTokens = [...androidTokens, ...iosTokens]
     let sentCount = 0
     const errors: string[] = []
@@ -81,7 +81,7 @@ export async function sendSignalementNotification(
               notification_id: notificationId,
               campaign_key: notificationId,
               commune_id: communeId ? String(communeId) : '',
-              ...(newStatus ? { status: String(newStatus) } : {}),
+              ...(newStatus ? { status: String(newStatus) } : {})
             } as Record<string, string>,
             android: {
               priority: 'high',
@@ -89,25 +89,25 @@ export async function sendSignalementNotification(
                 sound: 'default',
                 icon: 'ic_notification',
                 channel_id: 'default',
-                tag: `signalement_${signalementId}`,
-              },
-            },
-          },
+                tag: `signalement_${signalementId}`
+              }
+            }
+          }
         }
 
         if (platform === 'ios') {
           ;(message.message as Record<string, unknown>).apns = {
             headers: {
               'apns-priority': '10',
-              'apns-topic': 'com.communeplus.app',
+              'apns-topic': 'com.communeplus.app'
             },
             payload: {
               aps: {
                 sound: 'default',
                 badge: 1,
-                alert: { title, body },
-              },
-            },
+                alert: { title, body }
+              }
+            }
           }
         }
 
@@ -116,20 +116,20 @@ export async function sendSignalementNotification(
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify(message),
-          },
+            body: JSON.stringify(message)
+          }
         )
 
         if (!response.ok) {
           const errorData = await response
             .json()
             .catch(() => ({ error: { message: 'Unknown error' } }))
-          const errorMessage =
-            (errorData as { error?: { message?: string } }).error?.message
-            || `HTTP ${response.status}`
+          const errorMessage
+            = (errorData as { error?: { message?: string } }).error?.message
+              || `HTTP ${response.status}`
 
           if (
             errorMessage.includes('NOT_FOUND')
@@ -155,13 +155,13 @@ export async function sendSignalementNotification(
       target_id: String(signalementId),
       commune_id: communeId ? String(communeId) : undefined,
       sent_count: sentCount,
-      platform: 'mixed',
+      platform: 'mixed'
     })
 
     return {
       success: true,
       tokens_sent: sentCount,
-      errors: errors.length > 0 ? errors : undefined,
+      errors: errors.length > 0 ? errors : undefined
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)

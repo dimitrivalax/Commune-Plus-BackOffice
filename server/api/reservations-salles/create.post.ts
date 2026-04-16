@@ -26,12 +26,12 @@ function toTimePart(date: Date): string {
   return date.toTimeString().substring(0, 5)
 }
 
-function getSchoolYearBounds(anchorDate: Date): { start: Date; end: Date } {
+function getSchoolYearBounds(anchorDate: Date): { start: Date, end: Date } {
   const month = anchorDate.getMonth() + 1
   const startYear = month >= 8 ? anchorDate.getFullYear() : anchorDate.getFullYear() - 1
   return {
     start: new Date(startYear, 7, 1, 0, 0, 0, 0),
-    end: new Date(startYear + 1, 6, 31, 23, 59, 59, 999),
+    end: new Date(startYear + 1, 6, 31, 23, 59, 59, 999)
   }
 }
 
@@ -41,17 +41,17 @@ function getSchoolYearLabelsForAugToJul(anchorDate: Date): [string, string] {
   return [`${startYear - 1}-${startYear}`, `${startYear}-${startYear + 1}`]
 }
 
-function buildWeeklyOccurrences(dateDebut: Date, dateFin: Date): Array<{ start: Date; end: Date }> {
+function buildWeeklyOccurrences(dateDebut: Date, dateFin: Date): Array<{ start: Date, end: Date }> {
   const bounds = getSchoolYearBounds(dateDebut)
-  const occurrences: Array<{ start: Date; end: Date }> = []
+  const occurrences: Array<{ start: Date, end: Date }> = []
 
-  let startCursor = new Date(dateDebut)
-  let endCursor = new Date(dateFin)
+  const startCursor = new Date(dateDebut)
+  const endCursor = new Date(dateFin)
   while (startCursor <= bounds.end) {
     if (startCursor >= bounds.start) {
       occurrences.push({
         start: new Date(startCursor),
-        end: new Date(endCursor),
+        end: new Date(endCursor)
       })
     }
     startCursor.setDate(startCursor.getDate() + 7)
@@ -65,7 +65,7 @@ async function hasOverlapForSlot(
   salleId: string,
   date: string,
   startTime: string,
-  endTime: string,
+  endTime: string
 ) {
   const db = getAdminFirestore()
   const allSnap = await db
@@ -84,7 +84,7 @@ async function hasOverlapForSlot(
 
 async function createOneReservation(
   input: CreateReservationInput,
-  salleData: Record<string, unknown>,
+  salleData: Record<string, unknown>
 ) {
   const db = getAdminFirestore()
   const dateDebutDate = new Date(input.date_debut)
@@ -97,7 +97,7 @@ async function createOneReservation(
   if (overlapping) {
     throw createError({
       statusCode: 409,
-      message: 'Une réservation existe déjà pour cette salle à cet horaire',
+      message: 'Une réservation existe déjà pour cette salle à cet horaire'
     })
   }
 
@@ -115,13 +115,13 @@ async function createOneReservation(
     phone: input.telephone,
     status: input.status || 'en_attente',
     created_at: FieldValue.serverTimestamp(),
-    updated_at: FieldValue.serverTimestamp(),
+    updated_at: FieldValue.serverTimestamp()
   })
 
   const dataSnap = await ref.get()
   const data = serializeFirestoreData({
     id: dataSnap.id,
-    ...dataSnap.data(),
+    ...dataSnap.data()
   }) as Record<string, unknown>
 
   try {
@@ -139,7 +139,7 @@ async function createOneReservation(
         message: `${name} a demandé une réservation de salle`,
         is_read: false,
         created_at: FieldValue.serverTimestamp(),
-        read_at: null,
+        read_at: null
       })
     }
   } catch (notifyErr: unknown) {
@@ -156,7 +156,7 @@ async function createOneReservation(
       date_debut: input.date_debut,
       date_fin: input.date_fin,
       salle_nom: salleData.nom as string,
-      salle_adresse: (salleData.adresse as string) || null,
+      salle_adresse: (salleData.adresse as string) || null
     })
   } catch (emailError: unknown) {
     console.error('Error sending confirmation email:', emailError)
@@ -178,8 +178,8 @@ async function createOneReservation(
     salles: {
       id: input.salle_id,
       nom: salleData.nom,
-      adresse: salleData.adresse,
-    },
+      adresse: salleData.adresse
+    }
   }
 }
 
@@ -194,7 +194,7 @@ async function getVacancesForSalleCommune(salleData: Record<string, unknown>, an
   const [labelPrev, labelCurrent] = getSchoolYearLabelsForAugToJul(anchorDate)
   const [resPrev, resCurrent] = await Promise.all([
     getVacancesByCodePostal(commune.postal_code, { anneeScolaire: labelPrev, limit: 200 }),
-    getVacancesByCodePostal(commune.postal_code, { anneeScolaire: labelCurrent, limit: 200 }),
+    getVacancesByCodePostal(commune.postal_code, { anneeScolaire: labelCurrent, limit: 200 })
   ])
   let merged = [...(resPrev.vacances || []), ...(resCurrent.vacances || [])]
   if (merged.length === 0) {
@@ -228,7 +228,7 @@ export default eventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         message:
-          'Missing required fields: salle_id, date_debut, date_fin, nom, prenom, email, telephone',
+          'Missing required fields: salle_id, date_debut, date_fin, nom, prenom, email, telephone'
       })
     }
 
@@ -237,7 +237,7 @@ export default eventHandler(async (event) => {
     if (dateFin <= dateDebut) {
       throw createError({
         statusCode: 400,
-        message: 'date_fin must be after date_debut',
+        message: 'date_fin must be after date_debut'
       })
     }
 
@@ -254,7 +254,7 @@ export default eventHandler(async (event) => {
     if (isAssociation && !String(body.nom_association || '').trim()) {
       throw createError({
         statusCode: 400,
-        message: 'Le nom de l\'association est requis',
+        message: 'Le nom de l\'association est requis'
       })
     }
 
@@ -268,7 +268,7 @@ export default eventHandler(async (event) => {
         email: body.email,
         telephone: body.telephone,
         nom_association: isAssociation ? (body.nom_association || null) : null,
-        status: body.status || 'en_attente',
+        status: body.status || 'en_attente'
       }, salleData as Record<string, unknown>)
     }
 
@@ -277,7 +277,7 @@ export default eventHandler(async (event) => {
 
     let createdCount = 0
     let skippedVacancesCount = 0
-    const conflicts: Array<{ date: string; start_time: string; end_time: string }> = []
+    const conflicts: Array<{ date: string, start_time: string, end_time: string }> = []
     let firstCreated: Awaited<ReturnType<typeof createOneReservation>> | null = null
 
     for (const occurrence of occurrences) {
@@ -295,7 +295,7 @@ export default eventHandler(async (event) => {
         conflicts.push({
           date,
           start_time: startTime,
-          end_time: endTime,
+          end_time: endTime
         })
         continue
       }
@@ -309,7 +309,7 @@ export default eventHandler(async (event) => {
         email: body.email,
         telephone: body.telephone,
         nom_association: body.nom_association || null,
-        status: 'confirmée',
+        status: 'confirmée'
       }, salleData as Record<string, unknown>)
       createdCount += 1
       if (!firstCreated) firstCreated = created
@@ -332,22 +332,22 @@ export default eventHandler(async (event) => {
         salles: {
           id: body.salle_id,
           nom: salleData.nom,
-          adresse: salleData.adresse,
-        },
+          adresse: salleData.adresse
+        }
       }),
       recurrence_summary: {
         total: occurrences.length,
         createdCount,
         conflictCount: conflicts.length,
         skippedVacancesCount,
-        conflicts,
-      },
+        conflicts
+      }
     }
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while creating reservation',
+      message: e.message || 'An error occurred while creating reservation'
     })
   }
 })

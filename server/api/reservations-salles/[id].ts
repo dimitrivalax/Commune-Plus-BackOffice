@@ -25,7 +25,7 @@ export default eventHandler(async (event) => {
         throw createError({
           statusCode: 400,
           message:
-            'Missing required fields: date_debut, date_fin, nom, prenom, email, telephone',
+            'Missing required fields: date_debut, date_fin, nom, prenom, email, telephone'
         })
       }
 
@@ -33,7 +33,7 @@ export default eventHandler(async (event) => {
       if (body.status && !validStatuses.includes(body.status)) {
         throw createError({
           statusCode: 400,
-          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
         })
       }
 
@@ -42,7 +42,7 @@ export default eventHandler(async (event) => {
       if (dateFin <= dateDebut) {
         throw createError({
           statusCode: 400,
-          message: 'date_fin must be after date_debut',
+          message: 'date_fin must be after date_debut'
         })
       }
 
@@ -87,7 +87,7 @@ export default eventHandler(async (event) => {
       if (overlappingReservations.length > 0) {
         throw createError({
           statusCode: 409,
-          message: 'Une réservation existe déjà pour cette salle à cet horaire',
+          message: 'Une réservation existe déjà pour cette salle à cet horaire'
         })
       }
 
@@ -101,7 +101,7 @@ export default eventHandler(async (event) => {
         name,
         email: body.email,
         phone: body.telephone,
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       }
       if (body.status) updateData.status = body.status
 
@@ -109,7 +109,7 @@ export default eventHandler(async (event) => {
       const dataSnap = await ref.get()
       const data = serializeFirestoreData({
         id: dataSnap.id,
-        ...dataSnap.data(),
+        ...dataSnap.data()
       }) as Record<string, unknown>
 
       if (
@@ -120,7 +120,7 @@ export default eventHandler(async (event) => {
         const displayDate = new Date(date).toLocaleDateString('fr-FR', {
           day: 'numeric',
           month: 'long',
-          year: 'numeric',
+          year: 'numeric'
         })
         void sendReservationNotification({
           reservationId: String(data.id),
@@ -131,8 +131,8 @@ export default eventHandler(async (event) => {
           date: displayDate,
           startTime,
           endTime,
-          status: data.status as 'confirmée' | 'refusée',
-        }).catch((err) => console.error('reservation notification:', err))
+          status: data.status as 'confirmée' | 'refusée'
+        }).catch(err => console.error('reservation notification:', err))
       }
 
       return {
@@ -151,8 +151,8 @@ export default eventHandler(async (event) => {
         salles: {
           id: salleIdToUse,
           nom: salleData.nom,
-          adresse: salleData.adresse,
-        },
+          adresse: salleData.adresse
+        }
       }
     }
 
@@ -163,10 +163,10 @@ export default eventHandler(async (event) => {
 
     throw createError({ statusCode: 405, message: 'Method not allowed' })
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred',
+      message: e.message || 'An error occurred'
     })
   }
 })

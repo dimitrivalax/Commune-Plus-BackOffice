@@ -12,7 +12,7 @@ export default eventHandler(async (event) => {
   if (profile.role !== 'administrateur') {
     throw createError({
       statusCode: 403,
-      message: 'Accès réservé aux administrateurs',
+      message: 'Accès réservé aux administrateurs'
     })
   }
 
@@ -24,7 +24,7 @@ export default eventHandler(async (event) => {
       return []
     }
 
-    const utilisateurIds = utilisateursData.map((u) => u.id as string)
+    const utilisateurIds = utilisateursData.map(u => u.id as string)
     const db = getAdminFirestore()
     const assocByUser = new Map<string, { commune_id: string }[]>()
 
@@ -45,9 +45,9 @@ export default eventHandler(async (event) => {
       ...new Set(
         [...assocByUser.values()]
           .flat()
-          .map((a) => a.commune_id)
-          .filter(Boolean),
-      ),
+          .map(a => a.commune_id)
+          .filter(Boolean)
+      )
     ]
 
     const communesData: Record<string, unknown>[] = []
@@ -66,7 +66,7 @@ export default eventHandler(async (event) => {
     for (const [utilId, assocs] of assocByUser) {
       const list: typeof communesData = []
       for (const a of assocs) {
-        const c = communesData.find((x) => x.id === a.commune_id)
+        const c = communesData.find(x => x.id === a.commune_id)
         if (c) list.push(c)
       }
       communesByUtilisateurId.set(utilId, list)
@@ -78,17 +78,17 @@ export default eventHandler(async (event) => {
         ...utilisateur,
         is_active: utilisateur.is_active !== false,
         last_sign_in_at: utilisateur.last_sign_in_at || null,
-        communes,
+        communes
       }
     })
 
     return utilisateurs as unknown as Utilisateur[]
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     console.error('Error in utilisateurs API:', error)
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while fetching utilisateurs',
+      message: e.message || 'An error occurred while fetching utilisateurs'
     })
   }
 })

@@ -3,14 +3,14 @@ import { randomUUID } from 'node:crypto'
 import {
   requireAuth,
   requireCurrentUserProfile,
-  assertCanManageCommune,
+  assertCanManageCommune
 } from '../../../utils/firebase-auth'
 import { getAdminFirestore } from '../../../utils/firebase-admin-app'
 import { docWithId } from '../../../utils/firestore-serialize'
 import { z } from 'zod'
 
 const bodySchema = z.object({
-  content: z.string().min(1, 'Le commentaire ne peut pas être vide'),
+  content: z.string().min(1, 'Le commentaire ne peut pas être vide')
 })
 
 export default eventHandler(async (event) => {
@@ -20,7 +20,7 @@ export default eventHandler(async (event) => {
   if (!id) {
     throw createError({
       statusCode: 400,
-      message: 'Proposition ID is required',
+      message: 'Proposition ID is required'
     })
   }
 
@@ -50,7 +50,7 @@ export default eventHandler(async (event) => {
     author_type: 'commune',
     content: content.trim(),
     created_at: FieldValue.serverTimestamp(),
-    updated_at: FieldValue.serverTimestamp(),
+    updated_at: FieldValue.serverTimestamp()
   })
   const created = await cref.get()
   return docWithId(created.id, created.data())

@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import * as z from "zod";
-import type { FormSubmitEvent } from "@nuxt/ui";
-import type { Commune } from "~/types";
+import * as z from 'zod'
+import type { FormSubmitEvent } from '@nuxt/ui'
+import type { Commune } from '~/types'
 
 const props = defineProps<{
-  commune: Commune | null;
-}>();
+  commune: Commune | null
+}>()
 
 const schema = z.object({
-  name: z.string().min(1, "Le nom est requis"),
-  postal_code: z.string().min(1, "Le code postal est requis"),
-  email: z.string().email("Email invalide"),
-  logo_url: z.string().url("URL invalide").optional().or(z.literal("")),
-  date_licence: z.string().optional().or(z.literal("")),
+  name: z.string().min(1, 'Le nom est requis'),
+  postal_code: z.string().min(1, 'Le code postal est requis'),
+  email: z.string().email('Email invalide'),
+  logo_url: z.string().url('URL invalide').optional().or(z.literal('')),
+  date_licence: z.string().optional().or(z.literal('')),
   feature_reservations_salles: z.boolean(),
-  feature_propositions: z.boolean(),
-});
+  feature_propositions: z.boolean()
+})
 
-const open = ref(false);
+const open = ref(false)
 
-type Schema = z.output<typeof schema>;
+type Schema = z.output<typeof schema>
 
 const state = reactive<Partial<Schema>>({
   name: undefined,
@@ -28,48 +28,48 @@ const state = reactive<Partial<Schema>>({
   logo_url: undefined,
   date_licence: undefined,
   feature_reservations_salles: true,
-  feature_propositions: true,
-});
+  feature_propositions: true
+})
 
-const toast = useToast();
-const refresh = inject<() => void>("refresh-communes");
-const { getAuthHeaders } = useApiAuth();
-const { isAdministrator } = useCurrentUser();
+const toast = useToast()
+const refresh = inject<() => void>('refresh-communes')
+const { getAuthHeaders } = useApiAuth()
+const { isAdministrator } = useCurrentUser()
 
 function toInputDate(value?: string | null) {
-  if (!value) return "";
-  return value.slice(0, 10);
+  if (!value) return ''
+  return value.slice(0, 10)
 }
 
 watch(
   () => props.commune,
   (newCommune) => {
     if (newCommune) {
-      state.name = newCommune.name;
-      state.postal_code = newCommune.postal_code;
-      state.email = newCommune.email;
-      state.logo_url = newCommune.logo_url || "";
-      state.date_licence = toInputDate(newCommune.date_licence);
-      state.feature_reservations_salles =
-        newCommune.feature_reservations_salles !== false;
-      state.feature_propositions =
-        newCommune.feature_propositions !== false;
+      state.name = newCommune.name
+      state.postal_code = newCommune.postal_code
+      state.email = newCommune.email
+      state.logo_url = newCommune.logo_url || ''
+      state.date_licence = toInputDate(newCommune.date_licence)
+      state.feature_reservations_salles
+        = newCommune.feature_reservations_salles !== false
+      state.feature_propositions
+        = newCommune.feature_propositions !== false
     }
   },
-  { immediate: true },
-);
+  { immediate: true }
+)
 
 const emit = defineEmits<{
-  delete: [commune: Commune];
-  update: [commune: Commune];
-}>();
+  delete: [commune: Commune]
+  update: [commune: Commune]
+}>()
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
-  if (!props.commune) return;
+  if (!props.commune) return
 
   try {
     const updatedCommune = await $fetch<Commune>(`/api/communes/${props.commune.id}`, {
-      method: "PUT",
+      method: 'PUT',
       headers: getAuthHeaders(),
       body: {
         name: event.data.name,
@@ -78,60 +78,61 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         logo_url: event.data.logo_url || null,
         date_licence: event.data.date_licence || null,
         feature_reservations_salles: event.data.feature_reservations_salles,
-        feature_propositions: event.data.feature_propositions,
-      },
-    });
+        feature_propositions: event.data.feature_propositions
+      }
+    })
 
-    emit("update", updatedCommune);
+    emit('update', updatedCommune)
 
     toast.add({
-      title: "Succès",
+      title: 'Succès',
       description: `La commune "${event.data.name}" a été modifiée`,
-      color: "success",
-    });
+      color: 'success'
+    })
 
-    open.value = false;
+    open.value = false
 
     if (refresh) {
-      refresh();
+      refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message
+      = (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string')
+        ? error.message
+        : 'Une erreur est survenue lors de la modification'
     toast.add({
-      title: "Erreur",
-      description:
-        error.data?.message ||
-        error.message ||
-        "Une erreur est survenue lors de la modification",
-      color: "error",
-    });
+      title: 'Erreur',
+      description: message,
+      color: 'error'
+    })
   }
 }
 
 async function handleDelete() {
-  if (!props.commune) return;
+  if (!props.commune) return
 
-  open.value = false;
-  emit("delete", props.commune);
+  open.value = false
+  emit('delete', props.commune)
 }
 
 function openModal() {
   if (props.commune) {
-    state.name = props.commune.name;
-    state.postal_code = props.commune.postal_code;
-    state.email = props.commune.email;
-    state.logo_url = props.commune.logo_url || "";
-    state.date_licence = toInputDate(props.commune.date_licence);
-    state.feature_reservations_salles =
-      props.commune.feature_reservations_salles !== false;
-    state.feature_propositions =
-      props.commune.feature_propositions !== false;
-    open.value = true;
+    state.name = props.commune.name
+    state.postal_code = props.commune.postal_code
+    state.email = props.commune.email
+    state.logo_url = props.commune.logo_url || ''
+    state.date_licence = toInputDate(props.commune.date_licence)
+    state.feature_reservations_salles
+      = props.commune.feature_reservations_salles !== false
+    state.feature_propositions
+      = props.commune.feature_propositions !== false
+    open.value = true
   }
 }
 
 defineExpose({
-  openModal,
-});
+  openModal
+})
 </script>
 
 <template>
@@ -143,7 +144,9 @@ defineExpose({
     <template #body>
       <div v-if="commune" class="mb-4 p-3 bg-elevated rounded-lg space-y-2">
         <div>
-          <p class="text-sm text-muted">Date de création :</p>
+          <p class="text-sm text-muted">
+            Date de création :
+          </p>
           <p class="font-medium">
             {{
               commune.created_at
@@ -160,7 +163,12 @@ defineExpose({
         class="space-y-4"
         @submit="onSubmit"
       >
-        <UFormField label="Nom" placeholder="Venerque" name="name" required>
+        <UFormField
+          label="Nom"
+          placeholder="Venerque"
+          name="name"
+          required
+        >
           <UInput v-model="state.name" class="w-full" />
         </UFormField>
 
@@ -230,7 +238,7 @@ defineExpose({
             @load="
               (e) => ((e.target as HTMLImageElement).style.display = 'block')
             "
-          />
+          >
         </div>
 
         <div class="flex justify-between gap-2 pt-2">

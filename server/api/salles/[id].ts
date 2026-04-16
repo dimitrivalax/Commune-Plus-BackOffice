@@ -20,7 +20,7 @@ export default eventHandler(async (event) => {
         nombre_max_places: body.nombre_max_places,
         description: body.description || null,
         photo_url: body.photo_url || null,
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       })
       const snap = await ref.get()
       return docWithId(snap.id, snap.data())
@@ -33,10 +33,10 @@ export default eventHandler(async (event) => {
 
     throw createError({ statusCode: 405, message: 'Method not allowed' })
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred',
+      message: e.message || 'An error occurred'
     })
   }
 })

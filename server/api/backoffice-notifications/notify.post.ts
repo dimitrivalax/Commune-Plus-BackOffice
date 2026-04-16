@@ -5,7 +5,7 @@ import { getAdminFirestore } from '../../utils/firebase-admin-app'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type'
 }
 
 const notifySchema = z.object({
@@ -13,7 +13,7 @@ const notifySchema = z.object({
   entity_id: z.string().min(1).max(128),
   title: z.string().min(1).max(120).optional(),
   message: z.string().min(1).max(500).optional(),
-  requester_name: z.string().max(120).optional(),
+  requester_name: z.string().max(120).optional()
 })
 
 export default eventHandler(async (event) => {
@@ -40,8 +40,8 @@ export default eventHandler(async (event) => {
   const fallbackMessage
     = payload.requester_name && payload.requester_name.trim()
       ? `${payload.requester_name.trim()} a envoyé ${
-          payload.type === 'signalement' ? 'un signalement' : 'une réservation'
-        }`
+        payload.type === 'signalement' ? 'un signalement' : 'une réservation'
+      }`
       : payload.type === 'signalement'
         ? 'Un nouveau signalement a été créé'
         : 'Une nouvelle réservation a été créée'
@@ -53,7 +53,7 @@ export default eventHandler(async (event) => {
     message: payload.message || fallbackMessage,
     is_read: false,
     created_at: FieldValue.serverTimestamp(),
-    read_at: null,
+    read_at: null
   })
 
   return { success: true, created: true }

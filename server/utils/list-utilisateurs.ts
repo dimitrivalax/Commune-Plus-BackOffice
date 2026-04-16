@@ -15,20 +15,20 @@ export async function listUtilisateursWithLastSignIn(): Promise<
   const uids = [
     ...new Set(
       snap.docs
-        .map((d) => d.get('user_id') as string | undefined)
-        .filter(Boolean) as string[],
-    ),
+        .map(d => d.get('user_id') as string | undefined)
+        .filter(Boolean) as string[]
+    )
   ]
 
   const lastSignInByUid = new Map<string, string | null>()
   for (let i = 0; i < uids.length; i += 100) {
     const chunk = uids.slice(i, i + 100)
-    const res = await auth.getUsers(chunk.map((uid) => ({ uid })))
+    const res = await auth.getUsers(chunk.map(uid => ({ uid })))
     for (const u of res.users) {
       const t = u.metadata.lastSignInTime
       lastSignInByUid.set(
         u.uid,
-        t ? new Date(t).toISOString() : null,
+        t ? new Date(t).toISOString() : null
       )
     }
   }
@@ -40,7 +40,7 @@ export async function listUtilisateursWithLastSignIn(): Promise<
     return {
       ...serialized,
       last_sign_in_at: uid ? lastSignInByUid.get(uid) ?? null : null,
-      is_active: raw.is_active !== false,
+      is_active: raw.is_active !== false
     }
   })
 }

@@ -2,7 +2,7 @@ import {
   requireAuth,
   getCurrentUserProfile,
   getEffectiveCommuneIdForRequest,
-  assertCanManageCommune,
+  assertCanManageCommune
 } from '../utils/firebase-auth'
 import { getAdminFirestore } from '../utils/firebase-admin-app'
 import { docWithId } from '../utils/firestore-serialize'
@@ -15,7 +15,7 @@ const createPropositionSchema = z.object({
   name: z.string().min(3),
   description: z.string().min(10),
   photo_url: z.string().nullable().optional(),
-  comments_public: z.boolean().optional(),
+  comments_public: z.boolean().optional()
 })
 
 export default eventHandler(async (event) => {
@@ -46,13 +46,13 @@ export default eventHandler(async (event) => {
         votes_count: 0,
         is_archived: false,
         created_at: FieldValue.serverTimestamp(),
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       })
       const created = await ref.get()
       void sendNewPropositionNotification({
         propositionId: ref.id,
         communeId: payload.commune_id,
-        propositionName: payload.name.trim(),
+        propositionName: payload.name.trim()
       })
       return docWithId(created.id, created.data())
     }
@@ -77,18 +77,18 @@ export default eventHandler(async (event) => {
         .get()
     }
 
-    return snap.docs.map((d) => docWithId(d.id, d.data())).filter(Boolean)
+    return snap.docs.map(d => docWithId(d.id, d.data())).filter(Boolean)
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       throw createError({
         statusCode: 400,
-        message: `Validation error: ${error.issues.map((x) => x.message).join(', ')}`,
+        message: `Validation error: ${error.issues.map(x => x.message).join(', ')}`
       })
     }
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while fetching propositions',
+      message: e.message || 'An error occurred while fetching propositions'
     })
   }
 })

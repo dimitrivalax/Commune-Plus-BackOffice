@@ -12,8 +12,8 @@ export default eventHandler(async (event) => {
 
   // Galerie globale "commune-plus" réservée aux administrateurs
   const isGlobalGallery = communeId === 'commune-plus'
-  const canAccess =
-    isGlobalGallery
+  const canAccess
+    = isGlobalGallery
       ? profile.role === 'administrateur'
       : profile.role === 'administrateur' || profile.communeIds.includes(communeId)
   if (!canAccess) {

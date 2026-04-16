@@ -5,13 +5,13 @@ import { sendPropositionNotification } from '../../utils/send-proposition-notifi
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type'
 }
 
 const notifySchema = z.object({
   proposition_id: z.string().uuid(),
   type: z.enum(['vote', 'comment']),
-  comment_content: z.string().optional(),
+  comment_content: z.string().optional()
 })
 
 export default eventHandler(async (event) => {
@@ -25,8 +25,8 @@ export default eventHandler(async (event) => {
   if (!psnap.exists) {
     throw createError({ statusCode: 404, message: 'Proposition not found' })
   }
-  const pdata = psnap.data() || {};
-  const proposition = { id: psnap.id, ...pdata } as Record<string, unknown>;
+  const pdata = psnap.data() || {}
+  const proposition = { id: psnap.id, ...pdata } as Record<string, unknown>
 
   let title = ''
   let messageBody = ''
@@ -44,7 +44,7 @@ export default eventHandler(async (event) => {
     communeId: (proposition.commune_id as string | undefined) ?? null,
     title,
     body: messageBody,
-    type: validatedData.type,
+    type: validatedData.type
   })
 
   return result

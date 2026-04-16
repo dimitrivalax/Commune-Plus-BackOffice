@@ -1,95 +1,97 @@
 <script setup lang="ts">
-import * as z from "zod";
-import type { FormSubmitEvent } from "@nuxt/ui";
+import * as z from 'zod'
+import type { FormSubmitEvent } from '@nuxt/ui'
 
-const { user: supabaseUser, updateUserProfile } = useSupabase();
-const toast = useToast();
+const { user: supabaseUser, updateUserProfile } = useSupabase()
+const toast = useToast()
 
-const isOpen = ref(false);
-const loading = ref(false);
-const fileRef = ref<HTMLInputElement>();
+const isOpen = ref(false)
+const loading = ref(false)
+const fileRef = ref<HTMLInputElement>()
 
 const profileSchema = z.object({
-  first_name: z.string().min(2, "Trop court"),
-  last_name: z.string().min(2, "Trop court"),
+  first_name: z.string().min(2, 'Trop court'),
+  last_name: z.string().min(2, 'Trop court'),
   avatar_url: z.string().optional(),
-  bio: z.string().optional(),
-});
+  bio: z.string().optional()
+})
 
-type ProfileSchema = z.output<typeof profileSchema>;
+type ProfileSchema = z.output<typeof profileSchema>
 
 const state = reactive<Partial<ProfileSchema>>({
-  first_name: "",
-  last_name: "",
-  avatar_url: "",
-  bio: "",
-});
+  first_name: '',
+  last_name: '',
+  avatar_url: '',
+  bio: ''
+})
 
 watch(
   () => supabaseUser.value,
   (user) => {
     if (user) {
-      const dn = (user.displayName || "").trim();
-      const parts = dn.split(/\s+/).filter(Boolean);
-      state.first_name = parts[0] || "";
-      state.last_name = parts.slice(1).join(" ") || "";
-      state.avatar_url = user.photoURL || "";
-      state.bio = "";
+      const dn = (user.displayName || '').trim()
+      const parts = dn.split(/\s+/).filter(Boolean)
+      state.first_name = parts[0] || ''
+      state.last_name = parts.slice(1).join(' ') || ''
+      state.avatar_url = user.photoURL || ''
+      state.bio = ''
     }
   },
-  { immediate: true },
-);
+  { immediate: true }
+)
 
 async function onSubmit(event: FormSubmitEvent<ProfileSchema>) {
-  loading.value = true;
+  loading.value = true
   try {
     await updateUserProfile({
       displayName:
         `${event.data.first_name} ${event.data.last_name}`.trim(),
-      photoURL: event.data.avatar_url || null,
-    });
+      photoURL: event.data.avatar_url || null
+    })
 
     toast.add({
-      title: "Succès",
-      description: "Votre profil a été mis à jour.",
-      icon: "i-lucide-check",
-      color: "success",
-    });
-    isOpen.value = false;
-  } catch (error: any) {
+      title: 'Succès',
+      description: 'Votre profil a été mis à jour.',
+      icon: 'i-lucide-check',
+      color: 'success'
+    })
+    isOpen.value = false
+  } catch (error: unknown) {
+    const message = error instanceof Error
+      ? error.message
+      : 'Une erreur est survenue lors de la mise à jour.'
     toast.add({
-      title: "Erreur",
-      description:
-        error.message || "Une erreur est survenue lors de la mise à jour.",
-      icon: "i-lucide-x",
-      color: "error",
-    });
+      title: 'Erreur',
+      description: message,
+      icon: 'i-lucide-x',
+      color: 'error'
+    })
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
 function onFileChange(e: Event) {
-  const input = e.target as HTMLInputElement;
-  if (!input.files?.length) return;
+  const input = e.target as HTMLInputElement
+  if (!input.files?.length) return
 
   // Note: Here we would normally upload the file to Supabase Storage
   // For now, let's just use object URL as in the original settings page
-  state.avatar_url = URL.createObjectURL(input.files[0]!);
+  state.avatar_url = URL.createObjectURL(input.files[0]!)
 }
 
 function onFileClick() {
-  fileRef.value?.click();
+  fileRef.value?.click()
 }
 
 function openModal() {
-  console.log("Opening ProfileEditModal");
-  isOpen.value = true;
+  console.log('Opening ProfileEditModal')
+  isOpen.value = true
 }
 
 defineExpose({
-  openModal,
-});
+  openModal
+})
 </script>
 
 <template>
@@ -133,7 +135,7 @@ defineExpose({
               class="hidden"
               accept=".jpg, .jpeg, .png, .gif"
               @change="onFileChange"
-            />
+            >
           </div>
         </UFormField>
 

@@ -20,9 +20,9 @@ function signRequest(params: Record<string, string | number | undefined>): strin
   const { apiSecret } = getConfig()
   const exclude = new Set(['api_key', 'file', 'cloud_name', 'resource_type', 'signature'])
   const sorted = Object.keys(params)
-    .filter((k) => !exclude.has(k) && params[k] !== undefined && params[k] !== '')
+    .filter(k => !exclude.has(k) && params[k] !== undefined && params[k] !== '')
     .sort()
-  const str = sorted.map((k) => `${k}=${params[k]}`).join('&')
+  const str = sorted.map(k => `${k}=${params[k]}`).join('&')
   return createHash('sha1').update(str + apiSecret).digest('hex')
 }
 
@@ -73,7 +73,7 @@ export async function listGalleryImages(communeId: string, maxResults = 100): Pr
 export async function uploadGalleryImage(
   communeId: string,
   file: Buffer | string
-): Promise<{ secure_url: string; public_id: string }> {
+): Promise<{ secure_url: string, public_id: string }> {
   const { cloudName, apiKey } = getConfig()
   const folder = `galleries/${communeId}`
   const timestamp = Math.floor(Date.now() / 1000).toString()
@@ -108,7 +108,7 @@ export async function uploadGalleryImage(
     const err = await res.text()
     throw new Error(`Cloudinary upload failed: ${res.status} ${err}`)
   }
-  const data = (await res.json()) as { secure_url: string; public_id: string }
+  const data = (await res.json()) as { secure_url: string, public_id: string }
   return { secure_url: data.secure_url, public_id: data.public_id }
 }
 

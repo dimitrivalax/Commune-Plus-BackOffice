@@ -37,7 +37,7 @@ export default eventHandler(async (event) => {
   const result: CurrentUserMe = {
     id: profile.utilisateurId,
     role: profile.role,
-    communes,
+    communes
   }
 
   return result

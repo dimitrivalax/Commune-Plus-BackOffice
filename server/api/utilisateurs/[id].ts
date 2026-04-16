@@ -1,11 +1,10 @@
-import { FieldValue } from 'firebase-admin/firestore'
+import { FieldValue, FieldPath } from 'firebase-admin/firestore'
 import {
   requireAuth,
-  requireCurrentUserProfile,
+  requireCurrentUserProfile
 } from '../../utils/firebase-auth'
 import { getAdminAuth, getAdminFirestore } from '../../utils/firebase-admin-app'
 import { chunkArray, docWithId } from '../../utils/firestore-serialize'
-import { FieldPath } from 'firebase-admin/firestore'
 import { listUtilisateursWithLastSignIn } from '../../utils/list-utilisateurs'
 
 export default eventHandler(async (event) => {
@@ -15,7 +14,7 @@ export default eventHandler(async (event) => {
   if (profile.role !== 'administrateur') {
     throw createError({
       statusCode: 403,
-      message: 'Accès réservé aux administrateurs',
+      message: 'Accès réservé aux administrateurs'
     })
   }
 
@@ -27,7 +26,7 @@ export default eventHandler(async (event) => {
   try {
     if (method === 'GET') {
       const list = await listUtilisateursWithLastSignIn()
-      const utilisateurData = list.find((u) => u.id === id)
+      const utilisateurData = list.find(u => u.id === id)
       if (!utilisateurData) {
         throw createError({ statusCode: 404, message: 'Utilisateur not found' })
       }
@@ -36,7 +35,7 @@ export default eventHandler(async (event) => {
         .collection('utilisateur_commune')
         .where('utilisateur_id', '==', id)
         .get()
-      const communeIds = assocSnap.docs.map((d) => d.get('commune_id') as string)
+      const communeIds = assocSnap.docs.map(d => d.get('commune_id') as string)
       const communesData: Record<string, unknown>[] = []
       for (const ch of chunkArray(communeIds, 30)) {
         if (ch.length === 0) continue
@@ -52,7 +51,7 @@ export default eventHandler(async (event) => {
 
       return {
         ...utilisateurData,
-        communes: communesData,
+        communes: communesData
       }
     }
 
@@ -61,13 +60,13 @@ export default eventHandler(async (event) => {
       if (typeof body.is_active !== 'boolean') {
         throw createError({
           statusCode: 400,
-          message: 'Le champ is_active (booléen) est requis',
+          message: 'Le champ is_active (booléen) est requis'
         })
       }
       if (body.is_active === false && id === profile.utilisateurId) {
         throw createError({
           statusCode: 400,
-          message: 'Vous ne pouvez pas désactiver votre propre compte',
+          message: 'Vous ne pouvez pas désactiver votre propre compte'
         })
       }
       const ref = db.collection('utilisateur').doc(id!)
@@ -77,7 +76,7 @@ export default eventHandler(async (event) => {
       }
       await ref.update({
         is_active: body.is_active,
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       })
       const updated = await ref.get()
       return docWithId(updated.id, updated.data())
@@ -89,7 +88,7 @@ export default eventHandler(async (event) => {
         if (body.is_active === false && id === profile.utilisateurId) {
           throw createError({
             statusCode: 400,
-            message: 'Vous ne pouvez pas désactiver votre propre compte',
+            message: 'Vous ne pouvez pas désactiver votre propre compte'
           })
         }
       }
@@ -110,7 +109,7 @@ export default eventHandler(async (event) => {
         ville: body.ville || null,
         email: body.email,
         role: body.role || 'utilisateur',
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       }
       if (typeof body.is_active === 'boolean') {
         updatePayload.is_active = body.is_active
@@ -139,7 +138,7 @@ export default eventHandler(async (event) => {
             const aRef = db.collection('utilisateur_commune').doc()
             wb.set(aRef, {
               utilisateur_id: id,
-              commune_id: communeId,
+              commune_id: communeId
             })
           }
           await wb.commit()
@@ -173,7 +172,7 @@ export default eventHandler(async (event) => {
         console.warn('deleteUser:', err)
         throw createError({
           statusCode: 500,
-          message: 'Profil supprimé mais erreur suppression compte Firebase Auth',
+          message: 'Profil supprimé mais erreur suppression compte Firebase Auth'
         })
       }
 
@@ -182,10 +181,10 @@ export default eventHandler(async (event) => {
 
     throw createError({ statusCode: 405, message: 'Method not allowed' })
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred',
+      message: e.message || 'An error occurred'
     })
   }
 })

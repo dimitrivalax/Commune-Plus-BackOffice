@@ -37,7 +37,6 @@ function setCachedRole(role: CurrentUserProfile['role'] | null) {
  */
 export const useCurrentUser = () => {
   const { session } = useSupabase()
-  const sessionToken = computed(() => session.value?.access_token ?? '')
 
   const currentUser = ref<CurrentUserProfile | null>(null)
   const currentUserPending = ref(false)

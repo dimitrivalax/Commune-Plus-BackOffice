@@ -9,7 +9,7 @@ const router = useRouter()
 const { notifications, refreshNotifications, removeNotification, clearAll, notificationsError, unreadCount } = useNotifications()
 
 const unreadNotifications = computed(() =>
-  notifications.value.filter((n) => n.unread)
+  notifications.value.filter(n => n.unread)
 )
 
 function getNotificationUrl(notification: Notification) {

@@ -15,8 +15,8 @@ export interface ReservationConfirmationPayload {
 }
 
 export async function sendReservationConfirmationEmail(
-  reservationData: ReservationConfirmationPayload,
-): Promise<{ success: boolean; error?: string }> {
+  reservationData: ReservationConfirmationPayload
+): Promise<{ success: boolean, error?: string }> {
   const resendApiKey = process.env.RESEND_API_KEY
   const resendFromEmail
     = process.env.RESEND_FROM_EMAIL || 'noreply@commune-plus.fr'
@@ -25,7 +25,7 @@ export async function sendReservationConfirmationEmail(
     return {
       success: false,
       error:
-        'RESEND_API_KEY is not configured',
+        'RESEND_API_KEY is not configured'
     }
   }
 
@@ -35,15 +35,15 @@ export async function sendReservationConfirmationEmail(
     weekday: 'long',
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
+    day: 'numeric'
   })
   const heureDebut = dateDebut.toLocaleTimeString('fr-FR', {
     hour: '2-digit',
-    minute: '2-digit',
+    minute: '2-digit'
   })
   const heureFin = dateFin.toLocaleTimeString('fr-FR', {
     hour: '2-digit',
-    minute: '2-digit',
+    minute: '2-digit'
   })
 
   const emailSubject = `Confirmation de réservation - ${reservationData.salle_nom || 'Salle municipale'}`
@@ -82,23 +82,23 @@ ${dateDebutFormatted} ${heureDebut}-${heureFin}
   const resendResponse = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       from: `Mairie <${resendFromEmail}>`,
       to: [reservationData.email],
       subject: emailSubject,
       html: emailBody,
-      text: emailText,
-    }),
+      text: emailText
+    })
   })
 
   if (!resendResponse.ok) {
     const errorData = await resendResponse.json().catch(() => ({}))
     return {
       success: false,
-      error: `Resend: ${resendResponse.status} ${JSON.stringify(errorData)}`,
+      error: `Resend: ${resendResponse.status} ${JSON.stringify(errorData)}`
     }
   }
 
@@ -117,8 +117,8 @@ export interface SignalementEmailPayload {
 }
 
 export async function sendSignalementEmailToMairie(
-  signalementData: SignalementEmailPayload,
-): Promise<{ success: boolean; error?: string }> {
+  signalementData: SignalementEmailPayload
+): Promise<{ success: boolean, error?: string }> {
   const resendApiKey = process.env.RESEND_API_KEY
   const resendFromEmail
     = process.env.RESEND_FROM_EMAIL || 'noreply@commune-plus.fr'
@@ -176,17 +176,17 @@ Ce mail a été créé avec Commune Plus.`
   const resendResponse = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload)
   })
 
   if (!resendResponse.ok) {
     const errorData = await resendResponse.json().catch(() => ({}))
     return {
       success: false,
-      error: `Resend: ${resendResponse.status} ${JSON.stringify(errorData)}`,
+      error: `Resend: ${resendResponse.status} ${JSON.stringify(errorData)}`
     }
   }
 

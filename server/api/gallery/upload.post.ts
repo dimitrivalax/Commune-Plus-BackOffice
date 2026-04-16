@@ -1,7 +1,7 @@
 import {
   getAuthenticatedUidForRequest,
   getAuthenticatedUidFromToken,
-  getCurrentUserProfileFromUid,
+  getCurrentUserProfileFromUid
 } from '../../utils/firebase-auth'
 import { uploadGalleryImage } from '../../utils/cloudinary'
 
@@ -33,7 +33,7 @@ export default eventHandler(async (event) => {
   if (!auth) {
     throw createError({
       statusCode: 401,
-      message: 'Unauthorized: Authentication required',
+      message: 'Unauthorized: Authentication required'
     })
   }
 
@@ -41,7 +41,7 @@ export default eventHandler(async (event) => {
   if (!profile) {
     throw createError({
       statusCode: 404,
-      message: 'Profil utilisateur non trouvé',
+      message: 'Profil utilisateur non trouvé'
     })
   }
 

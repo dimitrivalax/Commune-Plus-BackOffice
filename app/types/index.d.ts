@@ -1,211 +1,211 @@
-import type { AvatarProps } from "@nuxt/ui";
+import type { AvatarProps } from '@nuxt/ui'
 
-export type UserStatus = "subscribed" | "unsubscribed" | "bounced";
-export type SaleStatus = "paid" | "failed" | "refunded";
+export type UserStatus = 'subscribed' | 'unsubscribed' | 'bounced'
+export type SaleStatus = 'paid' | 'failed' | 'refunded'
 
 export interface User {
-  id: number;
-  name: string;
-  email: string;
-  avatar?: AvatarProps;
-  status: UserStatus;
-  location: string;
+  id: number
+  name: string
+  email: string
+  avatar?: AvatarProps
+  status: UserStatus
+  location: string
 }
 
 export interface Mail {
-  id: number;
-  unread?: boolean;
-  from: User;
-  subject: string;
-  body: string;
-  date: string;
+  id: number
+  unread?: boolean
+  from: User
+  subject: string
+  body: string
+  date: string
 }
 
 export interface Member {
-  name: string;
-  username: string;
-  role: "member" | "owner";
-  avatar: AvatarProps;
+  name: string
+  username: string
+  role: 'member' | 'owner'
+  avatar: AvatarProps
 }
 
 export interface Stat {
-  title: string;
-  icon: string;
-  value: number | string;
-  variation: number;
-  formatter?: (value: number) => string;
+  title: string
+  icon: string
+  value: number | string
+  variation: number
+  formatter?: (value: number) => string
 }
 
 export interface Sale {
-  id: string;
-  date: string;
-  status: SaleStatus;
-  email: string;
-  amount: number;
+  id: string
+  date: string
+  status: SaleStatus
+  email: string
+  amount: number
 }
 
 export interface Notification {
-  id: string | number;
-  unread?: boolean;
-  sender: User;
-  body: string;
-  date: string;
-  type?: "signalement" | "reservation";
-  entity_id?: string;
-  title?: string;
+  id: string | number
+  unread?: boolean
+  sender: User
+  body: string
+  date: string
+  type?: 'signalement' | 'reservation'
+  entity_id?: string
+  title?: string
 }
 
-export type Period = "daily" | "weekly" | "monthly";
+export type Period = 'daily' | 'weekly' | 'monthly'
 
 export interface Range {
-  start: Date;
-  end: Date;
+  start: Date
+  end: Date
 }
 
-export type SignalementStatus =
-  | "en_attente"
-  | "en_cours"
-  | "traite"
-  | "archive";
+export type SignalementStatus
+  = | 'en_attente'
+    | 'en_cours'
+    | 'traite'
+    | 'archive'
 
 export interface Signalement {
-  id: string;
-  description: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  location_accuracy: number | null;
-  address: string | null;
-  comment: string | null;
-  reponse: string | null;
-  photo_url: string | null;
-  last_name: string;
-  first_name: string;
-  email: string | null;
-  phone: string | null;
-  status: SignalementStatus;
-  created_at: string;
-  updated_at: string;
-  city_id: string | null;
+  id: string
+  description: string | null
+  latitude: number | null
+  longitude: number | null
+  location_accuracy: number | null
+  address: string | null
+  comment: string | null
+  reponse: string | null
+  photo_url: string | null
+  last_name: string
+  first_name: string
+  email: string | null
+  phone: string | null
+  status: SignalementStatus
+  created_at: string
+  updated_at: string
+  city_id: string | null
 }
 
 export interface MunicipalInfo {
-  id: string;
-  title: string;
-  content: string;
-  category: string | null;
-  image_url: string | null;
-  commune_id: string | null;
-  event_date: string | null;
-  publication_status: "draft" | "scheduled" | "published";
-  scheduled_publish_at: string | null;
-  published_at: string | null;
-  notification_sent_at: string | null;
-  created_at: string;
-  updated_at: string;
+  id: string
+  title: string
+  content: string
+  category: string | null
+  image_url: string | null
+  commune_id: string | null
+  event_date: string | null
+  publication_status: 'draft' | 'scheduled' | 'published'
+  scheduled_publish_at: string | null
+  published_at: string | null
+  notification_sent_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface Salle {
-  id: string;
-  nom: string;
-  adresse: string;
-  nombre_max_places: number;
-  description: string | null;
-  photo_url: string | null;
-  created_at: string;
-  updated_at: string;
+  id: string
+  nom: string
+  adresse: string
+  nombre_max_places: number
+  description: string | null
+  photo_url: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface ReservationSalle {
-  id: string;
-  salle_id: string;
-  date_debut: string;
-  date_fin: string;
-  nom: string;
-  prenom: string;
-  email: string;
-  telephone: string;
-  nom_association: string | null;
-  status?: "en_attente" | "confirmée" | "refusée";
-  created_at: string;
-  updated_at: string;
+  id: string
+  salle_id: string
+  date_debut: string
+  date_fin: string
+  nom: string
+  prenom: string
+  email: string
+  telephone: string
+  nom_association: string | null
+  status?: 'en_attente' | 'confirmée' | 'refusée'
+  created_at: string
+  updated_at: string
   salles?: {
-    id: string;
-    nom: string;
-    adresse: string;
-  };
+    id: string
+    nom: string
+    adresse: string
+  }
   recurrence_summary?: {
-    total: number;
-    createdCount: number;
-    conflictCount: number;
-    skippedVacancesCount: number;
+    total: number
+    createdCount: number
+    conflictCount: number
+    skippedVacancesCount: number
     conflicts: Array<{
-      date: string;
-      start_time: string;
-      end_time: string;
-    }>;
-  };
+      date: string
+      start_time: string
+      end_time: string
+    }>
+  }
 }
 
 export interface Utilisateur {
-  id: string;
-  user_id: string;
-  nom: string;
-  prenom: string;
-  numero_de_rue: string | null;
-  rue: string | null;
-  code_postal: string | null;
-  ville: string | null;
-  email: string;
-  role: "utilisateur" | "administrateur";
+  id: string
+  user_id: string
+  nom: string
+  prenom: string
+  numero_de_rue: string | null
+  rue: string | null
+  code_postal: string | null
+  ville: string | null
+  email: string
+  role: 'utilisateur' | 'administrateur'
   /** false = compte désactivé par un administrateur (connexion refusée) */
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  last_sign_in_at: string | null;
-  communes?: Commune[];
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  last_sign_in_at: string | null
+  communes?: Commune[]
 }
 
 export interface Commune {
-  id: string;
-  name: string;
-  postal_code: string;
-  email: string;
-  logo_url?: string | null;
-  date_licence?: string | null;
+  id: string
+  name: string
+  postal_code: string
+  email: string
+  logo_url?: string | null
+  date_licence?: string | null
   /** Réservation de salles visible dans l'app mobile (défaut true) */
-  feature_reservations_salles?: boolean;
+  feature_reservations_salles?: boolean
   /** Module Propositions dans l'app mobile (défaut true) */
-  feature_propositions?: boolean;
-  created_at: string;
-  updated_at: string;
+  feature_propositions?: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface Proposition {
-  id: string;
-  commune_id: string;
-  user_id: string;
-  name: string;
-  description: string;
-  photo_url: string | null;
-  user_firstname: string;
-  user_lastname: string;
-  user_email: string;
-  votes_count: number;
-  is_archived: boolean;
-  comments_public?: boolean;
-  created_at: string;
-  updated_at: string;
-  comments?: PropositionComment[];
+  id: string
+  commune_id: string
+  user_id: string
+  name: string
+  description: string
+  photo_url: string | null
+  user_firstname: string
+  user_lastname: string
+  user_email: string
+  votes_count: number
+  is_archived: boolean
+  comments_public?: boolean
+  created_at: string
+  updated_at: string
+  comments?: PropositionComment[]
 }
 
 export interface PropositionComment {
-  id: string;
-  proposition_id: string;
-  user_firstname: string;
-  user_lastname: string;
-  user_email: string;
-  author_type?: "user" | "commune";
-  content: string;
-  created_at: string;
-  updated_at?: string;
+  id: string
+  proposition_id: string
+  user_firstname: string
+  user_lastname: string
+  user_email: string
+  author_type?: 'user' | 'commune'
+  content: string
+  created_at: string
+  updated_at?: string
 }

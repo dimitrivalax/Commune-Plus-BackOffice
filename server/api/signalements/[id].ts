@@ -9,7 +9,7 @@ const updateSignalementSchema = z.object({
   status: z.enum(['en_attente', 'en_cours', 'traite', 'archive']).optional(),
   description: z.string().nullable().optional(),
   comment: z.string().nullable().optional(),
-  reponse: z.string().nullable().optional(),
+  reponse: z.string().nullable().optional()
 })
 
 export default eventHandler(async (event) => {
@@ -19,7 +19,7 @@ export default eventHandler(async (event) => {
   if (!id) {
     throw createError({
       statusCode: 400,
-      message: 'Signalement ID is required',
+      message: 'Signalement ID is required'
     })
   }
 
@@ -35,7 +35,7 @@ export default eventHandler(async (event) => {
       if (!existingSnap.exists) {
         throw createError({
           statusCode: 404,
-          message: 'Signalement not found',
+          message: 'Signalement not found'
         })
       }
       const existingSignalement = existingSnap.data()!
@@ -45,7 +45,7 @@ export default eventHandler(async (event) => {
       const userId = existingSignalement.user_id
 
       const updateData: Record<string, unknown> = {
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       }
       if (validatedData.status !== undefined) {
         updateData.status = validatedData.status
@@ -92,7 +92,7 @@ export default eventHandler(async (event) => {
               en_attente: 'En Attente',
               en_cours: 'En Cours',
               traite: 'Traité',
-              archive: 'Archivé',
+              archive: 'Archivé'
             }
             notificationTitle = 'Mise à jour de votre signalement'
             notificationBody = `Le statut de votre signalement a été mis à jour : ${statusLabels[newStatus] || newStatus}`
@@ -107,7 +107,7 @@ export default eventHandler(async (event) => {
               title: notificationTitle,
               body: notificationBody,
               type: notificationType,
-              newStatus: statusChanged ? newStatus : undefined,
+              newStatus: statusChanged ? newStatus : undefined
             })
           }
         }
@@ -120,14 +120,14 @@ export default eventHandler(async (event) => {
       if (error instanceof z.ZodError) {
         throw createError({
           statusCode: 400,
-          message: `Validation error: ${error.issues.map((x) => x.message).join(', ')}`,
+          message: `Validation error: ${error.issues.map(x => x.message).join(', ')}`
         })
       }
-      const e = error as { statusCode?: number; message?: string }
+      const e = error as { statusCode?: number, message?: string }
       throw createError({
         statusCode: e.statusCode || 500,
         message:
-          e.message || 'An error occurred while updating the signalement',
+          e.message || 'An error occurred while updating the signalement'
       })
     }
   }

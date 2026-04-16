@@ -29,15 +29,15 @@ export default eventHandler(async (event) => {
       published_at: scheduledPublishAt ? null : nowIso,
       notification_sent_at: null,
       created_at: FieldValue.serverTimestamp(),
-      updated_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp()
     })
     const snap = await ref.get()
     return docWithId(snap.id, snap.data())
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while creating municipal info',
+      message: e.message || 'An error occurred while creating municipal info'
     })
   }
 })

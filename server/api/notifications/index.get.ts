@@ -13,7 +13,7 @@ export default eventHandler(async (event) => {
     .limit(MAX_ITEMS)
     .get()
 
-  return snap.docs.map((d) =>
-    serializeFirestoreData({ id: d.id, ...d.data() }),
+  return snap.docs.map(d =>
+    serializeFirestoreData({ id: d.id, ...d.data() })
   )
 })

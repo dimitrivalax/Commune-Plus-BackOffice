@@ -12,12 +12,12 @@ function formatDateFr(dateIso: string) {
   return new Date(dateIso).toLocaleDateString('fr-FR', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
+    day: 'numeric'
   })
 }
 
 export async function sendLicenceExpiryAlertEmail(
-  payload: LicenceAlertMailPayload,
+  payload: LicenceAlertMailPayload
 ): Promise<{ success: boolean, error?: string }> {
   const resendApiKey = process.env.RESEND_API_KEY
   const resendFromEmail = process.env.RESEND_FROM_EMAIL || 'contact@commune-plus.fr'
@@ -66,23 +66,23 @@ Action requise: contacter la commune pour prolongation.
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       from: `Commune Plus <${resendFromEmail}>`,
       to: [alertTo],
       subject,
       html,
-      text,
-    }),
+      text
+    })
   })
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
     return {
       success: false,
-      error: `Resend: ${response.status} ${JSON.stringify(errorData)}`,
+      error: `Resend: ${response.status} ${JSON.stringify(errorData)}`
     }
   }
 

@@ -1,29 +1,29 @@
 <script setup lang="ts">
-import { format, isToday } from "date-fns";
-import type { Proposition } from "~/types";
+import { format, isToday } from 'date-fns'
+import type { Proposition } from '~/types'
 
-const props = defineProps<{
-  propositions: Proposition[];
-}>();
+defineProps<{
+  propositions: Proposition[]
+}>()
 
-const propositionsRefs = ref<Record<string, any>>({});
-const selectedProposition = defineModel<Proposition | null>();
+const propositionsRefs = ref<Record<string, Element>>({})
+const selectedProposition = defineModel<Proposition | null>()
 
 watch(selectedProposition, () => {
-  if (!selectedProposition.value) return;
-  const ref = propositionsRefs.value[selectedProposition.value.id];
+  if (!selectedProposition.value) return
+  const ref = propositionsRefs.value[selectedProposition.value.id]
   if (ref) {
-    ref.scrollIntoView({ block: "nearest" });
+    ref.scrollIntoView({ block: 'nearest' })
   }
-});
+})
 
 const getStatusColor = (isArchived: boolean) => {
-  return isArchived ? "neutral" : "success";
-};
+  return isArchived ? 'neutral' : 'success'
+}
 
 const getStatusLabel = (isArchived: boolean) => {
-  return isArchived ? "Archivée" : "Active";
-};
+  return isArchived ? 'Archivée' : 'Active'
+}
 </script>
 
 <template>
@@ -43,7 +43,7 @@ const getStatusLabel = (isArchived: boolean) => {
           'text-toned',
           selectedProposition && selectedProposition.id === proposition.id
             ? 'border-primary bg-primary/10'
-            : 'border-(--ui-bg) hover:border-primary hover:bg-primary/5',
+            : 'border-(--ui-bg) hover:border-primary hover:bg-primary/5'
         ]"
         @click="selectedProposition = proposition"
       >

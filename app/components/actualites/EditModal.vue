@@ -48,7 +48,7 @@ function toDateOnly(isoOrDate: string | null | undefined): string | undefined {
   return isoOrDate.split('T')[0]
 }
 
-function toLocalDatetimeInput(isoOrDate: string | null | undefined): string | undefined {
+function toLocalDatetimeInput(isoOrDate: string | Date | null | undefined): string | undefined {
   if (!isoOrDate) return undefined
   const parsed = new Date(isoOrDate)
   if (Number.isNaN(parsed.getTime())) return undefined
@@ -166,11 +166,13 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error
+      ? error.message
+      : 'Une erreur est survenue lors de la modification'
     toast.add({
       title: 'Erreur',
-      description:
-        error.message || 'Une erreur est survenue lors de la modification',
+      description: message,
       color: 'error'
     })
   }
@@ -209,10 +211,11 @@ async function handleDuplicate() {
     })
 
     refresh?.()
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Duplication impossible'
     toast.add({
       title: 'Erreur',
-      description: error?.message || 'Duplication impossible',
+      description: message,
       color: 'error'
     })
   } finally {

@@ -79,9 +79,9 @@ async function sendActualiteNotification(infoId: string, info: ActualiteDoc): Pr
     .get()
 
   const tokens = tokenSnap.docs
-    .map((d) => d.data() as PushTokenDoc)
-    .filter((row) => row.is_active !== false && typeof row.token === 'string' && row.token.length > 0)
-    .map((row) => row.token as string)
+    .map(d => d.data() as PushTokenDoc)
+    .filter(row => row.is_active !== false && typeof row.token === 'string' && row.token.length > 0)
+    .map(row => row.token as string)
 
   if (!tokens.length) {
     return 0
@@ -129,7 +129,7 @@ export const notifyLicenceExpiry = onSchedule(
   {
     schedule: '0 8 * * *',
     timeZone: 'Europe/Paris',
-    region: 'europe-west1',
+    region: 'europe-west1'
   },
   async () => {
     const db = getRuntimeDb()
@@ -159,13 +159,13 @@ export const notifyLicenceExpiry = onSchedule(
         email: data.email || '(inconnu)',
         logoUrl: data.logo_url || null,
         dateLicence: toYyyyMmDd(licenceDate),
-        dateExpiration: expirationYyyyMmDd,
+        dateExpiration: expirationYyyyMmDd
       })
 
       if (!mailResult.success) {
         logger.error('Echec envoi alerte licence', {
           communeId: doc.id,
-          error: mailResult.error,
+          error: mailResult.error
         })
         continue
       }
@@ -173,23 +173,23 @@ export const notifyLicenceExpiry = onSchedule(
       sentCount += 1
       await doc.ref.update({
         license_renewal_notified_for_expiration: expirationYyyyMmDd,
-        license_renewal_last_notified_at: FieldValue.serverTimestamp(),
+        license_renewal_last_notified_at: FieldValue.serverTimestamp()
       })
     }
 
     logger.info('Alerte licences terminee', {
       targetExpiration,
       communesScanned: snapshot.size,
-      sentCount,
+      sentCount
     })
-  },
+  }
 )
 
 export const publishScheduledActualites = onSchedule(
   {
     schedule: '0 * * * *',
     timeZone: 'Europe/Paris',
-    region: 'europe-west1',
+    region: 'europe-west1'
   },
   async () => {
     try {
@@ -224,14 +224,14 @@ export const publishScheduledActualites = onSchedule(
           await scheduledDoc.ref.update({
             publication_status: 'published',
             published_at: nowIso,
-            updated_at: FieldValue.serverTimestamp(),
+            updated_at: FieldValue.serverTimestamp()
           })
           publishedCount += 1
         } catch (error: unknown) {
           publishErrors += 1
           logger.error('Echec mise a jour publication actualite', {
             infoId: scheduledDoc.id,
-            error: error instanceof Error ? error.message : String(error),
+            error: error instanceof Error ? error.message : String(error)
           })
           continue
         }
@@ -240,14 +240,14 @@ export const publishScheduledActualites = onSchedule(
           const sent = await sendActualiteNotification(scheduledDoc.id, info)
           await scheduledDoc.ref.update({
             notification_sent_at: new Date().toISOString(),
-            updated_at: FieldValue.serverTimestamp(),
+            updated_at: FieldValue.serverTimestamp()
           })
           notifiedCount += sent
         } catch (error: unknown) {
           notifyErrors += 1
           logger.error('Echec notification actualite programmee', {
             infoId: scheduledDoc.id,
-            error: error instanceof Error ? error.message : String(error),
+            error: error instanceof Error ? error.message : String(error)
           })
         }
       }
@@ -260,13 +260,13 @@ export const publishScheduledActualites = onSchedule(
         notifiedCount,
         skippedAlreadyNotified,
         publishErrors,
-        notifyErrors,
+        notifyErrors
       })
     } catch (error: unknown) {
       logger.error('Erreur scheduler publication actualites', {
         projectId: getRuntimeProjectId() || '(unknown)',
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : String(error)
       })
     }
-  },
+  }
 )

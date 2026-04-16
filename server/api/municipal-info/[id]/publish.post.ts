@@ -5,7 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { getFCMAccessToken, getFCMProjectId } from '../../../utils/fcm-auth'
 import {
   deactivatePushTokenByValue,
-  fetchPushTokensForPublish,
+  fetchPushTokensForPublish
 } from '../../../utils/push-tokens-db'
 import { capturePosthogEvent } from '../../../utils/posthog-server'
 
@@ -14,20 +14,20 @@ export default eventHandler(async (event) => {
   const profile = await getCurrentUserProfile(event)
 
   const id = getRouterParam(event, 'id')
-  const body = await readBody(event) as { commune_id?: string; global?: boolean }
+  const body = await readBody(event) as { commune_id?: string, global?: boolean }
   const { commune_id: bodyCommuneId, global: isGlobal } = body || {}
 
   if (isGlobal) {
     if (profile?.role !== 'administrateur') {
       throw createError({
         statusCode: 403,
-        message: 'Accès réservé aux administrateurs',
+        message: 'Accès réservé aux administrateurs'
       })
     }
   } else if (!bodyCommuneId) {
     throw createError({
       statusCode: 400,
-      message: 'commune_id is required',
+      message: 'commune_id is required'
     })
   }
 
@@ -43,7 +43,7 @@ export default eventHandler(async (event) => {
       throw createError({
         statusCode: 503,
         message:
-          'FCM non configuré. Variables FCM_SERVICE_ACCOUNT_JSON ou FCM_SERVICE_ACCOUNT_PATH',
+          'FCM non configuré. Variables FCM_SERVICE_ACCOUNT_JSON ou FCM_SERVICE_ACCOUNT_PATH'
       })
     }
 
@@ -53,7 +53,7 @@ export default eventHandler(async (event) => {
     if (!infoSnap.exists) {
       throw createError({
         statusCode: 404,
-        message: 'Information municipale non trouvée',
+        message: 'Information municipale non trouvée'
       })
     }
     const info = docWithId(infoSnap.id, infoSnap.data())!
@@ -69,11 +69,11 @@ export default eventHandler(async (event) => {
       publication_status: 'published',
       published_at: new Date().toISOString(),
       scheduled_publish_at: null,
-      updated_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp()
     })
 
     const pushTokens = await fetchPushTokensForPublish(
-      isGlobal ? undefined : bodyCommuneId,
+      isGlobal ? undefined : bodyCommuneId
     )
 
     if (!pushTokens || pushTokens.length === 0) {
@@ -82,7 +82,7 @@ export default eventHandler(async (event) => {
         message: isGlobal
           ? 'Aucun token de push trouvé'
           : 'Aucun token de push trouvé pour cette commune',
-        tokens_sent: 0,
+        tokens_sent: 0
       }
     }
 
@@ -91,11 +91,11 @@ export default eventHandler(async (event) => {
     const campaignKey = `actualite_${String(info.id)}_${Date.now()}`
 
     const androidTokens = pushTokens
-      .filter((t) => t.platform === 'android')
-      .map((t) => t.token)
+      .filter(t => t.platform === 'android')
+      .map(t => t.token)
     const iosTokens = pushTokens
-      .filter((t) => t.platform === 'ios')
-      .map((t) => t.token)
+      .filter(t => t.platform === 'ios')
+      .map(t => t.token)
     const allTokens = [...androidTokens, ...iosTokens]
 
     let sentCount = 0
@@ -109,14 +109,14 @@ export default eventHandler(async (event) => {
             token,
             notification: {
               title: notificationTitle,
-              body: notificationBody,
+              body: notificationBody
             },
             data: {
               type: 'actualite',
               info_id: String(info.id),
               commune_id: String(info.commune_id ?? ''),
               notification_id: campaignKey,
-              campaign_key: campaignKey,
+              campaign_key: campaignKey
             },
             android: {
               priority: 'high',
@@ -124,10 +124,10 @@ export default eventHandler(async (event) => {
                 sound: 'default',
                 icon: 'ic_notification',
                 channel_id: 'default',
-                tag: `info_${info.id}`,
-              },
-            },
-          },
+                tag: `info_${info.id}`
+              }
+            }
+          }
         }
 
         if (platform === 'ios') {
@@ -139,10 +139,10 @@ export default eventHandler(async (event) => {
                 badge: 1,
                 alert: {
                   title: notificationTitle,
-                  body: notificationBody,
-                },
-              },
-            },
+                  body: notificationBody
+                }
+              }
+            }
           }
         }
 
@@ -151,20 +151,20 @@ export default eventHandler(async (event) => {
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify(message),
-          },
+            body: JSON.stringify(message)
+          }
         )
 
         if (!response.ok) {
           const errorData = await response
             .json()
             .catch(() => ({ error: { message: 'Unknown error' } }))
-          const errorMessage =
-            (errorData as { error?: { message?: string } }).error?.message
-            || `HTTP ${response.status}`
+          const errorMessage
+            = (errorData as { error?: { message?: string } }).error?.message
+              || `HTTP ${response.status}`
 
           if (
             errorMessage.includes('NOT_FOUND')
@@ -191,13 +191,13 @@ export default eventHandler(async (event) => {
       commune_id: String(info.commune_id ?? ''),
       sent_count: sentCount,
       platform: 'mixed',
-      is_global: Boolean(isGlobal),
+      is_global: Boolean(isGlobal)
     })
 
     if (sentCount > 0) {
       await infoRef.update({
         notification_sent_at: new Date().toISOString(),
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       })
     }
 
@@ -207,7 +207,7 @@ export default eventHandler(async (event) => {
         message: 'Aucune notification n’a pu être envoyée',
         tokens_sent: 0,
         tokens_found: pushTokens.length,
-        errors: errors.length > 0 ? errors : undefined,
+        errors: errors.length > 0 ? errors : undefined
       }
     }
 
@@ -216,13 +216,13 @@ export default eventHandler(async (event) => {
       message: 'Notifications envoyées avec succès',
       tokens_sent: sentCount,
       tokens_found: pushTokens.length,
-      errors: errors.length > 0 ? errors : undefined,
+      errors: errors.length > 0 ? errors : undefined
     }
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; message?: string }
+    const e = error as { statusCode?: number, message?: string }
     throw createError({
       statusCode: e.statusCode || 500,
-      message: e.message || 'An error occurred while publishing',
+      message: e.message || 'An error occurred while publishing'
     })
   }
 })

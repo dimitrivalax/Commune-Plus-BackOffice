@@ -2,7 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import {
   requireAuth,
   requireCurrentUserProfile,
-  assertCanManageCommune,
+  assertCanManageCommune
 } from '../../utils/firebase-auth'
 import { getAdminFirestore } from '../../utils/firebase-admin-app'
 import { docWithId } from '../../utils/firestore-serialize'
@@ -13,7 +13,7 @@ const updatePropositionSchema = z.object({
   description: z.string().min(10).optional(),
   photo_url: z.string().nullable().optional(),
   comments_public: z.boolean().optional(),
-  is_archived: z.boolean().optional(),
+  is_archived: z.boolean().optional()
 })
 
 export default eventHandler(async (event) => {
@@ -23,7 +23,7 @@ export default eventHandler(async (event) => {
   if (!id) {
     throw createError({
       statusCode: 400,
-      message: 'Proposition ID is required',
+      message: 'Proposition ID is required'
     })
   }
 
@@ -45,18 +45,18 @@ export default eventHandler(async (event) => {
         .orderBy('created_at', 'asc')
         .get()
       const comments = csnap.docs
-        .map((d) => docWithId(d.id, d.data()))
+        .map(d => docWithId(d.id, d.data()))
         .filter(Boolean)
 
       return {
         ...proposition,
-        comments: comments || [],
+        comments: comments || []
       }
     } catch (error: unknown) {
-      const e = error as { statusCode?: number; message?: string }
+      const e = error as { statusCode?: number, message?: string }
       throw createError({
         statusCode: e.statusCode || 500,
-        message: e.message || 'Error',
+        message: e.message || 'Error'
       })
     }
   }
@@ -73,7 +73,7 @@ export default eventHandler(async (event) => {
       assertCanManageCommune(profile, existing.get('commune_id') as string | undefined)
       await pref.update({
         ...validatedData,
-        updated_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp()
       })
       const snap = await pref.get()
       return docWithId(snap.id, snap.data())
@@ -81,13 +81,13 @@ export default eventHandler(async (event) => {
       if (error instanceof z.ZodError) {
         throw createError({
           statusCode: 400,
-          message: `Validation error: ${error.issues.map((x) => x.message).join(', ')}`,
+          message: `Validation error: ${error.issues.map(x => x.message).join(', ')}`
         })
       }
-      const e = error as { statusCode?: number; message?: string }
+      const e = error as { statusCode?: number, message?: string }
       throw createError({
         statusCode: e.statusCode || 500,
-        message: e.message || 'Error',
+        message: e.message || 'Error'
       })
     }
   }
@@ -106,16 +106,16 @@ export default eventHandler(async (event) => {
         .get()
       const votes = await db.collection('proposition_vote').where('proposition_id', '==', id).get()
       const batch = db.batch()
-      comments.docs.forEach((d) => batch.delete(d.ref))
-      votes.docs.forEach((d) => batch.delete(d.ref))
+      comments.docs.forEach(d => batch.delete(d.ref))
+      votes.docs.forEach(d => batch.delete(d.ref))
       batch.delete(pref)
       await batch.commit()
       return { success: true }
     } catch (error: unknown) {
-      const e = error as { statusCode?: number; message?: string }
+      const e = error as { statusCode?: number, message?: string }
       throw createError({
         statusCode: e.statusCode || 500,
-        message: e.message || 'Error',
+        message: e.message || 'Error'
       })
     }
   }

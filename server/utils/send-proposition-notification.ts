@@ -1,7 +1,7 @@
 import { getFCMAccessToken, getFCMProjectId } from './fcm-auth'
 import {
   deactivatePushTokenByValue,
-  fetchActivePushTokensByUserId,
+  fetchActivePushTokensByUserId
 } from './push-tokens-db'
 import { capturePosthogEvent } from './posthog-server'
 
@@ -15,7 +15,7 @@ interface SendPropositionNotificationOptions {
 }
 
 export async function sendPropositionNotification(
-  options: SendPropositionNotificationOptions,
+  options: SendPropositionNotificationOptions
 ): Promise<{
   success: boolean
   tokens_sent: number
@@ -29,7 +29,7 @@ export async function sendPropositionNotification(
     return {
       success: false,
       tokens_sent: 0,
-      errors: ['No user_id found for proposition'],
+      errors: ['No user_id found for proposition']
     }
   }
 
@@ -53,11 +53,11 @@ export async function sendPropositionNotification(
     }
 
     const androidTokens = pushTokens
-      .filter((t) => t.platform === 'android')
-      .map((t) => t.token)
+      .filter(t => t.platform === 'android')
+      .map(t => t.token)
     const iosTokens = pushTokens
-      .filter((t) => t.platform === 'ios')
-      .map((t) => t.token)
+      .filter(t => t.platform === 'ios')
+      .map(t => t.token)
     const allTokens = [...androidTokens, ...iosTokens]
 
     let sentCount = 0
@@ -76,7 +76,7 @@ export async function sendPropositionNotification(
               notification_type: type,
               notification_id: notificationId,
               campaign_key: notificationId,
-              commune_id: communeId ? String(communeId) : '',
+              commune_id: communeId ? String(communeId) : ''
             },
             android: {
               priority: 'high',
@@ -84,25 +84,25 @@ export async function sendPropositionNotification(
                 sound: 'default',
                 icon: 'ic_notification',
                 channel_id: 'default',
-                tag: `proposition_${propositionId}`,
-              },
-            },
-          },
+                tag: `proposition_${propositionId}`
+              }
+            }
+          }
         }
 
         if (platform === 'ios') {
           ;(message.message as Record<string, unknown>).apns = {
             headers: {
               'apns-priority': '10',
-              'apns-topic': 'com.communeplus.app',
+              'apns-topic': 'com.communeplus.app'
             },
             payload: {
               aps: {
                 sound: 'default',
                 badge: 1,
-                alert: { title, body },
-              },
-            },
+                alert: { title, body }
+              }
+            }
           }
         }
 
@@ -111,20 +111,20 @@ export async function sendPropositionNotification(
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify(message),
-          },
+            body: JSON.stringify(message)
+          }
         )
 
         if (!response.ok) {
           const errorData = await response
             .json()
             .catch(() => ({ error: { message: 'Unknown error' } }))
-          const errorMessage =
-            (errorData as { error?: { message?: string } }).error?.message
-            || `HTTP ${response.status}`
+          const errorMessage
+            = (errorData as { error?: { message?: string } }).error?.message
+              || `HTTP ${response.status}`
           if (
             errorMessage.includes('NOT_FOUND')
             || errorMessage.includes('UNREGISTERED')
@@ -148,13 +148,13 @@ export async function sendPropositionNotification(
       target_id: String(propositionId),
       commune_id: communeId ? String(communeId) : undefined,
       sent_count: sentCount,
-      platform: 'mixed',
+      platform: 'mixed'
     })
 
     return {
       success: true,
       tokens_sent: sentCount,
-      errors: errors.length > 0 ? errors : undefined,
+      errors: errors.length > 0 ? errors : undefined
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)

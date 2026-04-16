@@ -1,7 +1,7 @@
 import { getFCMAccessToken, getFCMProjectId } from './fcm-auth'
 import {
   deactivatePushTokenByValue,
-  fetchPushTokensForPublish,
+  fetchPushTokensForPublish
 } from './push-tokens-db'
 import { capturePosthogEvent } from './posthog-server'
 
@@ -12,8 +12,8 @@ interface SendNewPropositionNotificationOptions {
 }
 
 export async function sendNewPropositionNotification(
-  options: SendNewPropositionNotificationOptions,
-): Promise<{ success: boolean; tokens_sent: number; errors?: string[] }> {
+  options: SendNewPropositionNotificationOptions
+): Promise<{ success: boolean, tokens_sent: number, errors?: string[] }> {
   const { propositionId, communeId, propositionName } = options
   const notificationId = `proposition_${propositionId}_new_${Date.now()}`
 
@@ -32,11 +32,11 @@ export async function sendNewPropositionNotification(
       : 'La mairie a publié une nouvelle proposition'
 
     const androidTokens = pushTokens
-      .filter((t) => t.platform === 'android')
-      .map((t) => t.token)
+      .filter(t => t.platform === 'android')
+      .map(t => t.token)
     const iosTokens = pushTokens
-      .filter((t) => t.platform === 'ios')
-      .map((t) => t.token)
+      .filter(t => t.platform === 'ios')
+      .map(t => t.token)
     const allTokens = [...androidTokens, ...iosTokens]
 
     let sentCount = 0
@@ -55,7 +55,7 @@ export async function sendNewPropositionNotification(
               notification_type: 'new_proposition',
               notification_id: notificationId,
               campaign_key: notificationId,
-              commune_id: String(communeId),
+              commune_id: String(communeId)
             },
             android: {
               priority: 'high',
@@ -63,10 +63,10 @@ export async function sendNewPropositionNotification(
                 sound: 'default',
                 icon: 'ic_notification',
                 channel_id: 'default',
-                tag: `proposition_${propositionId}`,
-              },
-            },
-          },
+                tag: `proposition_${propositionId}`
+              }
+            }
+          }
         }
 
         if (platform === 'ios') {
@@ -76,9 +76,9 @@ export async function sendNewPropositionNotification(
               aps: {
                 sound: 'default',
                 badge: 1,
-                alert: { title, body },
-              },
-            },
+                alert: { title, body }
+              }
+            }
           }
         }
 
@@ -87,20 +87,20 @@ export async function sendNewPropositionNotification(
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify(message),
-          },
+            body: JSON.stringify(message)
+          }
         )
 
         if (!response.ok) {
           const errorData = await response
             .json()
             .catch(() => ({ error: { message: 'Unknown error' } }))
-          const errorMessage =
-            (errorData as { error?: { message?: string } }).error?.message
-            || `HTTP ${response.status}`
+          const errorMessage
+            = (errorData as { error?: { message?: string } }).error?.message
+              || `HTTP ${response.status}`
           if (
             errorMessage.includes('NOT_FOUND')
             || errorMessage.includes('UNREGISTERED')
@@ -126,13 +126,13 @@ export async function sendNewPropositionNotification(
       commune_id: String(communeId),
       sent_count: sentCount,
       platform: 'mixed',
-      notification_type: 'new_proposition',
+      notification_type: 'new_proposition'
     })
 
     return {
       success: true,
       tokens_sent: sentCount,
-      errors: errors.length > 0 ? errors : undefined,
+      errors: errors.length > 0 ? errors : undefined
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
