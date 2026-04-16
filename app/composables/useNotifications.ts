@@ -1,5 +1,6 @@
-import type { Notification, User } from '~/types'
+import type { Notification } from '~/types'
 import { createSharedComposable } from '@vueuse/core'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const MAX_ITEMS = 50
 const POLL_MS = 25000
@@ -18,13 +19,13 @@ type BackofficeNotificationRow = {
   entity_id?: string | null
 }
 
-const DEFAULT_SENDER: User = {
+const DEFAULT_SENDER = {
   id: 0,
   name: 'Commune Plus',
   email: 'notifications@commune.plus',
   status: 'subscribed',
   location: ''
-}
+} as const
 
 function saveToStorage(notifications: unknown) {
   if (import.meta.server) return
@@ -70,64 +71,60 @@ const _useNotifications = () => {
   const notificationsError = ref<Error | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
 
-  async function fetchNotifications() {
+  async function refreshNotifications() {
     if (!session.value?.access_token) {
+      notificationsError.value = null
       notifications.value = []
+      saveToStorage(notifications.value)
       return
     }
-    notificationsError.value = null
     try {
       const rows = await $fetch<BackofficeNotificationRow[]>('/api/notifications', {
         headers: getAuthHeaders()
       })
+      notificationsError.value = null
       notifications.value = (rows || []).map(rowToNotification).slice(0, MAX_ITEMS)
       saveToStorage(notifications.value)
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Erreur notifications'
-      notificationsError.value = new Error(msg)
+    } catch (error: unknown) {
+      notificationsError.value = new Error(getErrorMessage(error, 'Erreur notifications'))
+      notifications.value = loadFromStorage()
     }
   }
 
   function startPolling() {
     if (pollTimer || !import.meta.client) return
     pollTimer = setInterval(() => {
-      void fetchNotifications()
+      void refreshNotifications()
     }, POLL_MS)
   }
 
   function stopPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer)
-      pollTimer = null
-    }
+    if (!pollTimer) return
+    clearInterval(pollTimer)
+    pollTimer = null
   }
 
-  async function refreshNotifications() {
-    await fetchNotifications()
-  }
-
-  async function markAsRead(id: string | number) {
+  async function removeNotification(id: string | number) {
     const idStr = String(id)
-    if (session.value?.access_token) {
-      try {
-        await $fetch(`/api/notifications/${idStr}/read`, {
-          method: 'POST',
-          headers: getAuthHeaders()
-        })
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e)
-        notificationsError.value = new Error(msg)
-      }
-    }
-    const list = notifications.value
-    const index = list.findIndex(n => String(n.id) === idStr)
-    if (index === -1) return
-    const current = list[index]
-    if (!current?.unread) return
-    const next = notifications.value.slice()
-    next[index] = { ...current, unread: false }
-    notifications.value = next
+    const previousNotifications = notifications.value.slice()
+    notifications.value = previousNotifications.filter(notification => String(notification.id) !== idStr)
     saveToStorage(notifications.value)
+
+    if (!session.value?.access_token) {
+      return
+    }
+
+    try {
+      await $fetch(`/api/notifications/${idStr}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+      notificationsError.value = null
+    } catch (error: unknown) {
+      notifications.value = previousNotifications
+      saveToStorage(notifications.value)
+      notificationsError.value = new Error(getErrorMessage(error, 'Suppression de la notification impossible'))
+    }
   }
 
   function addNotification(notification: Notification) {
@@ -135,9 +132,26 @@ const _useNotifications = () => {
     saveToStorage(notifications.value)
   }
 
-  function clearAll() {
+  async function clearAll() {
+    const previousNotifications = notifications.value.slice()
     notifications.value = []
     saveToStorage(notifications.value)
+
+    if (!session.value?.access_token) {
+      return
+    }
+
+    try {
+      await $fetch('/api/notifications/clear', {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+      notificationsError.value = null
+    } catch (error: unknown) {
+      notifications.value = previousNotifications
+      saveToStorage(notifications.value)
+      notificationsError.value = new Error(getErrorMessage(error, 'Suppression des notifications impossible'))
+    }
   }
 
   const unreadCount = computed(() => {
@@ -154,10 +168,12 @@ const _useNotifications = () => {
       async (token) => {
         stopPolling()
         if (token) {
-          await fetchNotifications()
+          await refreshNotifications()
           startPolling()
         } else {
+          notificationsError.value = null
           notifications.value = []
+          saveToStorage(notifications.value)
         }
       },
       { immediate: true }
@@ -168,8 +184,9 @@ const _useNotifications = () => {
     notifications: readonly(notifications),
     unreadCount,
     refreshNotifications,
-    markAsRead,
+    removeNotification,
     clearAll,
+    addNotification,
     notificationsError
   }
 }

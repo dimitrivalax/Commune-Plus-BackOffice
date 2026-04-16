@@ -6,7 +6,7 @@ import { useNotifications } from '~/composables/useNotifications'
 const { isNotificationsSlideoverOpen } = useDashboard()
 const router = useRouter()
 
-const { notifications, refreshNotifications, markAsRead, notificationsError, unreadCount } = useNotifications()
+const { notifications, refreshNotifications, removeNotification, clearAll, notificationsError, unreadCount } = useNotifications()
 
 const unreadNotifications = computed(() =>
   notifications.value.filter((n) => n.unread)
@@ -23,16 +23,14 @@ function getNotificationUrl(notification: Notification) {
 }
 
 function handleNotificationClick(notification: Notification) {
-  if (notification.unread) {
-    markAsRead(notification.id)
-  }
+  void removeNotification(notification.id)
   router.push(getNotificationUrl(notification))
   isNotificationsSlideoverOpen.value = false
 }
 
 watch(isNotificationsSlideoverOpen, (isOpen) => {
   if (isOpen) {
-    refreshNotifications()
+    void refreshNotifications()
   }
 })
 </script>
@@ -44,20 +42,29 @@ watch(isNotificationsSlideoverOpen, (isOpen) => {
   >
     <template #header>
       <div class="flex items-center justify-between w-full">
-        <h3 class="text-lg font-semibold">
-          Notifications
-        </h3>
-        <UBadge v-if="unreadCount > 0" :label="unreadCount" color="error" />
+        <div class="flex items-center gap-3">
+          <h3 class="text-lg font-semibold">
+            Notifications
+          </h3>
+          <UBadge v-if="unreadCount > 0" :label="unreadCount" color="error" />
+        </div>
+        <UButton
+          v-if="unreadNotifications.length > 0"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          @click="clearAll"
+        >
+          Supprimer toutes
+        </UButton>
       </div>
     </template>
 
     <template #body>
       <div v-if="notificationsError" class="px-3 py-8 text-center text-error">
-        <p>
-          Erreur lors du chargement des notifications
-        </p>
+        <p>Erreur lors du chargement des notifications</p>
         <p class="text-sm text-muted mt-2">
-          {{ notificationsError?.message || 'Veuillez réessayer' }}
+          {{ notificationsError.message }}
         </p>
       </div>
       <div v-else-if="unreadNotifications.length === 0" class="px-3 py-8 text-center text-muted">
