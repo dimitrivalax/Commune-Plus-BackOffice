@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import type { ReservationSalle, Salle } from '~/types'
+import type { ReservationSalle } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const props = defineProps<{
   reservation: ReservationSalle | null
@@ -46,13 +47,8 @@ const state = reactive<Partial<Schema>>({
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-reservations-salles')
-const { getAuthHeaders } = useApiAuth()
-
-// Charger les salles pour l'affichage
-const { data: salles } = await useFetch<Salle[]>('/api/salles', {
-  lazy: true,
-  headers: getAuthHeaders()
-})
+const { updateReservation } = useReservationsSallesService()
+const { salles, loadSalles: loadSallesList } = useSallesList()
 
 const statusOptions = computed(() => [
   { label: 'En attente', value: 'en_attente' },
@@ -79,27 +75,31 @@ watch(() => props.reservation, (newVal) => {
     state.email = newVal.email
     state.telephone = newVal.telephone
     state.nom_association = newVal.nom_association || undefined
-    state.status = (newVal as any).status || 'en_attente'
+    state.status = newVal.status || 'en_attente'
   }
 }, { immediate: true })
+
+async function loadSalles() {
+  try {
+    await loadSallesList()
+  } catch {
+    // Non bloquant pour l'édition, on garde "Salle inconnue" si besoin.
+  }
+}
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!props.reservation) return
 
   try {
-    await $fetch(`/api/reservations-salles/${props.reservation.id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: {
-        date_debut: new Date(event.data.date_debut).toISOString(),
-        date_fin: new Date(event.data.date_fin).toISOString(),
-        nom: event.data.nom,
-        prenom: event.data.prenom,
-        email: event.data.email,
-        telephone: event.data.telephone,
-        nom_association: event.data.nom_association || null,
-        status: event.data.status || 'en_attente'
-      }
+    await updateReservation(props.reservation.id, {
+      date_debut: new Date(event.data.date_debut).toISOString(),
+      date_fin: new Date(event.data.date_fin).toISOString(),
+      nom: event.data.nom,
+      prenom: event.data.prenom,
+      email: event.data.email,
+      telephone: event.data.telephone,
+      nom_association: event.data.nom_association || null,
+      status: event.data.status || 'en_attente'
     })
 
     toast.add({
@@ -113,10 +113,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: error.data?.message || error.message || 'Une erreur est survenue lors de la modification',
+      description: getErrorMessage(error, 'Une erreur est survenue lors de la modification'),
       color: 'error'
     })
   }
@@ -130,6 +130,7 @@ function handleDelete() {
 }
 
 function openModal() {
+  void loadSalles()
   open.value = true
 }
 

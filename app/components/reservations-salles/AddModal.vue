@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import type { Salle } from '~/types'
 
 const props = defineProps<{
   salleId?: string
@@ -82,6 +81,7 @@ defineExpose({
 const toast = useToast()
 const refresh = inject<() => void>('refresh-reservations-salles')
 const reservationsSallesService = useReservationsSallesService()
+const { salles, loadSalles } = useSallesList()
 const recurrenceSummary = ref<{
   total: number
   createdCount: number
@@ -173,17 +173,14 @@ watch(
   { immediate: true }
 )
 
-// Charger les salles pour le select
-const { data: salles, refresh: refreshSalles } = await useAsyncData<Salle[]>(
-  'reservations-salles-add-modal-salles',
-  () => reservationsSallesService.getSalles(),
-  { immediate: false, default: () => [] }
-)
-
 // Recharger les salles quand le modal s'ouvre
 watch(() => open.value, async (isOpen) => {
   if (isOpen) {
-    await refreshSalles()
+    try {
+      await loadSalles()
+    } catch {
+      // Non bloquant: le formulaire reste utilisable, même sans liste des salles.
+    }
     const defaultDateTimeRange = getDefaultDateTimeRange()
     // Réinitialiser avec les props quand le modal s'ouvre
     state.salle_id = props.salleId || undefined

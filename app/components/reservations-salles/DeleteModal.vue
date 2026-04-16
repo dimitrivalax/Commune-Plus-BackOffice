@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ReservationSalle } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const props = defineProps<{
   reservation: ReservationSalle | null
@@ -9,7 +10,7 @@ const open = ref(false)
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-reservations-salles')
-const { getAuthHeaders } = useApiAuth()
+const { deleteReservation } = useReservationsSallesService()
 
 const description = computed(() => {
   if (!props.reservation) return 'Êtes-vous sûr de vouloir supprimer cette réservation ? Cette action ne peut pas être annulée.'
@@ -20,10 +21,7 @@ async function onSubmit() {
   if (!props.reservation) return
 
   try {
-    await $fetch(`/api/reservations-salles/${props.reservation.id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    })
+    await deleteReservation(props.reservation.id)
 
     toast.add({
       title: 'Succès',
@@ -36,10 +34,10 @@ async function onSubmit() {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: error.message || 'Une erreur est survenue lors de la suppression',
+      description: getErrorMessage(error, 'Une erreur est survenue lors de la suppression'),
       color: 'error'
     })
   }

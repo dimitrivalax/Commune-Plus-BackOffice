@@ -26,6 +26,17 @@ interface CreateReservationSallePayload {
   inclure_vacances_scolaires: boolean
 }
 
+interface UpdateReservationSallePayload {
+  date_debut: string
+  date_fin: string
+  nom: string
+  prenom: string
+  email: string
+  telephone: string
+  nom_association: string | null
+  status: 'en_attente' | 'confirmée' | 'refusée'
+}
+
 export const useReservationsSallesService = () => {
   const { getAuthHeaders } = useApiAuth()
 
@@ -45,9 +56,22 @@ export const useReservationsSallesService = () => {
     body: payload
   })
 
+  const updateReservation = (reservationId: string, payload: UpdateReservationSallePayload) => $fetch<ReservationSalle>(`/api/reservations-salles/${reservationId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: payload
+  })
+
+  const deleteReservation = (reservationId: string) => $fetch(`/api/reservations-salles/${reservationId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  })
+
   return {
     getSalles,
     previewRecurrence,
-    createReservation
+    createReservation,
+    updateReservation,
+    deleteReservation
   }
 }
