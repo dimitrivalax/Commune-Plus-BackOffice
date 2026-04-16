@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { format, isToday } from 'date-fns'
 import type { Signalement } from '~/types'
 
@@ -75,6 +76,12 @@ const getStatusLabel = (status: string) => {
 const isUnread = (signalement: Signalement) => {
   return signalement.status === 'en_attente'
 }
+
+function setSignalementRef(id: string, el: Element | ComponentPublicInstance | null) {
+  if (el instanceof Element) {
+    signalementsRefs[id] = el
+  }
+}
 </script>
 
 <template>
@@ -82,7 +89,7 @@ const isUnread = (signalement: Signalement) => {
     <div
       v-for="signalement in signalements"
       :key="signalement.id"
-      :ref="(el: Element | null) => { if (el) signalementsRefs[signalement.id] = el }"
+      :ref="(el) => setSignalementRef(signalement.id, el)"
     >
       <div
         class="p-4 sm:px-6 text-sm cursor-pointer border-l-2 transition-colors"

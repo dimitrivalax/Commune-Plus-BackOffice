@@ -168,7 +168,7 @@ const pagination = ref({
   pageSize: 10
 })
 
-const list = computed(() => data.value ?? [])
+const list = computed<MunicipalInfo[]>(() => data.value ?? [])
 const totalRows = computed(() => list.value.length)
 const paginatedData = computed(() => {
   const { pageIndex, pageSize } = pagination.value

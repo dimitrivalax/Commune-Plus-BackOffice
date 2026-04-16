@@ -10,17 +10,18 @@ export const useCurrentCommune = () => {
   // Re-fetch quand la session est prête (changement de key = nouveau fetch avec les bons headers)
   const sessionToken = computed(() => useSupabase().session.value?.access_token ?? '')
   const fetchKey = computed(() => `user-communes-${sessionToken.value || 'anon'}`)
+  const authHeaders = computed<HeadersInit>(() => getAuthHeaders())
 
   // Uniquement côté client : en SSR la session n'existe pas (auth middleware client-only),
   // un fetch serveur partirait sans Bearer et échouerait — liste vide jusqu'à une navigation.
-  const authHeaders = computed(() => getAuthHeaders())
-  const { data: userCommunes, pending: userCommunesPending, refresh: refreshUserCommunes } = useFetch<Commune[]>('/api/user/communes', {
+  const { data: userCommunesData, pending: userCommunesPending, refresh: refreshUserCommunes } = useFetch<Commune[]>('/api/user/communes', {
     key: fetchKey,
     server: false,
     lazy: false,
     default: () => [],
     headers: authHeaders
   })
+  const userCommunes = computed<Commune[]>(() => (userCommunesData.value as Commune[] | null) ?? [])
 
   // Session parfois hydratée après le premier tick ; relancer le fetch quand le jeton est disponible.
   if (import.meta.client) {
@@ -47,8 +48,10 @@ export const useCurrentCommune = () => {
         }
       }
       // Sinon, prendre la première commune
-      currentCommune.value = userCommunes.value[0]
-      localStorage.setItem('current_commune_id', userCommunes.value[0].id)
+      const firstCommune = userCommunes.value[0]
+      if (!firstCommune) return
+      currentCommune.value = firstCommune
+      localStorage.setItem('current_commune_id', firstCommune.id)
     }
   })
 

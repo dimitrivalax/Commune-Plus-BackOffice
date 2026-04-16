@@ -18,7 +18,7 @@ const { currentCommune } = useCurrentCommune()
 const {
   getProposition,
   updateProposition,
-  deleteProposition,
+  deleteProposition: deletePropositionRequest,
   duplicateProposition: duplicatePropositionRequest,
   createComment,
   deleteComment: deleteCommentRequest
@@ -138,7 +138,7 @@ const saveProposition = async () => {
 const deleteProposition = async () => {
   isDeleting.value = true
   try {
-    await deleteProposition(props.proposition.id)
+    await deletePropositionRequest(props.proposition.id)
     emits('close')
     toast.add({
       title: 'Proposition supprimée',

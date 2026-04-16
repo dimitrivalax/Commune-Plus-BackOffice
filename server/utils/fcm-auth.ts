@@ -91,35 +91,36 @@ async function loadServiceAccount(): Promise<ServiceAccount> {
     )
   }
 
+  const serviceAccountRecord = (serviceAccount ?? {}) as Partial<ServiceAccount> & Record<string, unknown>
+
   // Debug: afficher les clés disponibles (sans les valeurs sensibles)
-  const availableKeys = Object.keys(serviceAccount || {})
+  const availableKeys = Object.keys(serviceAccountRecord)
   console.log('Service account keys found:', availableKeys)
 
   // Valider que les champs requis sont présents
-  if (!serviceAccount.private_key) {
+  if (!serviceAccountRecord.private_key) {
     const errorMsg = `Service account JSON is missing private_key field. Available fields: ${availableKeys.join(', ')}`
     console.error('Service account validation error:', errorMsg)
-    console.error('Service account type:', serviceAccount.type)
-    console.error('Service account project_id:', serviceAccount.project_id)
+    console.error('Service account type:', serviceAccountRecord.type)
+    console.error('Service account project_id:', serviceAccountRecord.project_id)
     throw new Error(errorMsg)
   }
-  if (!serviceAccount.client_email) {
+  if (!serviceAccountRecord.client_email) {
     throw new Error(
       `Service account JSON is missing client_email field. Available fields: ${availableKeys.join(', ')}`
     )
   }
-  if (!serviceAccount.project_id) {
+  if (!serviceAccountRecord.project_id) {
     throw new Error(
       `Service account JSON is missing project_id field. Available fields: ${availableKeys.join(', ')}`
     )
   }
-  if (!serviceAccount.token_uri) {
+  if (!serviceAccountRecord.token_uri) {
     // Le token_uri peut être dérivé si absent
-    serviceAccount.token_uri
-      = serviceAccount.token_uri || 'https://oauth2.googleapis.com/token'
+    serviceAccountRecord.token_uri = 'https://oauth2.googleapis.com/token'
   }
 
-  return serviceAccount as ServiceAccount
+  return serviceAccountRecord as ServiceAccount
 }
 
 /**

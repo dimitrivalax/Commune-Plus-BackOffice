@@ -147,7 +147,7 @@ defineExpose({
           Salle :
         </p>
         <p class="font-medium">
-          {{ salles?.find(s => s.id === reservation.salle_id)?.nom || 'Salle inconnue' }}
+          {{ salles?.find(s => s.id === reservation?.salle_id)?.nom || 'Salle inconnue' }}
         </p>
       </div>
 

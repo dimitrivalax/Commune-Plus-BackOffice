@@ -39,9 +39,6 @@ export default defineNuxtConfig({
         'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       }
     },
-    '/_next/**': {
-      index: false
-    },
     // Pages publiques : SSR ok. Le reste en client-only évite d’envoyer le HTML du backoffice
     // (ex. « Bienvenue ») avant que le middleware auth client n’ait redirigé vers /login.
     '/login': { ssr: true },

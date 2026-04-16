@@ -58,8 +58,9 @@ export async function getAddressFromCoordinates(
 
     const data = (await response.json()) as GeocodingResponse
 
-    if (data?.features?.length > 0) {
-      return data.features[0].properties.label
+    const firstFeature = data.features?.[0]
+    if (firstFeature) {
+      return firstFeature.properties.label
     }
   } catch (error) {
     console.error('Error getting address from coordinates:', error)

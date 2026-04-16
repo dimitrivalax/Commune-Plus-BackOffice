@@ -44,7 +44,7 @@ export const usePropositionsService = () => {
   }
 
   async function toggleArchiveProposition(row: Proposition) {
-    return await $fetch(`/api/propositions/${row.id}`, {
+    return await $fetch<Proposition>(`/api/propositions/${row.id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: { is_archived: !row.is_archived }
@@ -54,7 +54,7 @@ export const usePropositionsService = () => {
   async function duplicateProposition(input: DuplicatePropositionInput) {
     const { source } = input
     const title = source.name.trim()
-    return await $fetch('/api/propositions', {
+    return await $fetch<Proposition>('/api/propositions', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: {

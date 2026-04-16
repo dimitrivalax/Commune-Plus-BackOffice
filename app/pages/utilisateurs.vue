@@ -276,7 +276,7 @@ const pagination = ref({
 
 // Pagination côté client
 const filteredData = computed(() => {
-  const list = data.value || []
+  const list: Utilisateur[] = data.value ?? []
   const q = (emailFilter.value || '').toLowerCase().trim()
   if (!q) return list
   return list.filter((u: Utilisateur) => (u.email || '').toLowerCase().includes(q))

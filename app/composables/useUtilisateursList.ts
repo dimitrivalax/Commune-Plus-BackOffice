@@ -1,23 +1,15 @@
 import type { Utilisateur } from '~/types'
 
 export async function useUtilisateursList() {
-  const { session } = useSupabase()
+  const { getAuthHeaders } = useApiAuth()
+  const authHeaders = computed<HeadersInit>(() => getAuthHeaders())
 
-  const authHeaders = computed(() => {
-    const currentSession = session.value
-    if (!currentSession?.access_token) {
-      return {}
-    }
-    return {
-      Authorization: `Bearer ${currentSession.access_token}`
-    }
-  })
-
-  const { data, status, refresh } = await useFetch<Utilisateur[]>('/api/utilisateurs', {
+  const { data: rawData, status, refresh } = await useFetch<Utilisateur[]>('/api/utilisateurs', {
     lazy: true,
     default: () => [],
     headers: authHeaders
   })
+  const data = computed<Utilisateur[]>(() => (rawData.value as Utilisateur[] | null) ?? [])
 
-  return { data, status, refresh, authHeaders }
+  return { data, status, refresh }
 }

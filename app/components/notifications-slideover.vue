@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { formatTimeAgo } from '@vueuse/core'
-import type { Notification } from '~/types'
+import type { Notification as AppNotification } from '~/types'
 import { useNotifications } from '~/composables/useNotifications'
 
 const { isNotificationsSlideoverOpen } = useDashboard()
@@ -8,11 +8,12 @@ const router = useRouter()
 
 const { notifications, refreshNotifications, removeNotification, clearAll, notificationsError, unreadCount } = useNotifications()
 
-const unreadNotifications = computed(() =>
-  notifications.value.filter(n => n.unread)
+const notificationItems = computed<AppNotification[]>(() => (notifications.value as AppNotification[]) ?? [])
+const unreadNotifications = computed<AppNotification[]>(() =>
+  notificationItems.value.filter(n => n.unread)
 )
 
-function getNotificationUrl(notification: Notification) {
+function getNotificationUrl(notification: AppNotification) {
   if (notification.type === 'signalement') {
     return '/signalements'
   }
@@ -22,7 +23,7 @@ function getNotificationUrl(notification: Notification) {
   return '/'
 }
 
-function handleNotificationClick(notification: Notification) {
+function handleNotificationClick(notification: AppNotification) {
   void removeNotification(notification.id)
   router.push(getNotificationUrl(notification))
   isNotificationsSlideoverOpen.value = false

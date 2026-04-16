@@ -1,4 +1,4 @@
-import type { Notification } from '~/types'
+import type { Notification as AppNotification } from '~/types'
 import { createSharedComposable } from '@vueuse/core'
 import { getErrorMessage } from '~/utils/errorMessage'
 
@@ -37,21 +37,21 @@ function saveToStorage(notifications: unknown) {
   }
 }
 
-function loadFromStorage(): Notification[] {
+function loadFromStorage(): AppNotification[] {
   if (import.meta.server) return []
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.slice(0, MAX_ITEMS) as Notification[]
+    return parsed.slice(0, MAX_ITEMS) as AppNotification[]
   } catch {
     // Ignore malformed storage data and start from empty state.
     return []
   }
 }
 
-function rowToNotification(row: BackofficeNotificationRow): Notification {
+function rowToNotification(row: BackofficeNotificationRow): AppNotification {
   return {
     id: row.id,
     unread: row.unread ?? !(row.is_read ?? false),
@@ -67,7 +67,7 @@ function rowToNotification(row: BackofficeNotificationRow): Notification {
 const _useNotifications = () => {
   const { session } = useSupabase()
   const { getAuthHeaders } = useApiAuth()
-  const notifications = shallowRef<Notification[]>(loadFromStorage())
+  const notifications = ref<AppNotification[]>(loadFromStorage())
   const notificationsError = ref<Error | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -106,8 +106,15 @@ const _useNotifications = () => {
 
   async function removeNotification(id: string | number) {
     const idStr = String(id)
-    const previousNotifications = notifications.value.slice()
-    notifications.value = previousNotifications.filter(notification => String(notification.id) !== idStr)
+    const currentNotifications = notifications.value as unknown as AppNotification[]
+    const previousNotifications: AppNotification[] = currentNotifications.slice()
+    const nextNotifications: AppNotification[] = []
+    for (const notification of previousNotifications) {
+      if (String(notification.id) !== idStr) {
+        nextNotifications.push(notification)
+      }
+    }
+    notifications.value = nextNotifications
     saveToStorage(notifications.value)
 
     if (!session.value?.access_token) {
@@ -127,13 +134,14 @@ const _useNotifications = () => {
     }
   }
 
-  function addNotification(notification: Notification) {
-    notifications.value = [notification, ...notifications.value].slice(0, MAX_ITEMS)
+  function addNotification(notification: AppNotification) {
+    const currentNotifications = notifications.value as unknown as AppNotification[]
+    notifications.value = [notification, ...currentNotifications].slice(0, MAX_ITEMS)
     saveToStorage(notifications.value)
   }
 
   async function clearAll() {
-    const previousNotifications = notifications.value.slice()
+    const previousNotifications = (notifications.value as unknown as AppNotification[]).slice()
     notifications.value = []
     saveToStorage(notifications.value)
 

@@ -48,8 +48,7 @@ const state = reactive<Partial<Schema>>({
   name: undefined,
   description: '',
   photo_url: undefined,
-  comments_public: true,
-  is_archived: false
+  comments_public: true
 })
 
 const toast = useToast()
@@ -76,7 +75,6 @@ async function fetchDetails() {
     state.description = data.description
     state.photo_url = data.photo_url ?? undefined
     state.comments_public = data.comments_public !== false
-    state.is_archived = data.is_archived
   } finally {
     loading.value = false
   }

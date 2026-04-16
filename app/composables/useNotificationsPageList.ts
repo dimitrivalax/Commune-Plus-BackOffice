@@ -3,19 +3,10 @@ import type { MunicipalInfo } from '~/types'
 const CATEGORY_INFO_GENERALE = 'Information Générale'
 
 export async function useNotificationsPageList() {
-  const { session } = useSupabase()
+  const { getAuthHeaders } = useApiAuth()
+  const authHeaders = computed<HeadersInit>(() => getAuthHeaders())
 
-  const authHeaders = computed(() => {
-    const currentSession = session.value
-    if (!currentSession?.access_token) {
-      return {}
-    }
-    return {
-      Authorization: `Bearer ${currentSession.access_token}`
-    }
-  })
-
-  const { data, status, refresh } = await useFetch<MunicipalInfo[]>(
+  const { data: rawData, status, refresh } = await useFetch<MunicipalInfo[]>(
     '/api/municipal-info',
     {
       lazy: true,
@@ -25,6 +16,7 @@ export async function useNotificationsPageList() {
       }
     }
   )
+  const data = computed<MunicipalInfo[]>(() => (rawData.value as MunicipalInfo[] | null) ?? [])
 
   return { data, status, refresh }
 }

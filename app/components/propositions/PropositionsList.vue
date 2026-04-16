@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { format, isToday } from 'date-fns'
+import type { ComponentPublicInstance } from 'vue'
 import type { Proposition } from '~/types'
 
 defineProps<{
@@ -24,6 +25,12 @@ const getStatusColor = (isArchived: boolean) => {
 const getStatusLabel = (isArchived: boolean) => {
   return isArchived ? 'Archivée' : 'Active'
 }
+
+function setPropositionRef(id: string, el: Element | ComponentPublicInstance | null) {
+  if (el instanceof Element) {
+    propositionsRefs.value[id] = el
+  }
+}
 </script>
 
 <template>
@@ -31,11 +38,7 @@ const getStatusLabel = (isArchived: boolean) => {
     <div
       v-for="(proposition, index) in propositions"
       :key="index"
-      :ref="
-        (el) => {
-          if (el) propositionsRefs[proposition.id] = el;
-        }
-      "
+      :ref="(el) => setPropositionRef(proposition.id, el)"
     >
       <div
         class="p-4 sm:px-6 text-sm cursor-pointer border-l-2 transition-colors"
