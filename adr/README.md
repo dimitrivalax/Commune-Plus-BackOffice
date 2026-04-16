@@ -8,6 +8,7 @@ Ce dossier contient les Architecture Decision Records (ADR) et la documentation 
 - `0002-backoffice-notifications.md` : architecture des notifications BackOffice (UI + persistance locale).
 - `0003-signalement-notifications.md` : flux des notifications push de signalements (mobile <-> BackOffice <-> FCM).
 - `0004-mobile-analytics-rgpd.md` : cadrage RGPD et instrumentation analytics mobile.
+- `0005-mobile-service-contracts-and-error-handling.md` : standardisation mobile des contrats de services (`{ data, error }`) et de la gestion d'erreurs.
 
 ## Convention de nommage
 
