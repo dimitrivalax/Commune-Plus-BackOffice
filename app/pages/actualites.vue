@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type { MunicipalInfo } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const UButton = resolveComponent('UButton')
 const UDropdownMenu = resolveComponent('UDropdownMenu')
@@ -55,10 +56,10 @@ async function duplicateInfo(row: MunicipalInfo) {
       color: 'success'
     })
     refresh()
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: error?.message || 'Duplication impossible',
+      description: getErrorMessage(error, 'Duplication impossible'),
       color: 'error'
     })
   }
@@ -276,7 +277,6 @@ const columns: TableColumn<MunicipalInfo>[] = [
     }
   }
 ]
-
 </script>
 
 <template>
