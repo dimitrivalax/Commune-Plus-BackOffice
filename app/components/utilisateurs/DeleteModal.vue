@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Utilisateur } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const props = defineProps<{
   utilisateur: Utilisateur | null
@@ -9,7 +10,7 @@ const open = ref(false)
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-utilisateurs')
-const { getAuthHeaders } = useApiAuth()
+const { deleteUtilisateur } = useUtilisateursService()
 
 const description = computed(() => {
   if (!props.utilisateur) return 'Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action supprimera également le compte Supabase associé et ne peut pas être annulée.'
@@ -20,10 +21,7 @@ async function onSubmit() {
   if (!props.utilisateur) return
 
   try {
-    await $fetch(`/api/utilisateurs/${props.utilisateur.id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    })
+    await deleteUtilisateur(props.utilisateur.id)
 
     toast.add({
       title: 'Succès',
@@ -36,10 +34,10 @@ async function onSubmit() {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: error.data?.message || error.message || 'Une erreur est survenue lors de la suppression',
+      description: getErrorMessage(error, 'Une erreur est survenue lors de la suppression'),
       color: 'error'
     })
   }

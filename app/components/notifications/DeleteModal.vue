@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MunicipalInfo } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const props = defineProps<{
   info: MunicipalInfo | null
@@ -9,7 +10,7 @@ const open = ref(false)
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-notifications')
-const { getAuthHeaders } = useApiAuth()
+const { deleteMunicipalInfo } = useMunicipalInfoService()
 
 const description = computed(() => {
   if (!props.info) return 'Êtes-vous sûr de vouloir supprimer cette notification ? Cette action ne peut pas être annulée.'
@@ -20,10 +21,7 @@ async function onSubmit() {
   if (!props.info) return
 
   try {
-    await $fetch(`/api/municipal-info/${props.info.id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    })
+    await deleteMunicipalInfo(props.info.id)
 
     toast.add({
       title: 'Succès',
@@ -36,10 +34,10 @@ async function onSubmit() {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: error.message || 'Une erreur est survenue lors de la suppression',
+      description: getErrorMessage(error, 'Une erreur est survenue lors de la suppression'),
       color: 'error'
     })
   }

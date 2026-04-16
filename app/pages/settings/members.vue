@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import type { Member } from '~/types'
-
-const { data: members } = await useFetch<Member[]>('/api/members', { default: () => [] })
+const { members } = await useMembersList()
 
 const q = ref('')
 

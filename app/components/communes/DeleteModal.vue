@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Commune } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const props = defineProps<{
   commune: Commune | null
@@ -9,7 +10,7 @@ const open = ref(false)
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-communes')
-const { getAuthHeaders } = useApiAuth()
+const { deleteCommune } = useCommunesService()
 
 const description = computed(() => {
   if (!props.commune) return 'Êtes-vous sûr de vouloir supprimer cette commune ? Cette action ne peut pas être annulée.'
@@ -20,10 +21,7 @@ async function onSubmit() {
   if (!props.commune) return
 
   try {
-    await $fetch(`/api/communes/${props.commune.id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    })
+    await deleteCommune(props.commune.id)
 
     toast.add({
       title: 'Succès',
@@ -36,10 +34,10 @@ async function onSubmit() {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: error.data?.message || error.message || 'Une erreur est survenue lors de la suppression',
+      description: getErrorMessage(error, 'Une erreur est survenue lors de la suppression'),
       color: 'error'
     })
   }

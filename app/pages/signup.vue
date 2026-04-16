@@ -8,6 +8,7 @@ definePageMeta({
 
 const router = useRouter()
 const toast = useToast()
+const { signup } = useBackofficeAuthService()
 
 const form = ref({
   firstName: '',
@@ -78,15 +79,12 @@ const handleSubmit = async () => {
   loading.value = true
 
   try {
-    await $fetch('/api/auth/signup', {
-      method: 'POST',
-      body: {
-        firstName: form.value.firstName,
-        lastName: form.value.lastName,
-        fonction: form.value.fonction,
-        email: form.value.email,
-        password: form.value.password
-      }
+    await signup({
+      firstName: form.value.firstName,
+      lastName: form.value.lastName,
+      fonction: form.value.fonction,
+      email: form.value.email,
+      password: form.value.password
     })
 
     // Afficher la modale d'information

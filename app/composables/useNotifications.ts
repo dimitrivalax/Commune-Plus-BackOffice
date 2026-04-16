@@ -23,7 +23,7 @@ const DEFAULT_SENDER: User = {
   name: 'Commune Plus',
   email: 'notifications@commune.plus',
   status: 'subscribed',
-  location: '',
+  location: ''
 }
 
 function saveToStorage(notifications: unknown) {
@@ -59,7 +59,7 @@ function rowToNotification(row: BackofficeNotificationRow): Notification {
     date: row.created_at ?? row.date ?? new Date().toISOString(),
     type: row.type ?? undefined,
     entity_id: row.entity_id ?? undefined,
-    title: row.title ?? undefined,
+    title: row.title ?? undefined
   }
 }
 
@@ -78,7 +78,7 @@ const _useNotifications = () => {
     notificationsError.value = null
     try {
       const rows = await $fetch<BackofficeNotificationRow[]>('/api/notifications', {
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders()
       })
       notifications.value = (rows || []).map(rowToNotification).slice(0, MAX_ITEMS)
       saveToStorage(notifications.value)
@@ -112,7 +112,7 @@ const _useNotifications = () => {
       try {
         await $fetch(`/api/notifications/${idStr}/read`, {
           method: 'POST',
-          headers: getAuthHeaders(),
+          headers: getAuthHeaders()
         })
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e)
@@ -120,7 +120,7 @@ const _useNotifications = () => {
       }
     }
     const list = notifications.value
-    const index = list.findIndex((n) => String(n.id) === idStr)
+    const index = list.findIndex(n => String(n.id) === idStr)
     if (index === -1) return
     const current = list[index]
     if (!current?.unread) return
@@ -160,7 +160,7 @@ const _useNotifications = () => {
           notifications.value = []
         }
       },
-      { immediate: true },
+      { immediate: true }
     )
   }
 
@@ -170,7 +170,7 @@ const _useNotifications = () => {
     refreshNotifications,
     markAsRead,
     clearAll,
-    notificationsError,
+    notificationsError
   }
 }
 

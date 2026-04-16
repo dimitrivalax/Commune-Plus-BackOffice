@@ -4,164 +4,168 @@ import {
   CONTACT_SUPPORT_EMAIL,
   MAILTO_SUPPORT_HREF
 } from '~/utils/compte-desactive'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 definePageMeta({
   layout: false,
-  middleware: [],
-});
+  middleware: []
+})
 
-const router = useRouter();
-const toast = useToast();
-const route = useRoute();
-const { signIn, signOut, getSession, resetPassword, updatePassword } = useSupabase();
+const router = useRouter()
+const toast = useToast()
+const route = useRoute()
+const { signIn, signOut, getSession, resetPassword, updatePassword } = useSupabase()
+const { fetchCurrentUser } = useBackofficeAuthService()
 
 const form = ref({
-  email: "",
-  password: "",
-  newPassword: "",
-});
+  email: '',
+  password: '',
+  newPassword: ''
+})
 
-const loading = ref(false);
-const showPassword = ref(false);
-const showNewPassword = ref(false);
-const isResetMode = ref(false);
-const isRecoveryMode = ref(false);
-const errors = ref<Record<string, string>>({});
+const loading = ref(false)
+const showPassword = ref(false)
+const showNewPassword = ref(false)
+const isResetMode = ref(false)
+const isRecoveryMode = ref(false)
+const errors = ref<Record<string, string>>({})
 /** Affiche l’aide sous le mot de passe (403 / redirection compte désactivé). */
-const showCompteDesactiveAlert = ref(false);
+const showCompteDesactiveAlert = ref(false)
 
 onMounted(async () => {
   if (
-    route.query.type === "recovery"
-    || (route.query.mode === "resetPassword" && route.query.oobCode)
+    route.query.type === 'recovery'
+    || (route.query.mode === 'resetPassword' && route.query.oobCode)
   ) {
-    isRecoveryMode.value = true;
+    isRecoveryMode.value = true
   }
 
-  if (route.query.raison === "desactive") {
-    showCompteDesactiveAlert.value = true;
+  if (route.query.raison === 'desactive') {
+    showCompteDesactiveAlert.value = true
     toast.add({
-      title: "Compte désactivé",
+      title: 'Compte désactivé',
       description: COMPTE_DESACTIVE_MESSAGE,
-      color: "error",
-    });
-    const q = { ...route.query };
-    delete q.raison;
-    router.replace({ path: "/login", query: q });
+      color: 'error'
+    })
+    const q = { ...route.query }
+    delete q.raison
+    router.replace({ path: '/login', query: q })
   }
 
-  const session = await getSession();
+  const session = await getSession()
   if (session && !isRecoveryMode.value) {
-    router.push("/");
+    router.push('/')
   }
-});
+})
 
 const validateForm = () => {
-  errors.value = {};
+  errors.value = {}
 
   if (isRecoveryMode.value) {
     if (!form.value.newPassword) {
-      errors.value.newPassword = "Le nouveau mot de passe est requis";
+      errors.value.newPassword = 'Le nouveau mot de passe est requis'
     } else if (form.value.newPassword.length < 6) {
-      errors.value.newPassword =
-        "Le mot de passe doit faire au moins 6 caractères";
+      errors.value.newPassword
+        = 'Le mot de passe doit faire au moins 6 caractères'
     }
   } else {
     if (!form.value.email.trim()) {
-      errors.value.email = "L'email est requis";
+      errors.value.email = 'L\'email est requis'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
-      errors.value.email = "L'email n'est pas valide";
+      errors.value.email = 'L\'email n\'est pas valide'
     }
 
     if (!isResetMode.value && !form.value.password) {
-      errors.value.password = "Le mot de passe est requis";
+      errors.value.password = 'Le mot de passe est requis'
     }
   }
 
-  return Object.keys(errors.value).length === 0;
-};
+  return Object.keys(errors.value).length === 0
+}
 
 const handleSubmit = async () => {
   if (!validateForm()) {
     toast.add({
-      title: "Erreur de validation",
-      description: "Veuillez corriger les erreurs dans le formulaire",
-      color: "error",
-    });
-    return;
+      title: 'Erreur de validation',
+      description: 'Veuillez corriger les erreurs dans le formulaire',
+      color: 'error'
+    })
+    return
   }
 
-  loading.value = true;
+  loading.value = true
 
   try {
     if (isRecoveryMode.value) {
       await updatePassword(
         form.value.newPassword,
-        route.query.oobCode as string | undefined,
-      );
+        route.query.oobCode as string | undefined
+      )
       toast.add({
-        title: "Succès",
-        description: "Votre mot de passe a été mis à jour",
-        color: "success",
-      });
-      isRecoveryMode.value = false;
-      router.replace("/login");
+        title: 'Succès',
+        description: 'Votre mot de passe a été mis à jour',
+        color: 'success'
+      })
+      isRecoveryMode.value = false
+      router.replace('/login')
     } else if (isResetMode.value) {
-      await resetPassword(form.value.email);
+      await resetPassword(form.value.email)
       toast.add({
-        title: "Email envoyé",
+        title: 'Email envoyé',
         description:
-          "Veuillez vérifier votre boîte mail pour réinitialiser votre mot de passe",
-        color: "success",
-      });
-      isResetMode.value = false;
+          'Veuillez vérifier votre boîte mail pour réinitialiser votre mot de passe',
+        color: 'success'
+      })
+      isResetMode.value = false
     } else {
-      await signIn(form.value.email, form.value.password);
+      await signIn(form.value.email, form.value.password)
 
-      const { session } = useSupabase();
-      const token = session.value?.access_token;
+      const { session } = useSupabase()
+      const token = session.value?.access_token
       if (!token) {
-        throw new Error("Session indisponible après connexion");
+        throw new Error('Session indisponible après connexion')
       }
 
       try {
-        await $fetch("/api/user/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch (meErr: any) {
-        const status = meErr?.statusCode ?? meErr?.status ?? meErr?.response?.status;
-        await signOut();
-        if (status === 403) {
-          showCompteDesactiveAlert.value = true;
-          toast.add({
-            title: "Compte désactivé",
-            description: meErr?.data?.message ?? COMPTE_DESACTIVE_MESSAGE,
-            color: "error",
-          });
-          return;
+        await fetchCurrentUser(token)
+      } catch (meErr: unknown) {
+        const meError = meErr as {
+          statusCode?: number
+          status?: number
+          response?: { status?: number }
+          data?: { message?: string }
         }
-        throw meErr;
+        const status = meError.statusCode ?? meError.status ?? meError.response?.status
+        await signOut()
+        if (status === 403) {
+          showCompteDesactiveAlert.value = true
+          toast.add({
+            title: 'Compte désactivé',
+            description: meError.data?.message ?? COMPTE_DESACTIVE_MESSAGE,
+            color: 'error'
+          })
+          return
+        }
+        throw meError
       }
 
       toast.add({
-        title: "Connexion réussie",
-        description: "Vous êtes maintenant connecté",
-        color: "success",
-      });
-      router.push("/");
+        title: 'Connexion réussie',
+        description: 'Vous êtes maintenant connecté',
+        color: 'success'
+      })
+      router.push('/')
     }
   } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Une erreur est survenue";
     toast.add({
-      title: "Erreur",
-      description: errorMessage,
-      color: "error",
-    });
+      title: 'Erreur',
+      description: getErrorMessage(error, 'Une erreur est survenue'),
+      color: 'error'
+    })
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 </script>
 
 <template>
@@ -170,7 +174,7 @@ const handleSubmit = async () => {
   >
     <div class="max-w-md w-full space-y-8">
       <div class="text-center">
-        <img src="/logo.png" alt="Logo" class="mx-auto h-20 w-auto" />
+        <img src="/logo.png" alt="Logo" class="mx-auto h-20 w-auto">
         <h2 class="mt-6 text-3xl font-extrabold text-gray-900 dark:text-white">
           {{
             isRecoveryMode

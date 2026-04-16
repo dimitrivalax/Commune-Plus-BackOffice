@@ -1,91 +1,87 @@
 <script setup lang="ts">
-import * as z from "zod";
-import type { FormSubmitEvent } from "@nuxt/ui";
-import type { Commune } from "~/types";
+import * as z from 'zod'
+import type { FormSubmitEvent } from '@nuxt/ui'
+import type { Commune } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const schema = z.object({
-  nom: z.string().min(1, "Le nom est requis"),
-  prenom: z.string().min(1, "Le prénom est requis"),
-  email: z.string().email("Email invalide"),
-  role: z.enum(["utilisateur", "administrateur"]),
-});
+  nom: z.string().min(1, 'Le nom est requis'),
+  prenom: z.string().min(1, 'Le prénom est requis'),
+  email: z.string().email('Email invalide'),
+  role: z.enum(['utilisateur', 'administrateur'])
+})
 
-const open = ref(false);
+const open = ref(false)
 
-type Schema = z.output<typeof schema>;
+type Schema = z.output<typeof schema>
 
 const state = reactive<Partial<Schema>>({
   nom: undefined,
   prenom: undefined,
   email: undefined,
-  role: "utilisateur" as "utilisateur" | "administrateur",
-});
+  role: 'utilisateur' as 'utilisateur' | 'administrateur'
+})
 
-const toast = useToast();
-const refresh = inject<() => void>("refresh-utilisateurs");
-const { getAuthHeaders } = useApiAuth();
+const toast = useToast()
+const refresh = inject<() => void>('refresh-utilisateurs')
+const { listCommunes, createUtilisateur } = useUtilisateursService()
 
-const { data: communes } = await useFetch<Commune[]>("/api/communes", {
-  lazy: true,
-  headers: getAuthHeaders(),
-});
+const communes = ref<Commune[]>([])
 
-const selectedCommunes = ref<string[]>([]);
+const selectedCommunes = ref<string[]>([])
 
 function resetForm() {
-  state.nom = undefined;
-  state.prenom = undefined;
-  state.email = undefined;
-  state.role = "utilisateur";
-  selectedCommunes.value = [];
+  state.nom = undefined
+  state.prenom = undefined
+  state.email = undefined
+  state.role = 'utilisateur'
+  selectedCommunes.value = []
 }
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
-    await $fetch("/api/utilisateurs/create", {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: {
-        nom: event.data.nom,
-        prenom: event.data.prenom,
-        email: event.data.email,
-        role: event.data.role || "utilisateur",
-        communes: selectedCommunes.value,
-      },
-    });
+    await createUtilisateur({
+      nom: event.data.nom,
+      prenom: event.data.prenom,
+      email: event.data.email,
+      role: event.data.role || 'utilisateur',
+      communes: selectedCommunes.value
+    })
 
     toast.add({
-      title: "Succès",
+      title: 'Succès',
       description: `L'utilisateur "${event.data.prenom} ${event.data.nom}" a été créé`,
-      color: "success",
-    });
+      color: 'success'
+    })
 
-    open.value = false;
-    resetForm();
+    open.value = false
+    resetForm()
 
     if (refresh) {
-      refresh();
+      refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
-      title: "Erreur",
-      description:
-        error.data?.message ||
-        error.message ||
-        "Une erreur est survenue lors de la création",
-      color: "error",
-    });
+      title: 'Erreur',
+      description: getErrorMessage(error, 'Une erreur est survenue lors de la création'),
+      color: 'error'
+    })
   }
 }
 
-function openModal() {
-  resetForm();
-  open.value = true;
+async function openModal() {
+  try {
+    communes.value = await listCommunes()
+  } catch {
+    communes.value = []
+  }
+  resetForm()
+  open.value = true
 }
 
 defineExpose({
-  openModal,
-});
+  openModal
+})
 </script>
 
 <template>
@@ -101,11 +97,21 @@ defineExpose({
         class="space-y-4"
         @submit="onSubmit"
       >
-        <UFormField label="Nom" placeholder="Dupont" name="nom" required>
+        <UFormField
+          label="Nom"
+          placeholder="Dupont"
+          name="nom"
+          required
+        >
           <UInput v-model="state.nom" class="w-full" />
         </UFormField>
 
-        <UFormField label="Prénom" placeholder="Jean" name="prenom" required>
+        <UFormField
+          label="Prénom"
+          placeholder="Jean"
+          name="prenom"
+          required
+        >
           <UInput v-model="state.prenom" class="w-full" />
         </UFormField>
 
@@ -123,7 +129,7 @@ defineExpose({
             v-model="state.role"
             :options="[
               { label: 'Utilisateur', value: 'utilisateur' },
-              { label: 'Administrateur', value: 'administrateur' },
+              { label: 'Administrateur', value: 'administrateur' }
             ]"
             option-attribute="label"
             value-attribute="value"
@@ -151,10 +157,8 @@ defineExpose({
                 type="checkbox"
                 :value="commune.id"
                 class="rounded border-default"
-              />
-              <span class="text-sm"
-                >{{ commune.name }} ({{ commune.postal_code }})</span
               >
+              <span class="text-sm">{{ commune.name }} ({{ commune.postal_code }})</span>
             </label>
           </div>
         </UFormField>

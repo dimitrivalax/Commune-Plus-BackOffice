@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { EditorToolbarItem, FormSubmitEvent } from '@nuxt/ui'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const editorToolbarItems: EditorToolbarItem[] = [
   {
@@ -38,11 +39,11 @@ const state = reactive<Partial<Schema>>({
   published: false
 })
 
-const { getAuthHeaders } = useApiAuth()
 const { currentCommune } = useCurrentCommune()
 const toast = useToast()
 const refresh = inject<() => void>('refresh-information-commune')
 const isSubmitting = ref(false)
+const { createInformation } = useInformationCommuneService()
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!currentCommune.value?.id) {
@@ -56,16 +57,12 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
   try {
     isSubmitting.value = true
-    await $fetch('/api/information-commune/create', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: {
-        title: event.data.title,
-        description: event.data.description,
-        photo_url: event.data.photo_url || null,
-        published: event.data.published ?? false,
-        commune_id: currentCommune.value.id
-      }
+    await createInformation({
+      title: event.data.title,
+      description: event.data.description,
+      photo_url: event.data.photo_url || null,
+      published: event.data.published ?? false,
+      commune_id: currentCommune.value.id
     })
     toast.add({
       title: 'Succès',
@@ -81,7 +78,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: (error as Error)?.message || 'Une erreur est survenue',
+      description: getErrorMessage(error, 'Une erreur est survenue'),
       color: 'error'
     })
   } finally {

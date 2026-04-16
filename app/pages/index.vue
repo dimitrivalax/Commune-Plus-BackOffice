@@ -15,26 +15,7 @@ interface CommuneInformation {
 const UButton = resolveComponent('UButton')
 const UDropdownMenu = resolveComponent('UDropdownMenu')
 
-const { session } = useSupabase()
-const { currentCommune } = useCurrentCommune()
-
-const authHeaders = computed<Record<string, string> | undefined>(() => {
-  const token = session.value?.access_token
-  return token ? { Authorization: `Bearer ${token}` } : undefined
-})
-
-const { data, status, refresh } = await useFetch<CommuneInformation[]>(
-  '/api/information-commune',
-  {
-    lazy: true,
-    headers: authHeaders,
-    query: computed(() => ({
-      commune_id: currentCommune.value?.id
-    }))
-  }
-)
-
-watch(currentCommune, () => refresh())
+const { data, status, refresh } = await useInformationCommuneList()
 provide('refresh-information-commune', refresh)
 
 const searchQuery = ref('')
@@ -68,7 +49,7 @@ function openDeleteModal(item: CommuneInformation) {
 }
 
 const toast = useToast()
-const { getAuthHeaders } = useApiAuth()
+const { reorderInformation } = useInformationCommuneService()
 
 function getSortedList() {
   return ((data.value ?? []) as CommuneInformation[]).slice().sort((a, b) => {
@@ -87,14 +68,10 @@ function canMove(row: CommuneInformation, direction: 'up' | 'down') {
 
 async function moveRow(row: CommuneInformation, direction: 'up' | 'down') {
   try {
-    await $fetch('/api/information-commune/reorder', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: {
-        id: row.id,
-        commune_id: row.commune_id,
-        direction
-      }
+    await reorderInformation({
+      id: row.id,
+      commune_id: row.commune_id,
+      direction
     })
     await refresh()
   } catch (error: unknown) {

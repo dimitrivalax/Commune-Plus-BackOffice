@@ -21,9 +21,7 @@ const columnFilters = ref([{
 const columnVisibility = ref()
 const rowSelection = ref({ 1: true })
 
-const { data, status } = await useFetch<User[]>('/api/customers', {
-  lazy: true
-})
+const { data, status } = await useCustomersList()
 
 function getRowItems(row: Row<User>) {
   return [

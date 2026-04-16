@@ -2,6 +2,7 @@
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { Salle } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const props = defineProps<{
   salle: Salle | null
@@ -43,7 +44,7 @@ watch(() => props.salle, (newSalle) => {
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-salles')
-const { getAuthHeaders } = useApiAuth()
+const { updateSalle } = useSallesService()
 
 const emit = defineEmits<{
   delete: [salle: Salle]
@@ -65,16 +66,12 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!props.salle) return
 
   try {
-    await $fetch(`/api/salles/${props.salle.id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: {
-        nom: event.data.nom,
-        adresse: event.data.adresse,
-        nombre_max_places: event.data.nombre_max_places,
-        description: event.data.description || null,
-        photo_url: event.data.photo_url || null
-      }
+    await updateSalle(props.salle.id, {
+      nom: event.data.nom,
+      adresse: event.data.adresse,
+      nombre_max_places: event.data.nombre_max_places,
+      description: event.data.description || null,
+      photo_url: event.data.photo_url || null
     })
 
     toast.add({
@@ -88,10 +85,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: error.message || 'Une erreur est survenue lors de la modification',
+      description: getErrorMessage(error, 'Une erreur est survenue lors de la modification'),
       color: 'error'
     })
   }

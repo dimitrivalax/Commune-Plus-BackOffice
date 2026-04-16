@@ -1,39 +1,4 @@
 <script setup lang="ts">
-type TopItem = {
-  id: string
-  title: string
-  unique_views: number
-}
-
-type NotificationPerfItem = {
-  notification_id: string
-  target_type: string
-  target_id: string
-  target_title: string
-  sent_total: number
-  unique_clicks: number
-  ctr_percent: number
-}
-
-type StatsResponse = {
-  filters: {
-    commune_id: string | null
-    period: string
-    start: string
-    end: string
-    mobile_only: boolean
-  }
-  kpis: {
-    unique_actualites_views: number
-    unique_propositions_views: number
-    signalements_count: number
-    unique_notification_clicks: number
-  }
-  top_actualites: TopItem[]
-  top_propositions: TopItem[]
-  notifications_performance: NotificationPerfItem[]
-}
-
 const period = ref<'7d' | '30d' | 'custom'>('30d')
 const customStart = ref('')
 const customEnd = ref('')
@@ -42,10 +7,9 @@ const selectedCommuneId = ref('')
 const periodItems = [
   { label: '7 derniers jours', value: '7d' },
   { label: '30 derniers jours', value: '30d' },
-  { label: 'Personnalisee', value: 'custom' },
+  { label: 'Personnalisee', value: 'custom' }
 ]
 
-const { session } = useSupabase()
 const { currentCommune, userCommunes } = useCurrentCommune()
 const { isAdministrator } = useCurrentUser()
 
@@ -56,58 +20,23 @@ watch(
       selectedCommuneId.value = id
     }
   },
-  { immediate: true },
+  { immediate: true }
 )
 
 const communeItems = computed(() =>
-  (userCommunes.value || []).map((c) => ({
+  (userCommunes.value || []).map(c => ({
     label: `${c.name} (${c.postal_code})`,
-    value: c.id,
-  })),
+    value: c.id
+  }))
 )
 
-const authHeaders = computed<Record<string, string> | undefined>(() => {
-  const token = session.value?.access_token
-  return token ? { Authorization: `Bearer ${token}` } : undefined
-})
-
-const queryParams = computed(() => {
-  const query: Record<string, string> = {
-    period: period.value,
-  }
-  if (selectedCommuneId.value) {
-    query.commune_id = selectedCommuneId.value
-  }
-  if (period.value === 'custom') {
-    if (customStart.value) query.start = customStart.value
-    if (customEnd.value) query.end = customEnd.value
-  }
-  return query
-})
-
-const { data, status, refresh, error } = await useFetch<StatsResponse>(
-  '/api/stats/mobile',
-  {
-    lazy: true,
-    headers: authHeaders,
-    query: queryParams,
-  },
-)
-
-watch([period, selectedCommuneId, customStart, customEnd], () => {
-  if (
-    period.value !== 'custom'
-    || (period.value === 'custom' && customStart.value && customEnd.value)
-  ) {
-    refresh()
-  }
-})
+const { data, status, error } = await useStatsMobileData(period, selectedCommuneId, customStart, customEnd)
 
 const kpis = computed(() => data.value?.kpis)
 const topActualites = computed(() => data.value?.top_actualites || [])
 const topPropositions = computed(() => data.value?.top_propositions || [])
 const notificationPerformance = computed(
-  () => data.value?.notifications_performance || [],
+  () => data.value?.notifications_performance || []
 )
 const isLoading = computed(() => status.value === 'pending')
 </script>
@@ -170,19 +99,25 @@ const isLoading = computed(() => status.value === 'pending')
 
         <div class="grid gap-3 md:grid-cols-3">
           <UCard>
-            <template #header>Vues uniques actualites</template>
+            <template #header>
+              Vues uniques actualites
+            </template>
             <div class="text-2xl font-semibold">
               {{ kpis?.unique_actualites_views ?? 0 }}
             </div>
           </UCard>
           <UCard>
-            <template #header>Vues uniques propositions</template>
+            <template #header>
+              Vues uniques propositions
+            </template>
             <div class="text-2xl font-semibold">
               {{ kpis?.unique_propositions_views ?? 0 }}
             </div>
           </UCard>
           <UCard>
-            <template #header>Signalements crees</template>
+            <template #header>
+              Signalements crees
+            </template>
             <div class="text-2xl font-semibold">
               {{ kpis?.signalements_count ?? 0 }}
             </div>
@@ -191,7 +126,9 @@ const isLoading = computed(() => status.value === 'pending')
 
         <div class="grid gap-3 md:grid-cols-1">
           <UCard>
-            <template #header>Top actualites (vues uniques)</template>
+            <template #header>
+              Top actualites (vues uniques)
+            </template>
             <ul v-if="topActualites.length > 0" class="space-y-2">
               <li
                 v-for="item in topActualites"
@@ -199,15 +136,21 @@ const isLoading = computed(() => status.value === 'pending')
                 class="flex items-center justify-between text-sm"
               >
                 <span class="truncate pr-3">{{ item.title }}</span>
-                <UBadge color="primary" variant="soft">{{ item.unique_views }}</UBadge>
+                <UBadge color="primary" variant="soft">
+                  {{ item.unique_views }}
+                </UBadge>
               </li>
             </ul>
-            <p v-else class="text-sm text-muted">Aucune donnee.</p>
+            <p v-else class="text-sm text-muted">
+              Aucune donnee.
+            </p>
           </UCard>
         </div>
         <div class="grid gap-3 md:grid-cols-1">
           <UCard>
-            <template #header>Top propositions (vues uniques)</template>
+            <template #header>
+              Top propositions (vues uniques)
+            </template>
             <ul v-if="topPropositions.length > 0" class="space-y-2">
               <li
                 v-for="item in topPropositions"
@@ -215,15 +158,21 @@ const isLoading = computed(() => status.value === 'pending')
                 class="flex items-center justify-between text-sm"
               >
                 <span class="truncate pr-3">{{ item.title }}</span>
-                <UBadge color="primary" variant="soft">{{ item.unique_views }}</UBadge>
+                <UBadge color="primary" variant="soft">
+                  {{ item.unique_views }}
+                </UBadge>
               </li>
             </ul>
-            <p v-else class="text-sm text-muted">Aucune donnee.</p>
+            <p v-else class="text-sm text-muted">
+              Aucune donnee.
+            </p>
           </UCard>
         </div>
 
         <UCard>
-          <template #header>Performance des notifications</template>
+          <template #header>
+            Performance des notifications
+          </template>
           <UTable
             :data="notificationPerformance"
             :loading="status === 'pending'"

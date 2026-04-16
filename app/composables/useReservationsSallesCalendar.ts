@@ -19,7 +19,7 @@ const DAY_DURATION_MINUTES = DAY_END_MINUTES - DAY_START_MINUTES
 function getDayIntervalBounds(day: Date): { dayStart: Date, dayEnd: Date } {
   return {
     dayStart: setHours(setMinutes(day, 0), DAY_START_HOUR),
-    dayEnd: setHours(setMinutes(day, 0), DAY_END_HOUR),
+    dayEnd: setHours(setMinutes(day, 0), DAY_END_HOUR)
   }
 }
 
@@ -29,7 +29,7 @@ function toMinutes(date: Date): number {
 
 function getReservationIntervalForDay(
   reservation: ReservationSalle,
-  day: Date,
+  day: Date
 ): { startMinutes: number, endMinutes: number } | null {
   const { dayStart, dayEnd } = getDayIntervalBounds(day)
   const start = parseISO(reservation.date_debut)
@@ -42,7 +42,7 @@ function getReservationIntervalForDay(
 
   return {
     startMinutes: toMinutes(effectiveStart),
-    endMinutes: toMinutes(effectiveEnd),
+    endMinutes: toMinutes(effectiveEnd)
   }
 }
 
@@ -50,7 +50,7 @@ export function useReservationsSallesCalendar() {
   function getDayAgendaReservationsForSalle(
     reservations: ReservationSalle[],
     salleId: string,
-    day: Date,
+    day: Date
   ): DayPlacedReservation[] {
     const positioned = reservations
       .filter((res) => {
@@ -70,7 +70,7 @@ export function useReservationsSallesCalendar() {
           endMinutes: interval.endMinutes,
           columnIndex: 0,
           columnCount: 1,
-          groupId: -1,
+          groupId: -1
         } satisfies DayPlacedReservation
       })
       .filter((item): item is DayPlacedReservation => item !== null)
@@ -98,8 +98,7 @@ export function useReservationsSallesCalendar() {
       if (!active.length || item.startMinutes >= maxEndInCurrentGroup) {
         currentGroupId += 1
         maxEndInCurrentGroup = item.endMinutes
-      }
-      else if (item.endMinutes > maxEndInCurrentGroup) {
+      } else if (item.endMinutes > maxEndInCurrentGroup) {
         maxEndInCurrentGroup = item.endMinutes
       }
 
@@ -115,14 +114,14 @@ export function useReservationsSallesCalendar() {
 
       const groupColumnCount = Math.max(
         groupMaxColumns[currentGroupId] || 1,
-        nextColumnIndex + 1,
+        nextColumnIndex + 1
       )
       groupMaxColumns[currentGroupId] = groupColumnCount
     })
 
     return positioned.map(item => ({
       ...item,
-      columnCount: groupMaxColumns[item.groupId] || 1,
+      columnCount: groupMaxColumns[item.groupId] || 1
     }))
   }
 
@@ -137,7 +136,7 @@ export function useReservationsSallesCalendar() {
       top: `${top}%`,
       height: `${height}%`,
       width: `calc(${widthPct}% - 6px)`,
-      left: `calc(${leftPct}% + 3px)`,
+      left: `calc(${leftPct}% + 3px)`
     }
   }
 
@@ -148,6 +147,6 @@ export function useReservationsSallesCalendar() {
     dayEndMinutes: DAY_END_MINUTES,
     dayDurationMinutes: DAY_DURATION_MINUTES,
     getDayAgendaReservationsForSalle,
-    getDayAgendaReservationStyle,
+    getDayAgendaReservationStyle
   }
 }

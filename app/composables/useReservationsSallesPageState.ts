@@ -15,7 +15,7 @@ import {
   startOfWeek,
   subDays,
   subMonths,
-  subWeeks,
+  subWeeks
 } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { ReservationSalle, Salle } from '~/types'
@@ -48,7 +48,7 @@ export async function useReservationsSallesPageState() {
   }>({})
 
   const isReservationsMobileDisabled = computed(
-    () => currentCommune.value?.feature_reservations_salles === false,
+    () => currentCommune.value?.feature_reservations_salles === false
   )
 
   const dateRange = computed(() => {
@@ -58,12 +58,12 @@ export async function useReservationsSallesPageState() {
       case 'week':
         return {
           start: startOfWeek(currentDate.value, { locale: fr }),
-          end: endOfWeek(currentDate.value, { locale: fr }),
+          end: endOfWeek(currentDate.value, { locale: fr })
         }
       case 'month':
         return {
           start: startOfMonth(currentDate.value),
-          end: endOfMonth(currentDate.value),
+          end: endOfMonth(currentDate.value)
         }
     }
   })
@@ -72,8 +72,8 @@ export async function useReservationsSallesPageState() {
     lazy: true,
     headers: computed(() => getAuthHeaders()),
     query: computed(() => ({
-      commune_id: currentCommune.value?.id,
-    })),
+      commune_id: currentCommune.value?.id
+    }))
   })
 
   const { data: reservations, status, refresh: refreshReservations } = await useFetch<ReservationSalle[]>('/api/reservations-salles', {
@@ -82,13 +82,13 @@ export async function useReservationsSallesPageState() {
     query: computed(() => ({
       date_debut: dateRange.value.start.toISOString(),
       date_fin: dateRange.value.end.toISOString(),
-      commune_id: currentCommune.value?.id,
-    })),
+      commune_id: currentCommune.value?.id
+    }))
   })
 
   const {
     data: vacancesResponse,
-    refresh: refreshVacances,
+    refresh: refreshVacances
   } = await useFetch<VacancesResponse>('/api/vacances-scolaires', {
     lazy: true,
     immediate: false,
@@ -99,9 +99,9 @@ export async function useReservationsSallesPageState() {
       return {
         code_postal: codePostal,
         date_debut: dateRange.value.start.toISOString(),
-        date_fin: dateRange.value.end.toISOString(),
+        date_fin: dateRange.value.end.toISOString()
       }
-    }),
+    })
   })
 
   watch(
@@ -120,7 +120,7 @@ export async function useReservationsSallesPageState() {
 
       selectedSalleIds.value = selectedSalleIds.value.filter(id => availableSalleIds.includes(id))
     },
-    { immediate: true },
+    { immediate: true }
   )
 
   watch(currentCommune, () => {
@@ -133,13 +133,13 @@ export async function useReservationsSallesPageState() {
     [
       () => currentCommune.value?.postal_code,
       () => dateRange.value.start.getTime(),
-      () => dateRange.value.end.getTime(),
+      () => dateRange.value.end.getTime()
     ],
     ([postalCode]) => {
       if (!postalCode) return
       refreshVacances()
     },
-    { immediate: true },
+    { immediate: true }
   )
 
   const filteredReservations = computed(() => {
@@ -261,7 +261,7 @@ export async function useReservationsSallesPageState() {
     'bg-success/20 border-success hover:bg-success/35',
     'bg-warning/20 border-warning hover:bg-warning/35',
     'bg-error/20 border-error hover:bg-error/35',
-    'bg-info/20 border-info hover:bg-info/35',
+    'bg-info/20 border-info hover:bg-info/35'
   ]
 
   function getSalleColorClasses(salleId: string): string {
@@ -338,6 +338,6 @@ export async function useReservationsSallesPageState() {
     getReservationStatusLabel,
     formatReservationDateTime,
     isDayInVacances,
-    getVacancesDescriptionForDay,
+    getVacancesDescriptionForDay
   }
 }

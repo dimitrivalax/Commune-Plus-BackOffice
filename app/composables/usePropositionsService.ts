@@ -7,6 +7,42 @@ interface DuplicatePropositionInput {
 export const usePropositionsService = () => {
   const { getAuthHeaders } = useApiAuth()
 
+  async function getProposition(id: string) {
+    return await $fetch<Proposition>(`/api/propositions/${id}`, {
+      headers: getAuthHeaders()
+    })
+  }
+
+  async function updateProposition(id: string, payload: Record<string, unknown>) {
+    return await $fetch<Proposition>(`/api/propositions/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: payload
+    })
+  }
+
+  async function deleteProposition(id: string) {
+    return await $fetch(`/api/propositions/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    })
+  }
+
+  async function createComment(propositionId: string, content: string) {
+    return await $fetch(`/api/propositions/${propositionId}/comments`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: { content }
+    })
+  }
+
+  async function deleteComment(propositionId: string, commentId: string) {
+    return await $fetch(`/api/propositions/${propositionId}/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    })
+  }
+
   async function toggleArchiveProposition(row: Proposition) {
     return await $fetch(`/api/propositions/${row.id}`, {
       method: 'PUT',
@@ -32,6 +68,11 @@ export const usePropositionsService = () => {
   }
 
   return {
+    getProposition,
+    updateProposition,
+    deleteProposition,
+    createComment,
+    deleteComment,
     toggleArchiveProposition,
     duplicateProposition
   }

@@ -7,37 +7,20 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
 const UButton = resolveComponent('UButton')
-const UBadge = resolveComponent('UBadge')
 const UDropdownMenu = resolveComponent('UDropdownMenu')
 const UCheckbox = resolveComponent('UCheckbox')
 
 const toast = useToast()
 const table = useTemplateRef('table')
-const { session } = useSupabase()
+const { data, status, refresh } = await useCommunesList()
+const { nameFilter, pagination, totalRows, paginatedData } = useCommunesPageState(data)
 
-const authHeaders = computed(() => {
-  const currentSession = session.value
-  if (!currentSession?.access_token) {
-    return {} as Record<string, string>
-  }
-  return {
-    Authorization: `Bearer ${currentSession.access_token}`
-  } as Record<string, string>
-})
-
-const nameFilter = ref('')
 const columnFilters = ref([{
   id: 'name',
   value: ''
 }])
 const columnVisibility = ref()
 const rowSelection = ref({})
-
-const { data, status, refresh } = await useFetch<Commune[]>('/api/communes', {
-  lazy: true,
-  default: () => [],
-  headers: authHeaders
-})
 
 provide('refresh-communes', refresh)
 
@@ -200,32 +183,6 @@ const columns: TableColumn<Commune>[] = [
     }
   }
 ]
-
-const pagination = ref({
-  pageIndex: 0,
-  pageSize: 10
-})
-
-// Pagination côté client : filtrer puis tronquer par page
-const filteredData = computed(() => {
-  const list = (data.value as Commune[] | null) || []
-  const q = (nameFilter.value || '').toLowerCase().trim()
-  if (!q) return list
-  return list.filter((c: Commune) => (c.name || '').toLowerCase().includes(q))
-})
-
-const totalRows = computed(() => filteredData.value.length)
-
-const paginatedData = computed(() => {
-  const fd = filteredData.value
-  const { pageIndex, pageSize } = pagination.value
-  const start = pageIndex * pageSize
-  return fd.slice(start, start + pageSize)
-})
-
-watch(nameFilter, () => {
-  pagination.value.pageIndex = 0
-})
 
 function handleUpdate(updated: Commune) {
   if (!data.value) return

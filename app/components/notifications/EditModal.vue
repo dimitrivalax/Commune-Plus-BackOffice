@@ -2,6 +2,7 @@
 import * as z from 'zod'
 import type { FormSubmitEvent, EditorToolbarItem } from '@nuxt/ui'
 import type { MunicipalInfo } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const CATEGORY_INFO_GENERALE = 'Information Générale'
 
@@ -69,7 +70,7 @@ watch(
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-notifications')
-const { getAuthHeaders } = useApiAuth()
+const { updateMunicipalInfo } = useMunicipalInfoService()
 const { publish, isPublishing } = usePublishMunicipalInfo({
   onSuccess: () => refresh?.(),
   global: true
@@ -86,16 +87,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!props.info) return
 
   try {
-    await $fetch(`/api/municipal-info/${props.info.id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: {
-        title: event.data.title,
-        content: event.data.content,
-        event_date: event.data.event_date || null,
-        category: CATEGORY_INFO_GENERALE,
-        image_url: event.data.image_url || null
-      }
+    await updateMunicipalInfo({
+      id: props.info.id,
+      title: event.data.title,
+      content: event.data.content,
+      event_date: event.data.event_date || null,
+      category: CATEGORY_INFO_GENERALE,
+      image_url: event.data.image_url || null,
+      scheduled_publish_at: null
     })
 
     toast.add({
@@ -109,11 +108,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     if (refresh) {
       refresh()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description:
-        error.message || 'Une erreur est survenue lors de la modification',
+      description: getErrorMessage(error, 'Une erreur est survenue lors de la modification'),
       color: 'error'
     })
   }

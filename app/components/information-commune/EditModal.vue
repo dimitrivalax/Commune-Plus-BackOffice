@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { EditorToolbarItem, FormSubmitEvent } from '@nuxt/ui'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 interface CommuneInformation {
   id: string
@@ -57,9 +58,9 @@ const state = reactive<Partial<Schema>>({
 })
 const isSubmitting = ref(false)
 
-const { getAuthHeaders } = useApiAuth()
 const toast = useToast()
 const refresh = inject<() => void>('refresh-information-commune')
+const { updateInformation } = useInformationCommuneService()
 
 function openModal(info?: CommuneInformation) {
   const target = info || props.info
@@ -75,15 +76,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!props.info) return
   try {
     isSubmitting.value = true
-    await $fetch(`/api/information-commune/${props.info.id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: {
-        title: event.data.title,
-        description: event.data.description,
-        photo_url: event.data.photo_url || null,
-        published: event.data.published ?? false
-      }
+    await updateInformation(props.info.id, {
+      title: event.data.title,
+      description: event.data.description,
+      photo_url: event.data.photo_url || null,
+      published: event.data.published ?? false
     })
     toast.add({
       title: 'Succès',
@@ -95,7 +92,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: (error as Error)?.message || 'Une erreur est survenue',
+      description: getErrorMessage(error, 'Une erreur est survenue'),
       color: 'error'
     })
   } finally {

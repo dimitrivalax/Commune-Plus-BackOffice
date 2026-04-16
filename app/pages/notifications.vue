@@ -6,31 +6,8 @@ const UButton = resolveComponent('UButton')
 const UDropdownMenu = resolveComponent('UDropdownMenu')
 const UBadge = resolveComponent('UBadge')
 
-const CATEGORY_INFO_GENERALE = 'Information Générale'
-
 const table = useTemplateRef('table')
-const { session } = useSupabase()
-
-const authHeaders = computed(() => {
-  const currentSession = session.value
-  if (!currentSession?.access_token) {
-    return {}
-  }
-  return {
-    Authorization: `Bearer ${currentSession.access_token}`
-  }
-})
-
-const { data, status, refresh } = await useFetch<MunicipalInfo[]>(
-  '/api/municipal-info',
-  {
-    lazy: true,
-    headers: authHeaders as any,
-    query: {
-      category: CATEGORY_INFO_GENERALE
-    }
-  }
-)
+const { data, status, refresh } = await useNotificationsPageList()
 
 provide('refresh-notifications', refresh)
 

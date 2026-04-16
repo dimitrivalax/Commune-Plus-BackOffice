@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getErrorMessage } from '~/utils/errorMessage'
+
 interface CommuneInformation {
   id: string
   title: string
@@ -12,7 +14,7 @@ const open = ref(false)
 const isSubmitting = ref(false)
 const toast = useToast()
 const refresh = inject<() => void>('refresh-information-commune')
-const { getAuthHeaders } = useApiAuth()
+const { deleteInformation } = useInformationCommuneService()
 
 const description = computed(() => {
   if (!props.info) {
@@ -25,10 +27,7 @@ async function onSubmit() {
   if (!props.info) return
   try {
     isSubmitting.value = true
-    await $fetch(`/api/information-commune/${props.info.id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    })
+    await deleteInformation(props.info.id)
     toast.add({
       title: 'Succès',
       description: 'Information supprimée',
@@ -39,7 +38,7 @@ async function onSubmit() {
   } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: (error as Error)?.message || 'Impossible de supprimer',
+      description: getErrorMessage(error, 'Impossible de supprimer'),
       color: 'error'
     })
   } finally {

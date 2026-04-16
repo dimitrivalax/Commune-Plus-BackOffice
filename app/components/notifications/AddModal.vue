@@ -2,6 +2,7 @@
 import * as z from 'zod'
 import type { FormSubmitEvent, EditorToolbarItem } from '@nuxt/ui'
 import { ref, reactive, inject, watch } from 'vue'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const CATEGORY_INFO_GENERALE = 'Information Générale'
 
@@ -56,21 +57,18 @@ const state = reactive<Omit<Partial<Schema>, 'event_date'> & { event_date: strin
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-notifications')
-const { getAuthHeaders } = useApiAuth()
+const { createMunicipalInfo } = useMunicipalInfoService()
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
-    await $fetch('/api/municipal-info/create', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: {
-        title: event.data.title,
-        content: event.data.content,
-        event_date: event.data.event_date || todayISODate(),
-        category: CATEGORY_INFO_GENERALE,
-        image_url: event.data.image_url || null,
-        commune_id: null
-      }
+    await createMunicipalInfo({
+      title: event.data.title,
+      content: event.data.content,
+      event_date: event.data.event_date || todayISODate(),
+      category: CATEGORY_INFO_GENERALE,
+      image_url: event.data.image_url || null,
+      scheduled_publish_at: null,
+      commune_id: null
     })
 
     toast.add({
@@ -92,7 +90,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   } catch (error: unknown) {
     toast.add({
       title: 'Erreur',
-      description: (error instanceof Error ? error.message : undefined) || 'Une erreur est survenue lors de l\'ajout',
+      description: getErrorMessage(error, 'Une erreur est survenue lors de l\'ajout'),
       color: 'error'
     })
   }

@@ -1,232 +1,204 @@
 <script setup lang="ts">
-import { format } from "date-fns";
-import type { Proposition } from "~/types";
+import { format } from 'date-fns'
+import type { Proposition } from '~/types'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const props = defineProps<{
-  proposition: Proposition;
-}>();
+  proposition: Proposition
+}>()
 
 const emits = defineEmits<{
-  close: [];
-  update: [proposition: Proposition];
-  duplicated: [proposition: Proposition];
-}>();
+  close: []
+  update: [proposition: Proposition]
+  duplicated: [proposition: Proposition]
+}>()
 
-const toast = useToast();
-const { session } = useSupabase();
-const { currentCommune } = useCurrentCommune();
+const toast = useToast()
+const { currentCommune } = useCurrentCommune()
+const {
+  getProposition,
+  updateProposition,
+  deleteProposition,
+  duplicateProposition: duplicatePropositionRequest,
+  createComment,
+  deleteComment: deleteCommentRequest
+} = usePropositionsService()
 
-const isArchiving = ref(false);
-const fullProposition = ref<Proposition | null>(null);
-const loading = ref(false);
-const newComment = ref("");
-const isSubmittingComment = ref(false);
-const isSaving = ref(false);
-const isDeleting = ref(false);
-const isDuplicating = ref(false);
-const isImageModalOpen = ref(false);
-const isDeletingCommentId = ref<string | null>(null);
-const editName = ref("");
-const editDescription = ref("");
-const editCommentsPublic = ref(true);
-
-const authHeaders = computed(() => {
-  const currentSession = session.value;
-  const headers: Record<string, string> = {};
-  if (currentSession?.access_token) {
-    headers.Authorization = `Bearer ${currentSession.access_token}`;
-  }
-  return headers;
-});
+const isArchiving = ref(false)
+const fullProposition = ref<Proposition | null>(null)
+const loading = ref(false)
+const newComment = ref('')
+const isSubmittingComment = ref(false)
+const isSaving = ref(false)
+const isDeleting = ref(false)
+const isDuplicating = ref(false)
+const isImageModalOpen = ref(false)
+const isDeletingCommentId = ref<string | null>(null)
+const editName = ref('')
+const editDescription = ref('')
+const editCommentsPublic = ref(true)
 
 const fetchDetails = async () => {
-  loading.value = true;
+  loading.value = true
   try {
-    const data = await $fetch<Proposition>(
-      `/api/propositions/${props.proposition.id}`,
-      {
-        headers: authHeaders.value,
-      },
-    );
-    fullProposition.value = data;
-    editName.value = data.name ?? "";
-    editDescription.value = data.description ?? "";
-    editCommentsPublic.value = data.comments_public !== false;
+    const data = await getProposition(props.proposition.id)
+    fullProposition.value = data
+    editName.value = data.name ?? ''
+    editDescription.value = data.description ?? ''
+    editCommentsPublic.value = data.comments_public !== false
   } catch (error) {
-    console.error("Error fetching proposition details:", error);
+    console.error('Error fetching proposition details:', error)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
-watch(() => props.proposition.id, fetchDetails, { immediate: true });
+watch(() => props.proposition.id, fetchDetails, { immediate: true })
 
 const toggleArchive = async () => {
-  isArchiving.value = true;
+  isArchiving.value = true
   try {
-    const updated = await $fetch<Proposition>(
-      `/api/propositions/${props.proposition.id}`,
-      {
-        method: "PUT",
-        body: { is_archived: !props.proposition.is_archived },
-        headers: authHeaders.value,
-      },
-    );
+    const updated = await updateProposition(props.proposition.id, { is_archived: !props.proposition.is_archived })
 
-    emits("update", updated);
+    emits('update', updated)
 
     toast.add({
-      title: updated.is_archived ? "Proposition archivée" : "Proposition restaurée",
-      icon: "i-lucide-check-circle",
-      color: "success",
-    });
-  } catch (error: any) {
+      title: updated.is_archived ? 'Proposition archivée' : 'Proposition restaurée',
+      icon: 'i-lucide-check-circle',
+      color: 'success'
+    })
+  } catch (error: unknown) {
     toast.add({
-      title: "Erreur",
-      description: error.message || "Action impossible",
-      icon: "i-lucide-alert-circle",
-      color: "error",
-    });
+      title: 'Erreur',
+      description: getErrorMessage(error, 'Action impossible'),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
   } finally {
-    isArchiving.value = false;
+    isArchiving.value = false
   }
-};
+}
 
 const submitMairieComment = async () => {
-  const content = newComment.value?.trim();
-  if (!content) return;
+  const content = newComment.value?.trim()
+  if (!content) return
 
-  isSubmittingComment.value = true;
+  isSubmittingComment.value = true
   try {
-    await $fetch(`/api/propositions/${props.proposition.id}/comments`, {
-      method: "POST",
-      body: { content },
-      headers: authHeaders.value,
-    });
+    await createComment(props.proposition.id, content)
     toast.add({
-      title: "Commentaire publié",
-      icon: "i-lucide-check-circle",
-      color: "success",
-    });
-    newComment.value = "";
-    await fetchDetails();
-  } catch (error: any) {
+      title: 'Commentaire publié',
+      icon: 'i-lucide-check-circle',
+      color: 'success'
+    })
+    newComment.value = ''
+    await fetchDetails()
+  } catch (error: unknown) {
     toast.add({
-      title: "Erreur",
-      description: error?.data?.message || error.message || "Impossible de publier le commentaire",
-      icon: "i-lucide-alert-circle",
-      color: "error",
-    });
+      title: 'Erreur',
+      description: getErrorMessage(error, 'Impossible de publier le commentaire'),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
   } finally {
-    isSubmittingComment.value = false;
+    isSubmittingComment.value = false
   }
-};
+}
 
-const isMairieComment = (comment: { user_firstname: string; user_email?: string }) =>
-  comment.user_firstname === "Mairie" || comment.user_email === "mairie@commune";
+const isMairieComment = (comment: { user_firstname: string, user_email?: string }) =>
+  comment.user_firstname === 'Mairie' || comment.user_email === 'mairie@commune'
 
 const saveProposition = async () => {
-  isSaving.value = true;
+  isSaving.value = true
   try {
-    const updated = await $fetch<Proposition>(`/api/propositions/${props.proposition.id}`, {
-      method: "PUT",
-      body: {
-        name: editName.value.trim(),
-        description: editDescription.value.trim(),
-        comments_public: editCommentsPublic.value,
-      },
-      headers: authHeaders.value,
-    });
-    emits("update", updated);
-    fullProposition.value = { ...fullProposition.value, ...updated };
+    const updated = await updateProposition(props.proposition.id, {
+      name: editName.value.trim(),
+      description: editDescription.value.trim(),
+      comments_public: editCommentsPublic.value
+    })
+    emits('update', updated)
+    fullProposition.value = { ...fullProposition.value, ...updated }
     toast.add({
-      title: "Proposition mise à jour",
-      icon: "i-lucide-check-circle",
-      color: "success",
-    });
-  } catch (error: any) {
+      title: 'Proposition mise à jour',
+      icon: 'i-lucide-check-circle',
+      color: 'success'
+    })
+  } catch (error: unknown) {
     toast.add({
-      title: "Erreur",
-      description: error?.data?.message || error.message || "Enregistrement impossible",
-      icon: "i-lucide-alert-circle",
-      color: "error",
-    });
+      title: 'Erreur',
+      description: getErrorMessage(error, 'Enregistrement impossible'),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
   } finally {
-    isSaving.value = false;
+    isSaving.value = false
   }
-};
+}
 
 const deleteProposition = async () => {
-  isDeleting.value = true;
+  isDeleting.value = true
   try {
-    await $fetch(`/api/propositions/${props.proposition.id}`, {
-      method: "DELETE",
-      headers: authHeaders.value,
-    });
-    emits("close");
+    await deleteProposition(props.proposition.id)
+    emits('close')
     toast.add({
-      title: "Proposition supprimée",
-      icon: "i-lucide-check-circle",
-      color: "success",
-    });
-  } catch (error: any) {
+      title: 'Proposition supprimée',
+      icon: 'i-lucide-check-circle',
+      color: 'success'
+    })
+  } catch (error: unknown) {
     toast.add({
-      title: "Erreur",
-      description: error?.data?.message || error.message || "Suppression impossible",
-      icon: "i-lucide-alert-circle",
-      color: "error",
-    });
+      title: 'Erreur',
+      description: getErrorMessage(error, 'Suppression impossible'),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
   } finally {
-    isDeleting.value = false;
+    isDeleting.value = false
   }
-};
+}
 
 const deleteComment = async (commentId: string) => {
-  isDeletingCommentId.value = commentId;
+  isDeletingCommentId.value = commentId
   try {
-    await $fetch(`/api/propositions/${props.proposition.id}/comments/${commentId}`, {
-      method: "DELETE",
-      headers: authHeaders.value,
-    });
-    await fetchDetails();
+    await deleteCommentRequest(props.proposition.id, commentId)
+    await fetchDetails()
   } finally {
-    isDeletingCommentId.value = null;
+    isDeletingCommentId.value = null
   }
-};
+}
 
 const duplicateProposition = async () => {
-  const communeId = fullProposition.value?.commune_id ?? props.proposition.commune_id;
-  if (!communeId) return;
-  isDuplicating.value = true;
+  const communeId = fullProposition.value?.commune_id ?? props.proposition.commune_id
+  if (!communeId) return
+  isDuplicating.value = true
   try {
-    const duplicate = await $fetch<Proposition>("/api/propositions", {
-      method: "POST",
-      headers: authHeaders.value,
-      body: {
+    const duplicate = await duplicatePropositionRequest({
+      source: {
+        ...props.proposition,
         commune_id: communeId,
-        name: `${editName.value.trim()} (copie)`,
+        name: editName.value.trim(),
         description: editDescription.value.trim(),
         photo_url: fullProposition.value?.photo_url ?? props.proposition.photo_url ?? null,
-        comments_public: editCommentsPublic.value,
-      },
-    });
-    emits("duplicated", duplicate);
+        comments_public: editCommentsPublic.value
+      }
+    })
+    emits('duplicated', duplicate)
     toast.add({
-      title: "Proposition dupliquée",
-      icon: "i-lucide-copy-plus",
-      color: "success",
-    });
-  } catch (error: any) {
+      title: 'Proposition dupliquée',
+      icon: 'i-lucide-copy-plus',
+      color: 'success'
+    })
+  } catch (error: unknown) {
     toast.add({
-      title: "Erreur",
-      description: error?.data?.message || error.message || "Duplication impossible",
-      icon: "i-lucide-alert-circle",
-      color: "error",
-    });
+      title: 'Erreur',
+      description: getErrorMessage(error, 'Duplication impossible'),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
   } finally {
-    isDuplicating.value = false;
+    isDuplicating.value = false
   }
-};
+}
 </script>
 
 <template>
@@ -234,17 +206,30 @@ const duplicateProposition = async () => {
     id="proposition-detail"
     :ui="{
       root: 'relative flex flex-col min-w-0 h-full !min-h-0 overflow-hidden shrink',
-      body: 'flex flex-col gap-4 sm:gap-6 flex-1 min-h-0 overflow-hidden p-0',
+      body: 'flex flex-col gap-4 sm:gap-6 flex-1 min-h-0 overflow-hidden p-0'
     }"
   >
     <UDashboardNavbar :title="`Proposition #${proposition.id.slice(0, 8)}`" :toggle="false">
       <template #leading>
-        <UButton icon="i-lucide-x" color="neutral" variant="ghost" class="-ms-1.5" @click="emits('close')" />
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          class="-ms-1.5"
+          @click="emits('close')"
+        />
       </template>
 
       <template #right>
-        <UButton :label="proposition.is_archived ? 'Restaurer' : 'Archiver'" :icon="proposition.is_archived ? 'i-lucide-rotate-ccw' : 'i-lucide-archive'
-          " color="neutral" variant="ghost" @click="toggleArchive" :loading="isArchiving" />
+        <UButton
+          :label="proposition.is_archived ? 'Restaurer' : 'Archiver'"
+          :icon="proposition.is_archived ? 'i-lucide-rotate-ccw' : 'i-lucide-archive'
+          "
+          color="neutral"
+          variant="ghost"
+          :loading="isArchiving"
+          @click="toggleArchive"
+        />
       </template>
     </UDashboardNavbar>
 
@@ -258,13 +243,18 @@ const duplicateProposition = async () => {
           <p class="font-semibold text-highlighted">
             {{ proposition.user_firstname }} {{ proposition.user_lastname }}
           </p>
-          <p class="text-muted text-sm">{{ proposition.user_email }}</p>
+          <p class="text-muted text-sm">
+            {{ proposition.user_email }}
+          </p>
         </div>
       </div>
 
       <div class="max-sm:pl-16 sm:mt-2 flex flex-col items-end gap-2">
-        <UBadge :label="proposition.is_archived ? 'Archivée' : 'Active'"
-          :color="proposition.is_archived ? 'neutral' : 'success'" variant="subtle" />
+        <UBadge
+          :label="proposition.is_archived ? 'Archivée' : 'Active'"
+          :color="proposition.is_archived ? 'neutral' : 'success'"
+          variant="subtle"
+        />
         <p class="text-muted text-sm">
           {{ format(new Date(proposition.created_at), "dd MMM yyyy HH:mm") }}
         </p>
@@ -277,7 +267,9 @@ const duplicateProposition = async () => {
 
     <div class="min-h-0 flex-1 p-4 sm:p-6 overflow-y-auto space-y-6">
       <div class="space-y-3 p-4 border border-default rounded-lg bg-default/20">
-        <h3 class="font-semibold text-highlighted">Gestion de la proposition</h3>
+        <h3 class="font-semibold text-highlighted">
+          Gestion de la proposition
+        </h3>
         <UInput v-model="editName" placeholder="Titre" />
         <UTextarea v-model="editDescription" :rows="4" placeholder="Description" />
         <UCheckbox v-model="editCommentsPublic" label="Commentaires utilisateurs publics" />
@@ -330,7 +322,7 @@ const duplicateProposition = async () => {
           :src="proposition.photo_url"
           class="h-48 w-48 object-cover rounded-xl border border-default shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
           @click="isImageModalOpen = true"
-        />
+        >
       </div>
 
       <UDivider />
@@ -346,18 +338,23 @@ const duplicateProposition = async () => {
         </div>
 
         <div v-else-if="fullProposition?.comments?.length" class="space-y-4">
-          <div v-for="comment in fullProposition.comments" :key="comment.id"
-            class="bg-default/30 rounded-lg p-4 border border-default">
+          <div
+            v-for="comment in fullProposition.comments"
+            :key="comment.id"
+            class="bg-default/30 rounded-lg p-4 border border-default"
+          >
             <div class="flex justify-between items-start mb-2">
               <div>
                 <span class="font-semibold text-sm">{{ comment.user_firstname }}
                   {{ comment.user_lastname }}</span>
-                <p v-if="!isMairieComment(comment)" class="text-xs text-muted">{{ comment.user_email }}</p>
+                <p v-if="!isMairieComment(comment)" class="text-xs text-muted">
+                  {{ comment.user_email }}
+                </p>
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-xs text-muted">{{
                   format(new Date(comment.created_at), "dd/MM/yyyy HH:mm")
-                  }}</span>
+                }}</span>
                 <UButton
                   icon="i-lucide-trash-2"
                   color="error"
@@ -368,7 +365,9 @@ const duplicateProposition = async () => {
                 />
               </div>
             </div>
-            <p class="text-sm text-toned">{{ comment.content }}</p>
+            <p class="text-sm text-toned">
+              {{ comment.content }}
+            </p>
           </div>
         </div>
         <div v-else class="text-center py-8 text-dimmed italic">
@@ -376,15 +375,29 @@ const duplicateProposition = async () => {
         </div>
 
         <div class="mt-4 pt-4 border-t border-default">
-          <h4 class="font-medium text-highlighted mb-2">Commenter en tant que mairie</h4>
+          <h4 class="font-medium text-highlighted mb-2">
+            Commenter en tant que mairie
+          </h4>
           <p class="text-xs text-muted mb-2">
             Votre commentaire sera affiché sous le nom « Mairie {{ currentCommune?.name ?? '…' }} ».
           </p>
-            <UTextarea v-model="newComment" placeholder="Saisissez votre commentaire..." :rows="3"
-              :disabled="isSubmittingComment" class="w-full" />
-            <UButton label="Publier le commentaire" icon="i-lucide-send" :loading="isSubmittingComment"
-              :disabled="!newComment?.trim()" color="primary" @click="submitMairieComment" class="float-right mt-4" />
-          </div>
+          <UTextarea
+            v-model="newComment"
+            placeholder="Saisissez votre commentaire..."
+            :rows="3"
+            :disabled="isSubmittingComment"
+            class="w-full"
+          />
+          <UButton
+            label="Publier le commentaire"
+            icon="i-lucide-send"
+            :loading="isSubmittingComment"
+            :disabled="!newComment?.trim()"
+            color="primary"
+            class="float-right mt-4"
+            @click="submitMairieComment"
+          />
+        </div>
       </div>
     </div>
   </UDashboardPanel>

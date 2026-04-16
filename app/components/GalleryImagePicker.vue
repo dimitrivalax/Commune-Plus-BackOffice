@@ -28,10 +28,10 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | undefined]
 }>()
 
-const { getAuthHeaders } = useApiAuth()
 const { session } = useSupabase()
 const { currentCommune } = useCurrentCommune()
 const toast = useToast()
+const { listGallery, uploadGalleryImage, deleteGalleryImage } = useGalleryService()
 
 const effectiveCommuneId = computed(() => props.communeId ?? currentCommune.value?.id ?? null)
 
@@ -59,9 +59,7 @@ async function fetchGallery() {
   }
   galleryLoading.value = true
   try {
-    const data = await $fetch<{ images: GalleryImage[] }>(`/api/gallery/${cid}`, {
-      headers: getAuthHeaders()
-    })
+    const data = await listGallery(cid)
     galleryImages.value = data.images ?? []
   } catch {
     galleryImages.value = []
@@ -103,11 +101,7 @@ async function onFileSelected(event: Event) {
     if (token) {
       formData.append('access_token', token)
     }
-    const result = await $fetch<{ secure_url: string; public_id: string }>('/api/gallery/upload', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: formData
-    })
+    const result = await uploadGalleryImage(formData)
     await fetchGallery()
     emit('update:modelValue', result.secure_url)
     toast.add({ title: 'Photo ajoutée', description: 'L\'image a été ajoutée à la galerie', color: 'success' })
@@ -125,15 +119,11 @@ async function onFileSelected(event: Event) {
 async function deleteImage(publicId: string, e: Event) {
   e.stopPropagation()
   const wasSelected = props.modelValue && galleryImages.value.some(
-    (img) => img.secure_url === props.modelValue && img.public_id === publicId
+    img => img.secure_url === props.modelValue && img.public_id === publicId
   )
   try {
-    await $fetch('/api/gallery/delete', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: { public_id: publicId }
-    })
-    galleryImages.value = galleryImages.value.filter((img) => img.public_id !== publicId)
+    await deleteGalleryImage(publicId)
+    galleryImages.value = galleryImages.value.filter(img => img.public_id !== publicId)
     if (wasSelected) emit('update:modelValue', undefined)
     toast.add({ title: 'Photo supprimée', color: 'success' })
   } catch (err: unknown) {

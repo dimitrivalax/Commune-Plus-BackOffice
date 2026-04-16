@@ -5,6 +5,7 @@ import type { Row } from '@tanstack/table-core'
 import type { Utilisateur } from '~/types'
 import { format, formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { getErrorMessage } from '~/utils/errorMessage'
 
 const UAvatar = resolveComponent('UAvatar')
 const UButton = resolveComponent('UButton')
@@ -14,8 +15,9 @@ const UCheckbox = resolveComponent('UCheckbox')
 
 const toast = useToast()
 const table = useTemplateRef('table')
-const { session } = useSupabase()
 const { currentCommune, userCommunes, userCommunesPending, setCurrentCommune } = useCurrentCommune()
+const { data, status, refresh } = await useUtilisateursList()
+const { setUtilisateurActive } = useUtilisateursService()
 
 // Gérer la sélection de la commune courante
 const selectedCommuneId = computed({
@@ -34,16 +36,6 @@ const communeSelectItems = computed(() =>
     value: c.id
   })))
 
-const authHeaders = computed(() => {
-  const currentSession = session.value
-  if (!currentSession?.access_token) {
-    return {}
-  }
-  return {
-    Authorization: `Bearer ${currentSession.access_token}`
-  }
-})
-
 const emailFilter = ref('')
 const columnFilters = ref([{
   id: 'email',
@@ -51,12 +43,6 @@ const columnFilters = ref([{
 }])
 const columnVisibility = ref()
 const rowSelection = ref({})
-
-const { data, status, refresh } = await useFetch<Utilisateur[]>('/api/utilisateurs', {
-  lazy: true,
-  default: () => [],
-  headers: authHeaders
-})
 
 provide('refresh-utilisateurs', refresh)
 
@@ -89,20 +75,16 @@ function getRowItems(row: Row<Utilisateur>) {
         const u = row.original
         const nextActive = u.is_active === false
         try {
-          await $fetch(`/api/utilisateurs/${u.id}`, {
-            method: 'PATCH',
-            headers: authHeaders.value as HeadersInit,
-            body: { is_active: nextActive }
-          })
+          await setUtilisateurActive(u.id, nextActive)
           toast.add({
             title: nextActive ? 'Compte réactivé' : 'Compte désactivé',
             color: 'success'
           })
           refresh()
-        } catch (e: any) {
+        } catch (e: unknown) {
           toast.add({
             title: 'Erreur',
-            description: e?.data?.message || e?.message || 'Action impossible',
+            description: getErrorMessage(e, 'Action impossible'),
             color: 'error'
           })
         }
@@ -147,13 +129,6 @@ function formatAddress(utilisateur: Utilisateur): string {
   if (utilisateur.code_postal) parts.push(utilisateur.code_postal)
   if (utilisateur.ville) parts.push(utilisateur.ville)
   return parts.length > 0 ? parts.join(' ') : '-'
-}
-
-function formatCommunes(utilisateur: Utilisateur): string {
-  if (!utilisateur.communes || utilisateur.communes.length === 0) {
-    return '-'
-  }
-  return utilisateur.communes.map(c => c.name).join(', ')
 }
 
 const columns: TableColumn<Utilisateur>[] = [
@@ -389,7 +364,9 @@ watch(emailFilter, () => {
             <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
             <span>Chargement des communes…</span>
           </div>
-          <div v-else class="py-2 text-sm text-muted">Aucune commune</div>
+          <div v-else class="py-2 text-sm text-muted">
+            Aucune commune
+          </div>
         </UFormField>
       </div>
 
