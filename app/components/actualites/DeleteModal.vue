@@ -9,7 +9,7 @@ const open = ref(false)
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-actualites')
-const { getAuthHeaders } = useApiAuth()
+const { deleteMunicipalInfo } = useMunicipalInfoService()
 
 const description = computed(() => {
   if (!props.info) return 'Êtes-vous sûr de vouloir supprimer cette information ? Cette action ne peut pas être annulée.'
@@ -20,10 +20,7 @@ async function onSubmit() {
   if (!props.info) return
 
   try {
-    await $fetch(`/api/municipal-info/${props.info.id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    })
+    await deleteMunicipalInfo(props.info.id)
 
     toast.add({
       title: 'Succès',

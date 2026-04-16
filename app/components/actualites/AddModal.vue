@@ -89,8 +89,8 @@ const state = reactive<Omit<Partial<Schema>, 'event_date'> & { event_date: strin
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-actualites')
-const { getAuthHeaders } = useApiAuth()
 const { currentCommune } = useCurrentCommune()
+const { createMunicipalInfo } = useMunicipalInfoService()
 
 function normalizeScheduledPublishLocal() {
   state.scheduled_publish_local = normalizeHourlyLocalInput(state.scheduled_publish_local) ?? nextHourLocalInput()
@@ -135,18 +135,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   }
 
   try {
-    await $fetch('/api/municipal-info/create', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: {
-        title: event.data.title,
-        content: event.data.content,
-        event_date: event.data.event_date || todayISODate(),
-        category: event.data.category || null,
-        image_url: event.data.image_url || null,
-        scheduled_publish_at: scheduledPublishAt,
-        commune_id: communeId
-      }
+    await createMunicipalInfo({
+      title: event.data.title,
+      content: event.data.content,
+      event_date: event.data.event_date || todayISODate(),
+      category: event.data.category || null,
+      image_url: event.data.image_url || null,
+      scheduled_publish_at: scheduledPublishAt,
+      commune_id: communeId
     })
 
     toast.add({

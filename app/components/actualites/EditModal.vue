@@ -102,9 +102,10 @@ watch(
 
 const toast = useToast()
 const refresh = inject<() => void>('refresh-actualites')
-const { getAuthHeaders } = useApiAuth()
 const { currentCommune } = useCurrentCommune()
 const { publish, isPublishing } = usePublishMunicipalInfo({ onSuccess: () => refresh?.() })
+const { updateMunicipalInfo, duplicateMunicipalInfo } = useMunicipalInfoService()
+const isDuplicating = ref(false)
 
 function normalizeScheduledPublishLocal() {
   state.scheduled_publish_local = normalizeHourlyLocalInput(state.scheduled_publish_local)
@@ -144,17 +145,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   }
 
   try {
-    await $fetch(`/api/municipal-info/${props.info.id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: {
-        title: event.data.title,
-        content: event.data.content,
-        event_date: event.data.event_date || null,
-        category: event.data.category || null,
-        image_url: event.data.image_url || null,
-        scheduled_publish_at: scheduledPublishAt
-      }
+    await updateMunicipalInfo({
+      id: props.info.id,
+      title: event.data.title,
+      content: event.data.content,
+      event_date: event.data.event_date || null,
+      category: event.data.category || null,
+      image_url: event.data.image_url || null,
+      scheduled_publish_at: scheduledPublishAt
     })
 
     toast.add({
@@ -188,6 +186,38 @@ async function handleDelete() {
 function handlePublish() {
   if (!props.info) return
   publish(props.info)
+}
+
+async function handleDuplicate() {
+  if (!props.info) return
+
+  isDuplicating.value = true
+  try {
+    await duplicateMunicipalInfo({
+      source: props.info,
+      title: state.title || props.info.title,
+      content: state.content || props.info.content,
+      event_date: state.event_date || null,
+      category: state.category || null,
+      image_url: state.image_url || null
+    })
+
+    toast.add({
+      title: 'Succès',
+      description: 'L’actualité a été dupliquée',
+      color: 'success'
+    })
+
+    refresh?.()
+  } catch (error: any) {
+    toast.add({
+      title: 'Erreur',
+      description: error?.message || 'Duplication impossible',
+      color: 'error'
+    })
+  } finally {
+    isDuplicating.value = false
+  }
 }
 
 function openModal(info?: MunicipalInfo) {
@@ -313,6 +343,16 @@ defineExpose({
             @click="handleDelete"
           />
           <div class="flex gap-2">
+            <UButton
+              label="Dupliquer"
+              color="neutral"
+              variant="subtle"
+              icon="i-lucide-copy-plus"
+              :loading="isDuplicating"
+              :disabled="isDuplicating"
+              type="button"
+              @click="handleDuplicate"
+            />
             <UButton
               label="Annuler"
               color="neutral"
