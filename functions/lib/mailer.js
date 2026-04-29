@@ -1,24 +1,24 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendLicenceExpiryAlertEmail = sendLicenceExpiryAlertEmail;
+'use strict'
+Object.defineProperty(exports, '__esModule', { value: true })
+exports.sendLicenceExpiryAlertEmail = sendLicenceExpiryAlertEmail
 function formatDateFr(dateIso) {
-    return new Date(dateIso).toLocaleDateString('fr-FR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+  return new Date(dateIso).toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 }
 async function sendLicenceExpiryAlertEmail(payload) {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const resendFromEmail = process.env.RESEND_FROM_EMAIL || 'contact@commune-plus.fr';
-    const alertTo = process.env.LICENSE_ALERT_TO_EMAIL || 'contact@commune-plus.fr';
-    if (!resendApiKey) {
-        return { success: false, error: 'RESEND_API_KEY is not configured' };
-    }
-    const formattedDateLicence = formatDateFr(payload.dateLicence);
-    const formattedDateExpiration = formatDateFr(payload.dateExpiration);
-    const subject = `Licence commune bientot expiree - ${payload.name}`;
-    const html = `
+  const resendApiKey = process.env.RESEND_API_KEY
+  const resendFromEmail = process.env.RESEND_FROM_EMAIL || 'contact@commune-plus.fr'
+  const alertTo = process.env.LICENSE_ALERT_TO_EMAIL || 'contact@commune-plus.fr'
+  if (!resendApiKey) {
+    return { success: false, error: 'RESEND_API_KEY is not configured' }
+  }
+  const formattedDateLicence = formatDateFr(payload.dateLicence)
+  const formattedDateExpiration = formatDateFr(payload.dateExpiration)
+  const subject = `Licence commune bientot expiree - ${payload.name}`
+  const html = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"></head>
@@ -36,8 +36,8 @@ async function sendLicenceExpiryAlertEmail(payload) {
   ${payload.logoUrl ? `<p><img src="${payload.logoUrl}" alt="Logo ${payload.name}" style="max-height: 100px; max-width: 280px; object-fit: contain;" /></p>` : ''}
   <p style="font-size: 12px; color: #666;">Email automatique Commune Plus.</p>
 </body>
-</html>`.trim();
-    const text = `
+</html>`.trim()
+  const text = `
 Alerte expiration de licence
 La licence de la commune suivante va bientot expirer.
 ID commune: ${payload.communeId}
@@ -47,28 +47,28 @@ Email: ${payload.email}
 Date de licence: ${formattedDateLicence}
 Date d'expiration: ${formattedDateExpiration}
 Action requise: contacter la commune pour prolongation.
-`.trim();
-    const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            from: `Commune Plus <${resendFromEmail}>`,
-            to: [alertTo],
-            subject,
-            html,
-            text
-        })
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        return {
-            success: false,
-            error: `Resend: ${response.status} ${JSON.stringify(errorData)}`
-        };
+`.trim()
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: `Commune Plus <${resendFromEmail}>`,
+      to: [alertTo],
+      subject,
+      html,
+      text
+    })
+  })
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    return {
+      success: false,
+      error: `Resend: ${response.status} ${JSON.stringify(errorData)}`
     }
-    return { success: true };
+  }
+  return { success: true }
 }
-//# sourceMappingURL=mailer.js.map
+// # sourceMappingURL=mailer.js.map
