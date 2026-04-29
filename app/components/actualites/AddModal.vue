@@ -2,6 +2,7 @@
 import * as z from 'zod'
 import type { FormSubmitEvent, EditorToolbarItem } from '@nuxt/ui'
 import { ref, reactive, inject, watch } from 'vue'
+import { useFacebookPublicationService } from '~/composables/useFacebookPublicationService'
 
 const editorToolbarItems: EditorToolbarItem[] = [
   {
@@ -59,6 +60,7 @@ const schema = z.object({
   content: z.string().min(1, 'Le contenu est requis'),
   event_date: z.string().min(1, 'La date de l\'événement est requise'),
   is_scheduled: z.boolean().default(false),
+  publish_facebook_scheduled: z.boolean().default(false),
   scheduled_publish_local: z.string().optional(),
   category: z.string().optional(),
   image_url: z
@@ -71,6 +73,7 @@ watch(open, (isOpen) => {
   if (isOpen) {
     state.event_date = todayISODate()
     state.is_scheduled = false
+    state.publish_facebook_scheduled = false
     state.scheduled_publish_local = nextHourLocalInput()
   }
 })
@@ -82,6 +85,7 @@ const state = reactive<Omit<Partial<Schema>, 'event_date'> & { event_date: strin
   content: '',
   event_date: todayISODate(),
   is_scheduled: false,
+  publish_facebook_scheduled: false,
   scheduled_publish_local: nextHourLocalInput(),
   category: undefined,
   image_url: undefined
@@ -90,11 +94,35 @@ const state = reactive<Omit<Partial<Schema>, 'event_date'> & { event_date: strin
 const toast = useToast()
 const refresh = inject<() => void>('refresh-actualites')
 const { currentCommune } = useCurrentCommune()
+const { getFacebookStatus } = useFacebookPublicationService()
 const { createMunicipalInfo } = useMunicipalInfoService()
+const isFacebookConnected = ref(false)
 
 function normalizeScheduledPublishLocal() {
   state.scheduled_publish_local = normalizeHourlyLocalInput(state.scheduled_publish_local) ?? nextHourLocalInput()
 }
+
+async function refreshFacebookConnectionStatus() {
+  const communeId = currentCommune.value?.id
+  if (!communeId) {
+    isFacebookConnected.value = false
+    return
+  }
+  try {
+    const facebookStatus = await getFacebookStatus(communeId)
+    isFacebookConnected.value = Boolean(facebookStatus.connected)
+      && facebookStatus.token_status !== 'expired'
+      && facebookStatus.token_status !== 'revoked'
+  } catch {
+    isFacebookConnected.value = false
+  }
+}
+
+watch(() => open.value, (isOpen) => {
+  if (isOpen) {
+    void refreshFacebookConnectionStatus()
+  }
+})
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   // Utiliser la commune courante si disponible
@@ -142,6 +170,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       category: event.data.category || null,
       image_url: event.data.image_url || null,
       scheduled_publish_at: scheduledPublishAt,
+      publish_facebook_scheduled: event.data.is_scheduled
+        ? Boolean(event.data.publish_facebook_scheduled)
+        : false,
       commune_id: communeId
     })
 
@@ -155,6 +186,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     state.content = ''
     state.event_date = todayISODate()
     state.is_scheduled = false
+    state.publish_facebook_scheduled = false
     state.scheduled_publish_local = nextHourLocalInput()
     state.category = undefined
     state.image_url = undefined
@@ -223,6 +255,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               class="w-full"
               @change="normalizeScheduledPublishLocal"
               @blur="normalizeScheduledPublishLocal"
+            />
+            <UCheckbox
+              v-if="state.is_scheduled && isFacebookConnected"
+              v-model="state.publish_facebook_scheduled"
+              label="Programmer aussi la publication sur Facebook"
             />
           </div>
         </UFormField>

@@ -98,6 +98,7 @@ export interface MunicipalInfo {
   event_date: string | null
   publication_status: 'draft' | 'scheduled' | 'published'
   scheduled_publish_at: string | null
+  publish_facebook_scheduled?: boolean
   published_at: string | null
   notification_sent_at: string | null
   facebook_post_id?: string | null

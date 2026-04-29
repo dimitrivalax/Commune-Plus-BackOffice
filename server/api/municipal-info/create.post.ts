@@ -26,6 +26,7 @@ export default eventHandler(async (event) => {
       commune_id: body.commune_id || null,
       publication_status: scheduledPublishAt ? 'scheduled' : 'published',
       scheduled_publish_at: scheduledPublishAt,
+      publish_facebook_scheduled: Boolean(body.publish_facebook_scheduled) && Boolean(scheduledPublishAt),
       published_at: scheduledPublishAt ? null : nowIso,
       notification_sent_at: null,
       created_at: FieldValue.serverTimestamp(),

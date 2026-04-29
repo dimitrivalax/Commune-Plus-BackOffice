@@ -3,6 +3,7 @@ import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { logger } from 'firebase-functions'
+import { createDecipheriv } from 'node:crypto'
 import { sendLicenceExpiryAlertEmail } from './mailer.js'
 
 initializeApp()
@@ -23,11 +24,20 @@ type PushTokenDoc = {
 
 type ActualiteDoc = {
   title?: string
+  content?: string
+  image_url?: string | null
   category?: string | null
   commune_id?: string | null
   publication_status?: 'draft' | 'scheduled' | 'published'
   scheduled_publish_at?: string | null
+  publish_facebook_scheduled?: boolean
   notification_sent_at?: string | null
+}
+
+type CommuneFacebookConfigDoc = {
+  page_id?: string
+  token_status?: 'active' | 'revoked' | 'expired'
+  encrypted_page_access_token?: string
 }
 
 function getRuntimeProjectId(): string {
@@ -125,6 +135,118 @@ async function sendActualiteNotification(infoId: string, info: ActualiteDoc): Pr
   return sent
 }
 
+function decodeHtml(text: string): string {
+  return text
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, '\'')
+    .trim()
+}
+
+function getFacebookGraphApiVersion(): string {
+  const raw = String(process.env.FACEBOOK_GRAPH_API_VERSION || 'v25.0').trim()
+  return raw.startsWith('v') ? raw : `v${raw}`
+}
+
+function getFacebookGraphApiBaseUrl(): string {
+  return `https://graph.facebook.com/${getFacebookGraphApiVersion()}`
+}
+
+function decryptFacebookPageToken(encryptedPayloadRaw: string): string | null {
+  const keyRaw = process.env.FACEBOOK_TOKEN_ENCRYPTION_KEY || ''
+  if (!keyRaw) return null
+
+  const key = Buffer.from(keyRaw, 'base64')
+  if (key.length !== 32) return null
+
+  let encryptedPayload: { iv: string, authTag: string, ciphertext: string }
+  try {
+    encryptedPayload = JSON.parse(encryptedPayloadRaw) as { iv: string, authTag: string, ciphertext: string }
+  } catch {
+    return null
+  }
+
+  const decipher = createDecipheriv(
+    'aes-256-gcm',
+    key,
+    Buffer.from(encryptedPayload.iv, 'base64')
+  )
+  decipher.setAuthTag(Buffer.from(encryptedPayload.authTag, 'base64'))
+  const plainToken = Buffer.concat([
+    decipher.update(Buffer.from(encryptedPayload.ciphertext, 'base64')),
+    decipher.final()
+  ])
+  return plainToken.toString('utf8')
+}
+
+async function publishActualiteOnFacebook(infoId: string, info: ActualiteDoc): Promise<{ success: boolean, postId?: string, error?: string }> {
+  const communeId = info.commune_id
+  if (!communeId) {
+    return { success: false, error: 'commune_id manquant' }
+  }
+
+  const db = getRuntimeDb()
+  const facebookConfigSnap = await db.collection('commune_facebook_config').doc(communeId).get()
+  if (!facebookConfigSnap.exists) {
+    return { success: false, error: 'Configuration Facebook absente' }
+  }
+
+  const facebookConfig = facebookConfigSnap.data() as CommuneFacebookConfigDoc
+  if (!facebookConfig.page_id || !facebookConfig.encrypted_page_access_token) {
+    return { success: false, error: 'Configuration Facebook incomplète' }
+  }
+  if (facebookConfig.token_status && facebookConfig.token_status !== 'active') {
+    return { success: false, error: `Token Facebook ${facebookConfig.token_status}` }
+  }
+
+  const pageAccessToken = decryptFacebookPageToken(facebookConfig.encrypted_page_access_token)
+  if (!pageAccessToken) {
+    return { success: false, error: 'Token Facebook illisible (clé manquante ou invalide)' }
+  }
+
+  const title = decodeHtml(String(info.title || ''))
+  const content = decodeHtml(String(info.content || ''))
+  const message = [title, content].filter(Boolean).join('\n\n').slice(0, 60000)
+  const imageUrl = typeof info.image_url === 'string' ? info.image_url : null
+
+  const endpoint = imageUrl
+    ? `${getFacebookGraphApiBaseUrl()}/${facebookConfig.page_id}/photos`
+    : `${getFacebookGraphApiBaseUrl()}/${facebookConfig.page_id}/feed`
+
+  const body = imageUrl
+    ? new URLSearchParams({
+      caption: message,
+      url: imageUrl,
+      access_token: pageAccessToken
+    })
+    : new URLSearchParams({
+      message,
+      access_token: pageAccessToken
+    })
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString()
+  })
+
+  const json = await response.json().catch(() => null) as { id?: string, error?: { message?: string } } | null
+  if (!response.ok || !json?.id) {
+    return {
+      success: false,
+      error: json?.error?.message || `HTTP ${response.status}`
+    }
+  }
+
+  return { success: true, postId: json.id }
+}
+
 export const notifyLicenceExpiry = onSchedule(
   {
     schedule: '0 8 * * *',
@@ -212,6 +334,8 @@ export const publishScheduledActualites = onSchedule(
       let skippedAlreadyNotified = 0
       let publishErrors = 0
       let notifyErrors = 0
+      let facebookPublishedCount = 0
+      let facebookErrors = 0
 
       for (const scheduledDoc of dueDocs) {
         const info = scheduledDoc.data() as ActualiteDoc
@@ -238,10 +362,29 @@ export const publishScheduledActualites = onSchedule(
 
         try {
           const sent = await sendActualiteNotification(scheduledDoc.id, info)
-          await scheduledDoc.ref.update({
+          const patch: Record<string, unknown> = {
             notification_sent_at: new Date().toISOString(),
             updated_at: FieldValue.serverTimestamp()
-          })
+          }
+
+          if (info.publish_facebook_scheduled) {
+            const facebookResult = await publishActualiteOnFacebook(scheduledDoc.id, info)
+            if (facebookResult.success) {
+              facebookPublishedCount += 1
+              patch.facebook_post_id = facebookResult.postId || null
+              patch.facebook_published_at = new Date().toISOString()
+              patch.facebook_error = null
+            } else {
+              facebookErrors += 1
+              patch.facebook_error = facebookResult.error || 'Publication Facebook impossible'
+              logger.error('Echec publication Facebook actualite programmee', {
+                infoId: scheduledDoc.id,
+                error: facebookResult.error || '(unknown)'
+              })
+            }
+          }
+
+          await scheduledDoc.ref.update(patch)
           notifiedCount += sent
         } catch (error: unknown) {
           notifyErrors += 1
@@ -258,6 +401,8 @@ export const publishScheduledActualites = onSchedule(
         dueCount: dueDocs.length,
         publishedCount,
         notifiedCount,
+        facebookPublishedCount,
+        facebookErrors,
         skippedAlreadyNotified,
         publishErrors,
         notifyErrors

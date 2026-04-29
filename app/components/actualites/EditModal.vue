@@ -2,6 +2,7 @@
 import * as z from 'zod'
 import type { FormSubmitEvent, EditorToolbarItem } from '@nuxt/ui'
 import type { MunicipalInfo } from '~/types'
+import { useFacebookPublicationService } from '~/composables/useFacebookPublicationService'
 
 const editorToolbarItems: EditorToolbarItem[] = [
   {
@@ -32,6 +33,7 @@ const schema = z.object({
   content: z.string().min(1, 'Le contenu est requis'),
   event_date: z.string().optional(),
   is_scheduled: z.boolean().default(false),
+  publish_facebook_scheduled: z.boolean().default(false),
   scheduled_publish_local: z.string().optional(),
   category: z.string().optional(),
   image_url: z
@@ -79,6 +81,7 @@ const state = reactive<Partial<Schema>>({
   content: '',
   event_date: undefined,
   is_scheduled: false,
+  publish_facebook_scheduled: false,
   scheduled_publish_local: undefined,
   category: undefined,
   image_url: undefined
@@ -92,6 +95,7 @@ watch(
       state.content = newInfo.content
       state.event_date = toDateOnly(newInfo.event_date ?? null) ?? undefined
       state.is_scheduled = newInfo.publication_status === 'scheduled'
+      state.publish_facebook_scheduled = Boolean(newInfo.publish_facebook_scheduled)
       state.scheduled_publish_local = toLocalDatetimeInput(newInfo.scheduled_publish_at)
       state.category = newInfo.category || undefined
       state.image_url = newInfo.image_url || undefined
@@ -100,15 +104,42 @@ watch(
   { immediate: true }
 )
 
+watch(
+  () => open.value,
+  (isOpen) => {
+    if (isOpen) {
+      void refreshFacebookConnectionStatus()
+    }
+  }
+)
+
 const toast = useToast()
 const refresh = inject<() => void>('refresh-actualites')
 const { currentCommune } = useCurrentCommune()
+const { getFacebookStatus } = useFacebookPublicationService()
 const { publish, isPublishing } = usePublishMunicipalInfo({ onSuccess: () => refresh?.() })
 const { updateMunicipalInfo, duplicateMunicipalInfo } = useMunicipalInfoService()
 const isDuplicating = ref(false)
+const isFacebookConnected = ref(false)
 
 function normalizeScheduledPublishLocal() {
   state.scheduled_publish_local = normalizeHourlyLocalInput(state.scheduled_publish_local)
+}
+
+async function refreshFacebookConnectionStatus() {
+  const communeId = props.info?.commune_id ?? currentCommune.value?.id
+  if (!communeId) {
+    isFacebookConnected.value = false
+    return
+  }
+  try {
+    const facebookStatus = await getFacebookStatus(communeId)
+    isFacebookConnected.value = Boolean(facebookStatus.connected)
+      && facebookStatus.token_status !== 'expired'
+      && facebookStatus.token_status !== 'revoked'
+  } catch {
+    isFacebookConnected.value = false
+  }
 }
 
 const emit = defineEmits<{
@@ -152,7 +183,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       event_date: event.data.event_date || null,
       category: event.data.category || null,
       image_url: event.data.image_url || null,
-      scheduled_publish_at: scheduledPublishAt
+      scheduled_publish_at: scheduledPublishAt,
+      publish_facebook_scheduled: event.data.is_scheduled
+        ? Boolean(event.data.publish_facebook_scheduled)
+        : false
     })
 
     toast.add({
@@ -230,6 +264,7 @@ function openModal(info?: MunicipalInfo) {
     state.content = targetInfo.content
     state.event_date = toDateOnly(targetInfo.event_date ?? null) ?? undefined
     state.is_scheduled = targetInfo.publication_status === 'scheduled'
+    state.publish_facebook_scheduled = Boolean(targetInfo.publish_facebook_scheduled)
     state.scheduled_publish_local = toLocalDatetimeInput(targetInfo.scheduled_publish_at)
     state.category = targetInfo.category || undefined
     state.image_url = targetInfo.image_url || undefined
@@ -288,6 +323,11 @@ defineExpose({
               class="w-full"
               @change="normalizeScheduledPublishLocal"
               @blur="normalizeScheduledPublishLocal"
+            />
+            <UCheckbox
+              v-if="state.is_scheduled && isFacebookConnected"
+              v-model="state.publish_facebook_scheduled"
+              label="Programmer aussi la publication sur Facebook"
             />
           </div>
         </UFormField>

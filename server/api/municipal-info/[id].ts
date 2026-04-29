@@ -32,11 +32,13 @@ export default eventHandler(async (event) => {
         if (scheduledPublishAt) {
           patch.scheduled_publish_at = scheduledPublishAt
           patch.publication_status = 'scheduled'
+          patch.publish_facebook_scheduled = Boolean(body.publish_facebook_scheduled)
           patch.published_at = null
           patch.notification_sent_at = null
         } else {
           patch.scheduled_publish_at = null
           patch.publication_status = 'published'
+          patch.publish_facebook_scheduled = false
           patch.published_at = new Date().toISOString()
         }
       }

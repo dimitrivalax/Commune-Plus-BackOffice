@@ -7,6 +7,7 @@ interface CreateMunicipalInfoInput {
   category: string | null
   image_url: string | null
   scheduled_publish_at: string | null
+  publish_facebook_scheduled?: boolean
   commune_id?: string | null
 }
 
@@ -18,6 +19,7 @@ interface UpdateMunicipalInfoInput {
   category: string | null
   image_url: string | null
   scheduled_publish_at: string | null
+  publish_facebook_scheduled?: boolean
 }
 
 interface DuplicateMunicipalInfoInput {

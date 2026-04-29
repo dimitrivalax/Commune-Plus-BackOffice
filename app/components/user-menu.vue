@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import { getErrorMessage } from '~/utils/errorMessage'
-import { useFacebookPublicationService } from '~/composables/useFacebookPublicationService'
 
 defineProps<{
   collapsed?: boolean
@@ -14,8 +12,7 @@ const appConfig = useAppConfig()
 const { user: supabaseUser, signOut } = useSupabase()
 const { currentCommune } = useCurrentCommune()
 const openEditCommune = inject<() => void>('open-edit-commune')
-const { status, accept, refuse, reset } = useCookieConsent()
-const { getConnectUrl, getFacebookStatus } = useFacebookPublicationService()
+const { openFacebookConfigModal } = useFacebookConfigModal()
 
 const colors = [
   'red',
@@ -95,101 +92,6 @@ const handleSignOut = async () => {
 const editProfileModal = ref<{ openModal: () => void } | null>(null)
 const contactModalOpen = ref(false)
 const cookieModalOpen = ref(false)
-const facebookModalOpen = ref(false)
-const isFacebookLoading = ref(false)
-const facebookStatus = ref<{
-  connected: boolean
-  page_name?: string
-  token_status?: 'active' | 'revoked' | 'expired'
-} | null>(null)
-
-const cookieStatusLabel = computed(() => {
-  if (status.value === 'accepted') {
-    return 'Acceptés'
-  }
-  if (status.value === 'refused') {
-    return 'Refusés'
-  }
-  return 'En attente de choix'
-})
-
-function applyCookieChoice(choice: 'accepted' | 'refused' | 'reset') {
-  if (choice === 'accepted') {
-    accept()
-    toast.add({
-      title: 'Préférences cookies mises à jour',
-      description: 'Les cookies optionnels sont désormais activés.',
-      color: 'success'
-    })
-    return
-  }
-
-  if (choice === 'refused') {
-    refuse()
-    toast.add({
-      title: 'Préférences cookies mises à jour',
-      description: 'Les cookies optionnels sont désormais désactivés.',
-      color: 'success'
-    })
-    return
-  }
-
-  reset()
-  toast.add({
-    title: 'Préférences cookies réinitialisées',
-    description: 'Le bandeau de consentement sera affiché à nouveau.',
-    color: 'success'
-  })
-}
-
-async function refreshFacebookStatus() {
-  if (!currentCommune.value?.id) {
-    facebookStatus.value = null
-    return
-  }
-  isFacebookLoading.value = true
-  try {
-    facebookStatus.value = await getFacebookStatus(currentCommune.value.id)
-  } catch {
-    facebookStatus.value = null
-  } finally {
-    isFacebookLoading.value = false
-  }
-}
-
-async function connectFacebook() {
-  if (!currentCommune.value?.id) {
-    toast.add({
-      title: 'Erreur',
-      description: 'Aucune commune sélectionnée.',
-      color: 'error'
-    })
-    return
-  }
-  try {
-    const url = await getConnectUrl(currentCommune.value.id)
-    if (import.meta.client) {
-      window.open(url, '_blank', 'noopener,noreferrer')
-    }
-    toast.add({
-      title: 'Connexion Facebook',
-      description: 'La fenêtre de connexion Facebook a été ouverte.',
-      color: 'info'
-    })
-  } catch (error: unknown) {
-    toast.add({
-      title: 'Erreur',
-      description: getErrorMessage(error, 'Impossible de démarrer la connexion Facebook.'),
-      color: 'error'
-    })
-  }
-}
-
-watch(() => facebookModalOpen.value, (open) => {
-  if (open) {
-    void refreshFacebookStatus()
-  }
-})
 
 const items = computed<DropdownMenuItem[][]>(() => {
   const footerGroup: DropdownMenuItem[] = []
@@ -209,7 +111,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
       icon: 'i-lucide-link',
       onSelect: (e: Event) => {
         e.preventDefault()
-        facebookModalOpen.value = true
+        openFacebookConfigModal()
       }
     },
     {
@@ -430,144 +332,8 @@ const items = computed<DropdownMenuItem[][]>(() => {
     </UDropdownMenu>
 
     <SettingsProfileEditModal ref="editProfileModal" />
-
-    <UModal
-      v-model:open="facebookModalOpen"
-      title="Configuration Facebook"
-      description="Connectez la page Facebook de la commune courante pour publier les actualités."
-      :ui="{ content: 'sm:max-w-lg' }"
-    >
-      <template #body>
-        <div class="space-y-4 py-2">
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            Commune courante :
-            <span class="font-medium text-highlighted">
-              {{ currentCommune?.name || 'Aucune' }}
-            </span>
-          </p>
-          <p v-if="isFacebookLoading" class="text-sm">
-            Chargement du statut...
-          </p>
-          <p
-            v-else-if="facebookStatus?.connected && facebookStatus.page_name"
-            class="text-sm"
-          >
-            Connecté à la page : <strong>{{ facebookStatus.page_name }}</strong>
-            <span
-              v-if="facebookStatus.token_status && facebookStatus.token_status !== 'active'"
-              class="text-warning"
-            >
-              ({{ facebookStatus.token_status }})
-            </span>
-          </p>
-          <p v-else class="text-sm text-neutral-600 dark:text-neutral-400">
-            Aucune page Facebook connectée pour la commune courante.
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <UButton
-              :label="facebookStatus?.connected ? 'Reconnecter Facebook' : 'Connecter Facebook'"
-              color="neutral"
-              icon="i-lucide-link"
-              @click="connectFacebook"
-            />
-            <UButton
-              label="Rafraîchir le statut"
-              color="neutral"
-              variant="subtle"
-              icon="i-lucide-refresh-cw"
-              @click="refreshFacebookStatus"
-            />
-          </div>
-        </div>
-      </template>
-      <template #footer>
-        <UButton
-          label="Fermer"
-          color="neutral"
-          variant="subtle"
-          @click="facebookModalOpen = false"
-        />
-      </template>
-    </UModal>
-
-    <UModal
-      v-model:open="contactModalOpen"
-      title="Nous contacter"
-      description="Une question ou un besoin d'assistance ?"
-      :ui="{ content: 'sm:max-w-md' }"
-    >
-      <template #body>
-        <div class="space-y-4 py-2">
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            Pour nous contacter, envoyez-nous un mail à l'adresse suivante :
-          </p>
-          <div
-            class="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-center gap-2 group"
-          >
-            <UIcon name="i-lucide-mail" class="text-primary size-5" />
-            <a
-              href="mailto:contact@commune-plus.fr"
-              class="text-primary font-semibold hover:underline decoration-2 underline-offset-4 transition-all"
-            >
-              contact@commune-plus.fr
-            </a>
-          </div>
-        </div>
-      </template>
-      <template #footer>
-        <UButton
-          label="Fermer"
-          color="neutral"
-          variant="subtle"
-          @click="contactModalOpen = false"
-        />
-      </template>
-    </UModal>
-
-    <UModal
-      v-model:open="cookieModalOpen"
-      title="Préférences cookies"
-      description="Gérez votre consentement pour les cookies optionnels (mesure d'audience)."
-      :ui="{ content: 'sm:max-w-md' }"
-    >
-      <template #body>
-        <div class="space-y-4 py-2">
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            Statut actuel :
-            <span class="font-medium text-highlighted">
-              {{ cookieStatusLabel }}
-            </span>
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <UButton
-              label="Accepter"
-              color="success"
-              variant="soft"
-              @click="applyCookieChoice('accepted')"
-            />
-            <UButton
-              label="Refuser"
-              color="error"
-              variant="soft"
-              @click="applyCookieChoice('refused')"
-            />
-            <UButton
-              label="Réinitialiser"
-              color="neutral"
-              variant="ghost"
-              @click="applyCookieChoice('reset')"
-            />
-          </div>
-        </div>
-      </template>
-      <template #footer>
-        <UButton
-          label="Fermer"
-          color="neutral"
-          variant="subtle"
-          @click="cookieModalOpen = false"
-        />
-      </template>
-    </UModal>
+    <UserMenuFacebookConfigModal />
+    <UserMenuContactModal v-model:open="contactModalOpen" />
+    <UserMenuCookiePreferencesModal v-model:open="cookieModalOpen" />
   </div>
 </template>

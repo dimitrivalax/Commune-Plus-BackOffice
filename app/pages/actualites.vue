@@ -29,7 +29,15 @@ const {
 provide('refresh-actualites', refresh)
 
 const { publish } = usePublishMunicipalInfo({ onSuccess: refresh })
-const { publishToFacebook, getConnectUrl } = useFacebookPublicationService()
+const { publishToFacebook, getConnectUrl, getFacebookStatus } = useFacebookPublicationService()
+const { currentCommune } = useCurrentCommune()
+const { openFacebookConfigModal } = useFacebookConfigModal()
+const isFacebookStatusLoading = ref(false)
+const facebookStatus = ref<{
+  connected: boolean
+  page_name?: string
+  token_status?: 'active' | 'revoked' | 'expired'
+} | null>(null)
 
 const selectedInfo = ref<MunicipalInfo | null>(null)
 const editModal = useTemplateRef<{ openModal: (info?: MunicipalInfo) => void }>(
@@ -73,6 +81,35 @@ async function connectFacebookForCurrentCommune() {
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 }
+
+async function refreshFacebookStatus() {
+  if (!currentCommune.value?.id) {
+    facebookStatus.value = null
+    return
+  }
+  isFacebookStatusLoading.value = true
+  try {
+    facebookStatus.value = await getFacebookStatus(currentCommune.value.id)
+  } catch {
+    facebookStatus.value = null
+  } finally {
+    isFacebookStatusLoading.value = false
+  }
+}
+
+const facebookStatusText = computed(() => {
+  if (isFacebookStatusLoading.value) return 'Facebook: chargement...'
+  if (facebookStatus.value?.connected && facebookStatus.value.page_name) {
+    const tokenStatus = facebookStatus.value.token_status
+    const suffix = tokenStatus && tokenStatus !== 'active' ? ` (${tokenStatus})` : ''
+    return `Connecté à la page Facebook : ${facebookStatus.value.page_name}${suffix}`
+  }
+  return 'Facebook non connecté'
+})
+
+watch(() => currentCommune.value?.id, () => {
+  void refreshFacebookStatus()
+}, { immediate: true })
 
 async function publishInfoToFacebook(row: MunicipalInfo) {
   try {
@@ -357,12 +394,35 @@ const columns: TableColumn<MunicipalInfo>[] = [
     </template>
 
     <template #body>
-      <UInput
-        v-model="searchQuery"
-        class="max-w-sm mb-4"
-        icon="i-lucide-search"
-        placeholder="Rechercher par titre, contenu ou catégorie..."
-      />
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <UInput
+          v-model="searchQuery"
+          class="max-w-sm w-full"
+          icon="i-lucide-search"
+          placeholder="Rechercher par titre, contenu ou catégorie..."
+        />
+        <div class="flex items-center justify-end gap-2 min-w-0">
+          <span class="text-sm text-muted truncate">
+            {{ facebookStatusText }}
+          </span>
+          <UButton
+            v-if="!facebookStatus?.connected"
+            label="Configurer Facebook"
+            color="neutral"
+            variant="subtle"
+            icon="i-lucide-link"
+            @click="openFacebookConfigModal"
+          />
+          <UButton
+            v-else
+            label="Gérer"
+            color="neutral"
+            variant="subtle"
+            icon="i-lucide-settings"
+            @click="openFacebookConfigModal"
+          />
+        </div>
+      </div>
 
       <UTable
         ref="table"

@@ -40,6 +40,7 @@ export default eventHandler(async (event) => {
         ...row,
         publication_status: status,
         scheduled_publish_at: row.scheduled_publish_at ?? null,
+        publish_facebook_scheduled: Boolean(row.publish_facebook_scheduled),
         published_at: row.published_at ?? null,
         notification_sent_at: row.notification_sent_at ?? null
       }
