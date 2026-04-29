@@ -100,6 +100,9 @@ export interface MunicipalInfo {
   scheduled_publish_at: string | null
   published_at: string | null
   notification_sent_at: string | null
+  facebook_post_id?: string | null
+  facebook_published_at?: string | null
+  facebook_error?: string | null
   created_at: string
   updated_at: string
 }

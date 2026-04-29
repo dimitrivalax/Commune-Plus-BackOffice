@@ -22,6 +22,7 @@ const profile = reactive<Partial<ProfileSchema>>({
   bio: undefined
 })
 const toast = useToast()
+
 async function onSubmit(event: FormSubmitEvent<ProfileSchema>) {
   toast.add({
     title: 'Succès',

@@ -54,6 +54,31 @@ env:
     value: "https://backoffice.commune-plus.fr"
     availability:
       - RUNTIME
+  # Facebook / Meta Graph API (serveur)
+  - variable: FACEBOOK_APP_ID
+    secret: FACEBOOK_APP_ID
+    availability:
+      - RUNTIME
+  - variable: FACEBOOK_APP_SECRET
+    secret: FACEBOOK_APP_SECRET
+    availability:
+      - RUNTIME
+  - variable: FACEBOOK_OAUTH_CALLBACK_URL
+    value: "https://backoffice.commune-plus.fr/api/facebook/callback"
+    availability:
+      - RUNTIME
+  - variable: FACEBOOK_OAUTH_STATE_SECRET
+    secret: FACEBOOK_OAUTH_STATE_SECRET
+    availability:
+      - RUNTIME
+  - variable: FACEBOOK_TOKEN_ENCRYPTION_KEY
+    secret: FACEBOOK_TOKEN_ENCRYPTION_KEY
+    availability:
+      - RUNTIME
+  - variable: FACEBOOK_GRAPH_API_VERSION
+    value: "v25.0"
+    availability:
+      - RUNTIME
 
   # Cloudinary
   - variable: CLOUDINARY_CLOUD_NAME

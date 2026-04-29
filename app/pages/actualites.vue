@@ -2,6 +2,7 @@
 import type { TableColumn } from '@nuxt/ui'
 import type { MunicipalInfo } from '~/types'
 import { getErrorMessage } from '~/utils/errorMessage'
+import { useFacebookPublicationService } from '~/composables/useFacebookPublicationService'
 
 const UButton = resolveComponent('UButton')
 const UDropdownMenu = resolveComponent('UDropdownMenu')
@@ -28,6 +29,7 @@ const {
 provide('refresh-actualites', refresh)
 
 const { publish } = usePublishMunicipalInfo({ onSuccess: refresh })
+const { publishToFacebook, getConnectUrl } = useFacebookPublicationService()
 
 const selectedInfo = ref<MunicipalInfo | null>(null)
 const editModal = useTemplateRef<{ openModal: (info?: MunicipalInfo) => void }>(
@@ -65,6 +67,57 @@ async function duplicateInfo(row: MunicipalInfo) {
   }
 }
 
+async function connectFacebookForCurrentCommune() {
+  const url = await getConnectUrl()
+  if (import.meta.client) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+}
+
+async function publishInfoToFacebook(row: MunicipalInfo) {
+  try {
+    await publishToFacebook(row.id)
+    toast.add({
+      title: 'Succès',
+      description: 'Actualité publiée sur Facebook.',
+      color: 'success'
+    })
+    refresh()
+  } catch (error: unknown) {
+    const statusCode
+      = typeof error === 'object'
+        && error !== null
+        && 'statusCode' in error
+        && typeof (error as { statusCode?: unknown }).statusCode === 'number'
+        ? (error as { statusCode: number }).statusCode
+        : undefined
+
+    if (statusCode === 412) {
+      toast.add({
+        title: 'Connexion Facebook requise',
+        description: 'Connectez Facebook pour cette commune, puis relancez la publication.',
+        color: 'warning'
+      })
+      try {
+        await connectFacebookForCurrentCommune()
+      } catch (connectError: unknown) {
+        toast.add({
+          title: 'Erreur',
+          description: getErrorMessage(connectError, 'Impossible de démarrer la connexion Facebook.'),
+          color: 'error'
+        })
+      }
+      return
+    }
+
+    toast.add({
+      title: 'Erreur',
+      description: getErrorMessage(error, 'Publication Facebook impossible'),
+      color: 'error'
+    })
+  }
+}
+
 function getRowItems(row: MunicipalInfo) {
   return [
     {
@@ -84,6 +137,13 @@ function getRowItems(row: MunicipalInfo) {
       icon: 'i-lucide-send',
       onSelect() {
         publish(row)
+      }
+    },
+    {
+      label: 'Publier sur Facebook',
+      icon: 'i-lucide-share-2',
+      onSelect() {
+        publishInfoToFacebook(row)
       }
     },
     {
