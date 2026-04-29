@@ -221,14 +221,14 @@ async function publishActualiteOnFacebook(infoId: string, info: ActualiteDoc): P
 
   const body = imageUrl
     ? new URLSearchParams({
-      caption: message,
-      url: imageUrl,
-      access_token: pageAccessToken
-    })
+        caption: message,
+        url: imageUrl,
+        access_token: pageAccessToken
+      })
     : new URLSearchParams({
-      message,
-      access_token: pageAccessToken
-    })
+        message,
+        access_token: pageAccessToken
+      })
 
   const response = await fetch(endpoint, {
     method: 'POST',
