@@ -9,7 +9,7 @@ const corsHeaders = {
 }
 
 const notifySchema = z.object({
-  proposition_id: z.string().uuid(),
+  proposition_id: z.string().min(1),
   type: z.enum(['vote', 'comment']),
   comment_content: z.string().optional()
 })
@@ -17,7 +17,14 @@ const notifySchema = z.object({
 export default eventHandler(async (event) => {
   setResponseHeaders(event, corsHeaders)
   const body = await readBody(event)
-  const validatedData = notifySchema.parse(body)
+  const parsed = notifySchema.safeParse(body)
+  if (!parsed.success) {
+    throw createError({
+      statusCode: 400,
+      message: 'Invalid notification payload'
+    })
+  }
+  const validatedData = parsed.data
   const db = getAdminFirestore()
 
   const pref = db.collection('proposition').doc(validatedData.proposition_id)
