@@ -119,6 +119,9 @@ const currentDayVacancesDescription = computed(() => props.getVacancesDescriptio
                 <div v-if="item.reservation.nom_association" class="text-xs text-muted truncate">
                   Asso : {{ item.reservation.nom_association }}
                 </div>
+                <div class="text-xs font-medium truncate">
+                  Statut : {{ getReservationStatusLabel(item.reservation.status) }}
+                </div>
                 <div class="text-xs text-muted truncate">
                   {{ format(parseISO(item.reservation.date_debut), 'HH:mm') }} -
                   {{ format(parseISO(item.reservation.date_fin), 'HH:mm') }}

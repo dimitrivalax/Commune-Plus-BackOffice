@@ -41,6 +41,8 @@ export async function useReservationsSallesPageState() {
   const currentView = ref<ViewType>('week')
   const currentDate = ref(new Date())
   const selectedSalleIds = ref<string[]>([])
+  const reservationStatusOptions: ReservationSalle['status'][] = ['en_attente', 'confirmée', 'refusée']
+  const selectedReservationStatuses = ref<ReservationSalle['status'][]>([...reservationStatusOptions])
   const addModalProps = ref<{
     salleId?: string
     dateDebut?: Date
@@ -145,6 +147,7 @@ export async function useReservationsSallesPageState() {
   const filteredReservations = computed(() => {
     if (!reservations.value) return []
     return reservations.value.filter((res) => {
+      if (!selectedReservationStatuses.value.includes(res.status)) return false
       const resStart = parseISO(res.date_debut)
       const resEnd = parseISO(res.date_fin)
       return isWithinInterval(resStart, dateRange.value)
@@ -256,6 +259,16 @@ export async function useReservationsSallesPageState() {
     selectedSalleIds.value = selectedSalleIds.value.filter(id => id !== salleId)
   }
 
+  function toggleReservationStatusSelection(status: ReservationSalle['status'], checked: boolean) {
+    if (checked) {
+      if (!selectedReservationStatuses.value.includes(status)) {
+        selectedReservationStatuses.value = [...selectedReservationStatuses.value, status]
+      }
+      return
+    }
+    selectedReservationStatuses.value = selectedReservationStatuses.value.filter(value => value !== status)
+  }
+
   const salleColorPalette = [
     'bg-primary/20 border-primary hover:bg-primary/35',
     'bg-success/20 border-success hover:bg-success/35',
@@ -314,6 +327,8 @@ export async function useReservationsSallesPageState() {
     currentView,
     currentDate,
     selectedSalleIds,
+    reservationStatusOptions,
+    selectedReservationStatuses,
     addModalProps,
     isReservationsMobileDisabled,
     dateRange,
@@ -334,6 +349,7 @@ export async function useReservationsSallesPageState() {
     getReservationsForDay,
     getSalleName,
     toggleSalleSelection,
+    toggleReservationStatusSelection,
     getSalleColorClasses,
     getReservationStatusLabel,
     formatReservationDateTime,

@@ -101,6 +101,9 @@ const today = new Date()
                 <div v-if="reservation.nom_association" class="text-xs text-muted truncate">
                   Asso : {{ reservation.nom_association }}
                 </div>
+                <div class="text-xs font-medium truncate">
+                  Statut : {{ getReservationStatusLabel(reservation.status) }}
+                </div>
                 <div class="text-xs text-muted truncate">
                   {{ getSalleName(reservation.salle_id) }} -
                   {{ format(parseISO(reservation.date_debut), 'HH:mm') }} -

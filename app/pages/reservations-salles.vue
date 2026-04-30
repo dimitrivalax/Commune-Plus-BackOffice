@@ -10,6 +10,8 @@ const {
   currentView,
   currentDate,
   selectedSalleIds,
+  reservationStatusOptions,
+  selectedReservationStatuses,
   addModalProps,
   isReservationsMobileDisabled,
   dateRange,
@@ -29,6 +31,7 @@ const {
   getReservationsForDay,
   getSalleName,
   toggleSalleSelection,
+  toggleReservationStatusSelection,
   getSalleColorClasses,
   getReservationStatusLabel,
   formatReservationDateTime,
@@ -284,28 +287,55 @@ async function printPlanning(mode: 'view' | 'list') {
           </div>
 
           <div v-if="salles?.length" class="non-print-salles mb-4 p-3 border border-default rounded-lg bg-elevated/20">
-            <div class="text-sm font-medium mb-2">
-              Salles affichées
-            </div>
-            <div class="flex flex-wrap gap-3">
-              <label
-                v-for="salle in salles"
-                :key="`filter-${salle.id}`"
-                class="flex items-center gap-2 text-sm"
-              >
-                <input
-                  :checked="selectedSalleIds.includes(salle.id)"
-                  type="checkbox"
-                  class="rounded border-default"
-                  @change="toggleSalleSelection(salle.id, ($event.target as HTMLInputElement).checked)"
-                >
-                <span
-                  class="inline-flex items-center gap-2 px-2 py-1 border rounded"
-                  :class="getSalleColorClasses(salle.id)"
-                >
-                  {{ salle.nom }}
-                </span>
-              </label>
+            <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <div class="text-sm font-medium mb-2">
+                  Salles affichées
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <label
+                    v-for="salle in salles"
+                    :key="`filter-${salle.id}`"
+                    class="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      :checked="selectedSalleIds.includes(salle.id)"
+                      type="checkbox"
+                      class="rounded border-default"
+                      @change="toggleSalleSelection(salle.id, ($event.target as HTMLInputElement).checked)"
+                    >
+                    <span
+                      class="inline-flex items-center gap-2 px-2 py-1 border rounded"
+                      :class="getSalleColorClasses(salle.id)"
+                    >
+                      {{ salle.nom }}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="md:ml-4">
+                <div class="text-sm font-medium mb-2">
+                  Statuts
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <label
+                    v-for="statusValue in reservationStatusOptions"
+                    :key="`status-filter-${statusValue}`"
+                    class="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      :checked="selectedReservationStatuses.includes(statusValue)"
+                      type="checkbox"
+                      class="rounded border-default"
+                      @change="toggleReservationStatusSelection(statusValue, ($event.target as HTMLInputElement).checked)"
+                    >
+                    <span class="inline-flex items-center gap-2 px-2 py-1 border border-default rounded">
+                      {{ getReservationStatusLabel(statusValue) }}
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 

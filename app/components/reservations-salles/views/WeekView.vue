@@ -97,6 +97,9 @@ const emit = defineEmits<{
                 <div v-if="reservation.nom_association" class="text-xs text-muted truncate">
                   Asso : {{ reservation.nom_association }}
                 </div>
+                <div class="text-xs font-medium truncate">
+                  Statut : {{ getReservationStatusLabel(reservation.status) }}
+                </div>
                 <div class="text-xs text-muted">
                   {{ format(parseISO(reservation.date_debut), 'HH:mm') }} -
                   {{ format(parseISO(reservation.date_fin), 'HH:mm') }}
