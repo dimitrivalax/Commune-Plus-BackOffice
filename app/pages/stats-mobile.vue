@@ -35,9 +35,7 @@ const { data, status, error } = await useStatsMobileData(period, selectedCommune
 const kpis = computed(() => data.value?.kpis)
 const topActualites = computed(() => data.value?.top_actualites || [])
 const topPropositions = computed(() => data.value?.top_propositions || [])
-const notificationPerformance = computed(
-  () => data.value?.notifications_performance || []
-)
+
 const isLoading = computed(() => status.value === 'pending')
 </script>
 
@@ -168,23 +166,6 @@ const isLoading = computed(() => status.value === 'pending')
             </p>
           </UCard>
         </div>
-
-        <UCard>
-          <template #header>
-            Performance des notifications
-          </template>
-          <UTable
-            :data="notificationPerformance"
-            :loading="status === 'pending'"
-            :columns="[
-              { accessorKey: 'target_type', header: 'Type' },
-              { accessorKey: 'target_title', header: 'Titre' },
-              { accessorKey: 'sent_total', header: 'Envoyees' },
-              { accessorKey: 'unique_clicks', header: 'Clics uniques' },
-              { accessorKey: 'ctr_percent', header: 'Taux d\'ouverture (%)' }
-            ]"
-          />
-        </UCard>
 
         <UAlert
           v-if="error"
