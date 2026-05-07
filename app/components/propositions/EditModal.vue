@@ -100,6 +100,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     toast.add({ title: 'Succès', description: 'La proposition a été modifiée', color: 'success' })
     await fetchDetails()
     refresh?.()
+    open.value = false
   } catch (error: unknown) {
     toast.add({ title: 'Erreur', description: getErrorMessage(error, 'Mise à jour impossible'), color: 'error' })
   }

@@ -161,6 +161,18 @@ const columns: TableColumn<Proposition>[] = [
       }, String(row.original.votes_count || 0))
   },
   {
+    accessorKey: 'comments_public',
+    header: 'Commentaires',
+    cell: ({ row }) =>
+      h('span', {
+        class: 'cursor-pointer',
+        onClick: (e: Event) => {
+          e.stopPropagation()
+          handleRowClick(row.original)
+        }
+      }, row.original.comments_public ? 'Public' : 'Privé')
+  },
+  {
     accessorKey: 'updated_at',
     header: 'Date de modification',
     cell: ({ row }) =>
