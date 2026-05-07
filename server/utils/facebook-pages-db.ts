@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
+import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminFirestore } from './firebase-admin-app'
 
 export interface CommuneFacebookConfig {
@@ -9,6 +10,7 @@ export interface CommuneFacebookConfig {
   created_at: string
   updated_at: string
   connected_by_utilisateur_id: string
+  connected_facebook_user_asid?: string
   encrypted_page_access_token?: string
 }
 
@@ -18,6 +20,7 @@ interface PersistFacebookConfigInput {
   pageName: string
   pageAccessToken: string
   connectedByUtilisateurId: string
+  connectedFacebookUserAsid: string
 }
 
 interface EncryptedPayload {
@@ -100,11 +103,33 @@ export async function upsertCommuneFacebookConfig(input: PersistFacebookConfigIn
       encrypted_page_access_token: encryptToken(input.pageAccessToken),
       token_status: 'active',
       connected_by_utilisateur_id: input.connectedByUtilisateurId,
+      connected_facebook_user_asid: input.connectedFacebookUserAsid,
       created_at: existing.exists ? existing.get('created_at') || now : now,
       updated_at: now
     },
     { merge: true }
   )
+}
+
+export async function findCommuneFacebookConfigsByAsid(
+  asid: string
+): Promise<CommuneFacebookConfig[]> {
+  const db = getAdminFirestore()
+  const snap = await db
+    .collection('commune_facebook_config')
+    .where('connected_facebook_user_asid', '==', asid)
+    .get()
+  return snap.docs.map(doc => doc.data() as CommuneFacebookConfig)
+}
+
+export async function revokeCommuneFacebookConfig(communeId: string): Promise<void> {
+  const db = getAdminFirestore()
+  await db.collection('commune_facebook_config').doc(communeId).update({
+    token_status: 'revoked',
+    encrypted_page_access_token: FieldValue.delete(),
+    connected_facebook_user_asid: FieldValue.delete(),
+    updated_at: new Date().toISOString()
+  })
 }
 
 export async function getCommuneFacebookConfig(communeId: string): Promise<(CommuneFacebookConfig & { page_access_token: string }) | null> {

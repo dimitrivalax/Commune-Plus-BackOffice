@@ -9,6 +9,7 @@ Ce dossier contient les Architecture Decision Records (ADR) et la documentation 
 - `0003-signalement-notifications.md` : flux des notifications push de signalements (mobile <-> BackOffice <-> FCM).
 - `0004-mobile-analytics-rgpd.md` : cadrage RGPD et instrumentation analytics mobile.
 - `0005-mobile-service-contracts-and-error-handling.md` : standardisation mobile des contrats de services (`{ data, error }`) et de la gestion d'erreurs.
+- `0006-facebook-data-deletion-callback.md` : mise en conformite Meta Data Deletion Callback avec stockage ASID et revocation active des Pages Facebook.
 
 ## Convention de nommage
 

@@ -118,6 +118,22 @@ export async function exchangeCodeForUserAccessToken(code: string): Promise<Face
   return json
 }
 
+export async function fetchFacebookUserId(userAccessToken: string): Promise<string> {
+  const params = new URLSearchParams({
+    fields: 'id',
+    access_token: userAccessToken
+  })
+  const response = await fetch(`${getFacebookGraphApiBaseUrl()}/me?${params.toString()}`)
+  const json = await response.json().catch(() => null) as { id?: string } | null
+  if (!response.ok || !json?.id) {
+    throw createError({
+      statusCode: 400,
+      message: 'Impossible de recuperer l\'identifiant Facebook de l\'utilisateur'
+    })
+  }
+  return json.id
+}
+
 export async function fetchManagedFacebookPages(userAccessToken: string): Promise<FacebookManagedPage[]> {
   const params = new URLSearchParams({
     fields: 'id,name,access_token',

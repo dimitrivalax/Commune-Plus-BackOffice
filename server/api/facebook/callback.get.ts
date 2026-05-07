@@ -1,5 +1,6 @@
 import {
   exchangeCodeForUserAccessToken,
+  fetchFacebookUserId,
   fetchManagedFacebookPages,
   verifyFacebookOAuthState
 } from '../../utils/facebook-oauth'
@@ -30,6 +31,7 @@ export default eventHandler(async (event) => {
 
   const statePayload = verifyFacebookOAuthState(state)
   const tokenData = await exchangeCodeForUserAccessToken(code)
+  const facebookUserId = await fetchFacebookUserId(tokenData.access_token)
   const pages = await fetchManagedFacebookPages(tokenData.access_token)
 
   if (pages.length === 0) {
@@ -46,7 +48,8 @@ export default eventHandler(async (event) => {
     pageId: selectedPage.id,
     pageName: selectedPage.name,
     pageAccessToken: selectedPage.access_token,
-    connectedByUtilisateurId: statePayload.utilisateurId
+    connectedByUtilisateurId: statePayload.utilisateurId,
+    connectedFacebookUserAsid: facebookUserId
   })
 
   return sendRedirect(
