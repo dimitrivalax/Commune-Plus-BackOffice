@@ -191,11 +191,13 @@ defineExpose({
         </UFormField>
 
         <UFormField
-          label="Logo URL"
-          placeholder="https://example.com/logo.png"
+          label="Logo"
           name="logo_url"
         >
-          <UInput v-model="state.logo_url" class="w-full" />
+          <GalleryImagePicker
+            v-model="state.logo_url"
+            :commune-id="commune?.id ?? null"
+          />
         </UFormField>
 
         <UFormField
@@ -222,23 +224,6 @@ defineExpose({
           >
             <USwitch v-model="state.feature_propositions" />
           </UFormField>
-        </div>
-
-        <div
-          v-if="state.logo_url"
-          class="flex justify-center p-4 bg-muted/50 rounded-lg border border-dashed border-default"
-        >
-          <img
-            :src="state.logo_url"
-            class="max-h-32 object-contain rounded"
-            alt="Aperçu du logo"
-            @error="
-              (e) => ((e.target as HTMLImageElement).style.display = 'none')
-            "
-            @load="
-              (e) => ((e.target as HTMLImageElement).style.display = 'block')
-            "
-          >
         </div>
 
         <div class="flex justify-between gap-2 pt-2">
