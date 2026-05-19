@@ -99,7 +99,7 @@ const today = new Date()
                   {{ reservation.prenom }} {{ reservation.nom }}
                 </div>
                 <div v-if="reservation.nom_association" class="text-xs text-muted truncate">
-                  Asso : {{ reservation.nom_association }}
+                  Motif : {{ reservation.nom_association }}
                 </div>
                 <div class="text-xs font-medium truncate">
                   Statut : {{ getReservationStatusLabel(reservation.status) }}

@@ -15,7 +15,7 @@ defineProps<{
       {{ reservation.prenom }} {{ reservation.nom }}
     </div>
     <div v-if="reservation.nom_association" class="mb-1 text-muted">
-      Assoc. : {{ reservation.nom_association }}
+      Motif : {{ reservation.nom_association }}
     </div>
     <div class="mb-1">
       Salle : {{ getSalleName(reservation.salle_id) }}

@@ -117,7 +117,7 @@ const currentDayVacancesDescription = computed(() => props.getVacancesDescriptio
                   {{ item.reservation.prenom }} {{ item.reservation.nom }}
                 </div>
                 <div v-if="item.reservation.nom_association" class="text-xs text-muted truncate">
-                  Asso : {{ item.reservation.nom_association }}
+                  Motif : {{ item.reservation.nom_association }}
                 </div>
                 <div class="text-xs font-medium truncate">
                   Statut : {{ getReservationStatusLabel(item.reservation.status) }}
