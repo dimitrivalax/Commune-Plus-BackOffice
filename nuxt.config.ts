@@ -32,8 +32,7 @@ export default defineNuxtConfig({
       firebaseMessagingSenderId: process.env.NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
       firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID || '',
       posthogApiKey: process.env.POSTHOG_API_KEY || '',
-      posthogHost: process.env.POSTHOG_HOST || 'https://app.posthog.com',
-      facebookPublishingEnabled: process.env.NUXT_PUBLIC_FACEBOOK_PUBLISHING_ENABLED !== 'false'
+      posthogHost: process.env.POSTHOG_HOST || 'https://app.posthog.com'
     }
   },
 

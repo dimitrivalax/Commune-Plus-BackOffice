@@ -30,7 +30,6 @@ provide('refresh-actualites', refresh)
 
 const { publish } = usePublishMunicipalInfo({ onSuccess: refresh })
 const { publishToFacebook, getConnectUrl, getFacebookStatus } = useFacebookPublicationService()
-const isFacebookPublishingEnabled = useFacebookPublishingEnabled()
 const { currentCommune } = useCurrentCommune()
 const { openFacebookConfigModal } = useFacebookConfigModal()
 const isFacebookStatusLoading = ref(false)
@@ -109,10 +108,6 @@ const facebookStatusText = computed(() => {
 })
 
 watch(() => currentCommune.value?.id, () => {
-  if (!isFacebookPublishingEnabled.value) {
-    facebookStatus.value = null
-    return
-  }
   void refreshFacebookStatus()
 }, { immediate: true })
 
@@ -181,15 +176,13 @@ function getRowItems(row: MunicipalInfo) {
         publish(row)
       }
     },
-    ...(isFacebookPublishingEnabled.value
-      ? [{
-          label: 'Publier sur Facebook',
-          icon: 'i-lucide-share-2',
-          onSelect() {
-            publishInfoToFacebook(row)
-          }
-        }]
-      : []),
+    {
+      label: 'Publier sur Facebook',
+      icon: 'i-lucide-share-2',
+      onSelect() {
+        publishInfoToFacebook(row)
+      }
+    },
     {
       label: 'Dupliquer',
       icon: 'i-lucide-copy-plus',
@@ -408,10 +401,7 @@ const columns: TableColumn<MunicipalInfo>[] = [
           icon="i-lucide-search"
           placeholder="Rechercher par titre, contenu ou catégorie..."
         />
-        <div
-          v-if="isFacebookPublishingEnabled"
-          class="flex items-center justify-end gap-2 min-w-0"
-        >
+        <div class="flex items-center justify-end gap-2 min-w-0">
           <span class="text-sm text-muted truncate">
             {{ facebookStatusText }}
           </span>

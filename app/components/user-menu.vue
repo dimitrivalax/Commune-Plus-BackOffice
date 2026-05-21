@@ -13,7 +13,6 @@ const { user: supabaseUser, signOut } = useSupabase()
 const { currentCommune } = useCurrentCommune()
 const openEditCommune = inject<() => void>('open-edit-commune')
 const { openFacebookConfigModal } = useFacebookConfigModal()
-const isFacebookPublishingEnabled = useFacebookPublishingEnabled()
 
 const colors = [
   'red',
@@ -106,17 +105,15 @@ const items = computed<DropdownMenuItem[][]>(() => {
       }
     })
   }
-  if (isFacebookPublishingEnabled.value) {
-    footerGroup.push({
+  footerGroup.push(
+    {
       label: 'Facebook',
       icon: 'i-lucide-link',
       onSelect: (e: Event) => {
         e.preventDefault()
         openFacebookConfigModal()
       }
-    })
-  }
-  footerGroup.push(
+    },
     {
       label: 'Contact',
       icon: 'i-lucide-mail',

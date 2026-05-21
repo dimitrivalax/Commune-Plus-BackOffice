@@ -95,7 +95,6 @@ const toast = useToast()
 const refresh = inject<() => void>('refresh-actualites')
 const { currentCommune } = useCurrentCommune()
 const { getFacebookStatus } = useFacebookPublicationService()
-const isFacebookPublishingEnabled = useFacebookPublishingEnabled()
 const { createMunicipalInfo } = useMunicipalInfoService()
 const isFacebookConnected = ref(false)
 
@@ -120,7 +119,7 @@ async function refreshFacebookConnectionStatus() {
 }
 
 watch(() => open.value, (isOpen) => {
-  if (isOpen && isFacebookPublishingEnabled.value) {
+  if (isOpen) {
     void refreshFacebookConnectionStatus()
   }
 })
@@ -258,7 +257,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               @blur="normalizeScheduledPublishLocal"
             />
             <UCheckbox
-              v-if="isFacebookPublishingEnabled && state.is_scheduled && isFacebookConnected"
+              v-if="state.is_scheduled && isFacebookConnected"
               v-model="state.publish_facebook_scheduled"
               label="Programmer aussi la publication sur Facebook"
             />
