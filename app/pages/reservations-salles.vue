@@ -330,9 +330,7 @@ async function printPlanning(mode: 'view' | 'list') {
                       class="rounded border-default"
                       @change="toggleReservationStatusSelection(statusValue, ($event.target as HTMLInputElement).checked)"
                     >
-                    <span class="inline-flex items-center gap-2 px-2 py-1 border border-default rounded">
-                      {{ getReservationStatusLabel(statusValue) }}
-                    </span>
+                    <ReservationsSallesReservationStatusBadge :status="statusValue" size="sm" />
                   </label>
                 </div>
               </div>
@@ -355,7 +353,6 @@ async function printPlanning(mode: 'view' | 'list') {
             :get-salle-color-classes="getSalleColorClasses"
             :get-salle-name="getSalleName"
             :format-reservation-date-time="formatReservationDateTime"
-            :get-reservation-status-label="getReservationStatusLabel"
             @reservation-click="handleReservationClick"
             @day-column-click="handleDayColumnClick"
           />
@@ -371,7 +368,6 @@ async function printPlanning(mode: 'view' | 'list') {
             :get-salle-color-classes="getSalleColorClasses"
             :get-salle-name="getSalleName"
             :format-reservation-date-time="formatReservationDateTime"
-            :get-reservation-status-label="getReservationStatusLabel"
             @reservation-click="handleReservationClick"
           />
 
@@ -388,7 +384,6 @@ async function printPlanning(mode: 'view' | 'list') {
             :get-salle-name="getSalleName"
             :get-salle-color-classes="getSalleColorClasses"
             :format-reservation-date-time="formatReservationDateTime"
-            :get-reservation-status-label="getReservationStatusLabel"
             @reservation-click="handleReservationClick"
           />
         </div>

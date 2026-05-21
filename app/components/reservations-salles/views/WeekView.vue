@@ -2,6 +2,7 @@
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { ReservationSalle, Salle } from '~/types'
+import ReservationsSallesReservationStatusBadge from '~/components/reservations-salles/ReservationStatusBadge.vue'
 
 defineProps<{
   status: string
@@ -13,7 +14,6 @@ defineProps<{
   getSalleColorClasses: (salleId: string) => string
   getSalleName: (salleId: string) => string
   formatReservationDateTime: (date: string) => string
-  getReservationStatusLabel: (status?: ReservationSalle['status']) => string
 }>()
 
 const emit = defineEmits<{
@@ -83,7 +83,6 @@ const emit = defineEmits<{
                   :reservation="reservation"
                   :get-salle-name="getSalleName"
                   :format-reservation-date-time="formatReservationDateTime"
-                  :get-reservation-status-label="getReservationStatusLabel"
                 />
               </template>
               <div
@@ -97,8 +96,8 @@ const emit = defineEmits<{
                 <div v-if="reservation.nom_association" class="text-xs text-muted truncate">
                   Motif : {{ reservation.nom_association }}
                 </div>
-                <div class="text-xs font-medium truncate">
-                  Statut : {{ getReservationStatusLabel(reservation.status) }}
+                <div class="mt-0.5">
+                  <ReservationsSallesReservationStatusBadge :status="reservation.status" />
                 </div>
                 <div class="text-xs text-muted">
                   {{ format(parseISO(reservation.date_debut), 'HH:mm') }} -

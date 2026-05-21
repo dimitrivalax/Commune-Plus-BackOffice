@@ -2,6 +2,7 @@
 import { format, parseISO } from 'date-fns'
 import type { ReservationSalle, Salle } from '~/types'
 import type { DayPlacedReservation } from '~/composables/useReservationsSallesCalendar'
+import ReservationsSallesReservationStatusBadge from '~/components/reservations-salles/ReservationStatusBadge.vue'
 
 const props = defineProps<{
   currentDate: Date
@@ -18,7 +19,6 @@ const props = defineProps<{
   getSalleColorClasses: (salleId: string) => string
   getSalleName: (salleId: string) => string
   formatReservationDateTime: (date: string) => string
-  getReservationStatusLabel: (status?: ReservationSalle['status']) => string
 }>()
 
 const emit = defineEmits<{
@@ -103,7 +103,6 @@ const currentDayVacancesDescription = computed(() => props.getVacancesDescriptio
                   :reservation="item.reservation"
                   :get-salle-name="getSalleName"
                   :format-reservation-date-time="formatReservationDateTime"
-                  :get-reservation-status-label="getReservationStatusLabel"
                 />
               </template>
 
@@ -119,8 +118,8 @@ const currentDayVacancesDescription = computed(() => props.getVacancesDescriptio
                 <div v-if="item.reservation.nom_association" class="text-xs text-muted truncate">
                   Motif : {{ item.reservation.nom_association }}
                 </div>
-                <div class="text-xs font-medium truncate">
-                  Statut : {{ getReservationStatusLabel(item.reservation.status) }}
+                <div class="mt-0.5">
+                  <ReservationsSallesReservationStatusBadge :status="item.reservation.status" />
                 </div>
                 <div class="text-xs text-muted truncate">
                   {{ format(parseISO(item.reservation.date_debut), 'HH:mm') }} -

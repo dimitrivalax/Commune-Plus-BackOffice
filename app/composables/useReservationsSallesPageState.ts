@@ -19,6 +19,7 @@ import {
 } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { ReservationSalle, Salle } from '~/types'
+import { getReservationStatusLabel } from '~/utils/reservation-salle-status'
 
 export type ViewType = 'day' | 'week' | 'month'
 
@@ -282,18 +283,6 @@ export async function useReservationsSallesPageState() {
     const index = salles.value.findIndex(salle => salle.id === salleId)
     if (index < 0) return 'bg-elevated border-default hover:bg-elevated/80'
     return salleColorPalette[index % salleColorPalette.length] || 'bg-elevated border-default hover:bg-elevated/80'
-  }
-
-  function getReservationStatusLabel(statusValue?: ReservationSalle['status']): string {
-    switch (statusValue) {
-      case 'confirmée':
-        return 'Confirmée'
-      case 'refusée':
-        return 'Refusée'
-      case 'en_attente':
-      default:
-        return 'En attente'
-    }
   }
 
   function formatReservationDateTime(date: string): string {

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { ReservationSalle } from '~/types'
+import ReservationsSallesReservationStatusBadge from '~/components/reservations-salles/ReservationStatusBadge.vue'
 
 defineProps<{
   reservation: ReservationSalle
   getSalleName: (salleId: string) => string
   formatReservationDateTime: (date: string) => string
-  getReservationStatusLabel: (status?: ReservationSalle['status']) => string
 }>()
 </script>
 
@@ -26,8 +26,9 @@ defineProps<{
     <div class="mb-1">
       Fin : {{ formatReservationDateTime(reservation.date_fin) }}
     </div>
-    <div class="mb-1">
-      Statut : {{ getReservationStatusLabel(reservation.status) }}
+    <div class="mb-1 flex items-center gap-1.5">
+      <span class="text-muted">Statut</span>
+      <ReservationsSallesReservationStatusBadge :status="reservation.status" size="sm" />
     </div>
     <div class="text-muted truncate">
       {{ reservation.email }} - {{ reservation.telephone }}
