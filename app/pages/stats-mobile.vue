@@ -95,7 +95,15 @@ const isLoading = computed(() => status.value === 'pending')
           </UFormField>
         </div>
 
-        <div class="grid gap-3 md:grid-cols-3">
+        <div class="grid gap-3 md:grid-cols-4">
+          <UCard>
+            <template #header>
+              Utilisateurs mobiles connectes
+            </template>
+            <div class="text-2xl font-semibold">
+              {{ kpis?.connected_users_count ?? 0 }}
+            </div>
+          </UCard>
           <UCard>
             <template #header>
               Vues uniques actualites
