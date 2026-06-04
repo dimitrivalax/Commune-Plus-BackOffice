@@ -9,6 +9,7 @@ interface FacebookConnectResponse {
 
 interface FacebookStatusResponse {
   connected: boolean
+  has_configuration?: boolean
   page_id?: string
   page_name?: string
   token_status?: 'active' | 'revoked' | 'expired'

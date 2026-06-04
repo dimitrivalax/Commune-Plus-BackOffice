@@ -132,6 +132,22 @@ export async function revokeCommuneFacebookConfig(communeId: string): Promise<vo
   })
 }
 
+/** Métadonnées Firestore sans déchiffrer le token (statut UI, déconnexion). */
+export async function getCommuneFacebookConfigMeta(
+  communeId: string
+): Promise<CommuneFacebookConfig | null> {
+  const db = getAdminFirestore()
+  const snap = await db.collection('commune_facebook_config').doc(communeId).get()
+  if (!snap.exists) return null
+  return snap.data() as CommuneFacebookConfig
+}
+
+/** Suppression complète de la liaison Facebook pour une commune (action utilisateur). */
+export async function removeCommuneFacebookConfig(communeId: string): Promise<void> {
+  const db = getAdminFirestore()
+  await db.collection('commune_facebook_config').doc(communeId).delete()
+}
+
 export async function getCommuneFacebookConfig(communeId: string): Promise<(CommuneFacebookConfig & { page_access_token: string }) | null> {
   const db = getAdminFirestore()
   const snap = await db.collection('commune_facebook_config').doc(communeId).get()

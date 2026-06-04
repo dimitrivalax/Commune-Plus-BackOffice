@@ -5,8 +5,8 @@ import {
   requireAuth
 } from '../../utils/firebase-auth'
 import {
-  getCommuneFacebookConfig,
-  revokeCommuneFacebookConfig
+  getCommuneFacebookConfigMeta,
+  removeCommuneFacebookConfig
 } from '../../utils/facebook-pages-db'
 
 export default eventHandler(async (event) => {
@@ -27,16 +27,17 @@ export default eventHandler(async (event) => {
 
   assertCanManageCommune(profile, communeId)
 
-  const config = await getCommuneFacebookConfig(communeId!)
-  if (!config) {
+  const meta = await getCommuneFacebookConfigMeta(communeId!)
+  if (!meta?.page_id) {
     return { success: true, disconnected: false }
   }
 
-  await revokeCommuneFacebookConfig(communeId!)
+  const pageName = meta.page_name
+  await removeCommuneFacebookConfig(communeId!)
 
   return {
     success: true,
     disconnected: true,
-    page_name: config.page_name
+    page_name: pageName
   }
 })

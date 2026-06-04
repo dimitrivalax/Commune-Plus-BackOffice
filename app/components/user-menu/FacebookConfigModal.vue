@@ -16,9 +16,32 @@ const isFacebookLoading = ref(false)
 const isDisconnecting = ref(false)
 const facebookStatus = ref<{
   connected: boolean
+  has_configuration?: boolean
   page_name?: string
   token_status?: 'active' | 'revoked' | 'expired'
 } | null>(null)
+
+const canDisconnectFacebook = computed(() =>
+  Boolean(
+    facebookStatus.value?.connected
+    || facebookStatus.value?.has_configuration
+    || facebookStatus.value?.page_name
+  )
+)
+
+const facebookStatusLabel = computed(() => {
+  if (!facebookStatus.value?.page_name) return null
+  if (facebookStatus.value.connected) {
+    return `Connecté à la page : ${facebookStatus.value.page_name}`
+  }
+  if (facebookStatus.value.token_status === 'revoked') {
+    return `Liaison révoquée — page : ${facebookStatus.value.page_name}`
+  }
+  if (facebookStatus.value.token_status === 'expired') {
+    return `Jeton expiré — page : ${facebookStatus.value.page_name}`
+  }
+  return `Configuration enregistrée — page : ${facebookStatus.value.page_name}`
+})
 
 async function refreshFacebookStatus() {
   if (!currentCommune.value?.id) {
@@ -73,7 +96,7 @@ async function disconnectFacebookForCommune() {
     })
     return
   }
-  if (!facebookStatus.value?.connected) return
+  if (!canDisconnectFacebook.value) return
 
   isDisconnecting.value = true
   try {
@@ -137,22 +160,18 @@ setupFacebookOAuthWindowRefresh(() => {
           Chargement du statut...
         </p>
         <p
-          v-else-if="facebookStatus?.connected && facebookStatus.page_name"
+          v-else-if="facebookStatusLabel"
           class="text-sm"
         >
-          Connecté à la page : <strong>{{ facebookStatus.page_name }}</strong>
-          <span
-            v-if="facebookStatus.token_status && facebookStatus.token_status !== 'active'"
-            class="text-warning"
-          >
-            ({{ facebookStatus.token_status }})
+          <span :class="facebookStatus?.connected ? '' : 'text-warning'">
+            {{ facebookStatusLabel }}
           </span>
         </p>
         <p v-else class="text-sm text-neutral-600 dark:text-neutral-400">
           Aucune page Facebook connectée pour la commune courante.
         </p>
         <ul
-          v-if="!facebookStatus?.connected && !isFacebookLoading"
+          v-if="!canDisconnectFacebook && !isFacebookLoading"
           class="list-disc space-y-1 pl-5 text-xs text-neutral-500 dark:text-neutral-500"
         >
           <li v-if="isAdministrator">
@@ -167,20 +186,10 @@ setupFacebookOAuthWindowRefresh(() => {
         </ul>
         <div class="flex flex-wrap gap-2">
           <UButton
-            :label="facebookStatus?.connected ? 'Reconnecter Facebook' : 'Connecter Facebook'"
+            :label="canDisconnectFacebook ? 'Reconnecter Facebook' : 'Connecter Facebook'"
             color="neutral"
             icon="i-lucide-link"
             @click="connectFacebook"
-          />
-          <UButton
-            v-if="facebookStatus?.connected"
-            label="Déconnecter Facebook"
-            color="error"
-            variant="subtle"
-            icon="i-lucide-unlink"
-            :loading="isDisconnecting"
-            :disabled="isFacebookLoading"
-            @click="disconnectFacebookForCommune"
           />
           <UButton
             label="Rafraîchir le statut"
@@ -194,12 +203,25 @@ setupFacebookOAuthWindowRefresh(() => {
       </div>
     </template>
     <template #footer>
-      <UButton
-        label="Fermer"
-        color="neutral"
-        variant="subtle"
-        @click="closeFacebookConfigModal"
-      />
+      <div class="flex w-full flex-wrap items-center justify-end gap-2">
+        <UButton
+          v-if="canDisconnectFacebook"
+          label="Déconnecter Facebook"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-unlink"
+          :loading="isDisconnecting"
+          :disabled="isFacebookLoading"
+          @click="disconnectFacebookForCommune"
+        />
+        <UButton
+          label="Fermer"
+          color="neutral"
+          variant="subtle"
+          :disabled="isDisconnecting"
+          @click="closeFacebookConfigModal"
+        />
+      </div>
     </template>
   </UModal>
 </template>
