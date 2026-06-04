@@ -1,6 +1,7 @@
 import {
   assertCanManageCommune,
   getCurrentUserProfile,
+  getEffectiveCommuneIdForRequest,
   requireAuth
 } from '../../utils/firebase-auth'
 import {
@@ -22,9 +23,7 @@ export default eventHandler(async (event) => {
   const requestedCommuneId = typeof query.commune_id === 'string'
     ? query.commune_id
     : undefined
-  const communeId = profile.role === 'administrateur'
-    ? requestedCommuneId
-    : profile.communeIds[0]
+  const communeId = getEffectiveCommuneIdForRequest(profile, requestedCommuneId)
 
   assertCanManageCommune(profile, communeId)
   const state = createFacebookOAuthState(communeId!, profile.utilisateurId)

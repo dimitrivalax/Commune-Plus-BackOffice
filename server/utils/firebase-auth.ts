@@ -143,6 +143,9 @@ export function getEffectiveCommuneIdForRequest(
   if (profile.role === 'administrateur') {
     return queryCommuneId
   }
+  if (queryCommuneId && profile.communeIds.includes(queryCommuneId)) {
+    return queryCommuneId
+  }
   return profile.communeIds.length > 0 ? profile.communeIds[0] : undefined
 }
 

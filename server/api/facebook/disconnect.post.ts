@@ -4,7 +4,10 @@ import {
   getEffectiveCommuneIdForRequest,
   requireAuth
 } from '../../utils/firebase-auth'
-import { getCommuneFacebookConfig } from '../../utils/facebook-pages-db'
+import {
+  getCommuneFacebookConfig,
+  revokeCommuneFacebookConfig
+} from '../../utils/facebook-pages-db'
 
 export default eventHandler(async (event) => {
   await requireAuth(event)
@@ -26,14 +29,14 @@ export default eventHandler(async (event) => {
 
   const config = await getCommuneFacebookConfig(communeId!)
   if (!config) {
-    return { connected: false }
+    return { success: true, disconnected: false }
   }
 
+  await revokeCommuneFacebookConfig(communeId!)
+
   return {
-    connected: true,
-    page_id: config.page_id,
-    page_name: config.page_name,
-    token_status: config.token_status,
-    updated_at: config.updated_at
+    success: true,
+    disconnected: true,
+    page_name: config.page_name
   }
 })

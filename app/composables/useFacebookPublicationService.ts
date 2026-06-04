@@ -15,6 +15,12 @@ interface FacebookStatusResponse {
   updated_at?: string
 }
 
+interface FacebookDisconnectResponse {
+  success: boolean
+  disconnected: boolean
+  page_name?: string
+}
+
 export const useFacebookPublicationService = () => {
   const { getAuthHeaders } = useApiAuth()
   const { currentCommune } = useCurrentCommune()
@@ -60,9 +66,25 @@ export const useFacebookPublicationService = () => {
     )
   }
 
+  async function disconnectFacebook(communeIdArg?: string) {
+    const communeId = communeIdArg ?? currentCommune.value?.id
+    if (!communeId) {
+      throw new Error('Veuillez sélectionner une commune.')
+    }
+    const query = new URLSearchParams({ commune_id: communeId })
+    return await $fetch<FacebookDisconnectResponse>(
+      `/api/facebook/disconnect?${query.toString()}`,
+      {
+        method: 'POST',
+        headers: getAuthHeaders()
+      }
+    )
+  }
+
   return {
     getConnectUrl,
     publishToFacebook,
-    getFacebookStatus
+    getFacebookStatus,
+    disconnectFacebook
   }
 }

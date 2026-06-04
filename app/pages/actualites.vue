@@ -32,6 +32,11 @@ const { publish } = usePublishMunicipalInfo({ onSuccess: refresh })
 const { publishToFacebook, getConnectUrl, getFacebookStatus } = useFacebookPublicationService()
 const { currentCommune } = useCurrentCommune()
 const { openFacebookConfigModal } = useFacebookConfigModal()
+const {
+  markFacebookOAuthPending,
+  consumeFacebookRouteQuery,
+  setupFacebookOAuthWindowRefresh
+} = useFacebookOAuthFeedback()
 const isFacebookStatusLoading = ref(false)
 const facebookStatus = ref<{
   connected: boolean
@@ -78,6 +83,7 @@ async function duplicateInfo(row: MunicipalInfo) {
 async function connectFacebookForCurrentCommune() {
   const url = await getConnectUrl()
   if (import.meta.client) {
+    markFacebookOAuthPending()
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 }
@@ -110,6 +116,16 @@ const facebookStatusText = computed(() => {
 watch(() => currentCommune.value?.id, () => {
   void refreshFacebookStatus()
 }, { immediate: true })
+
+onMounted(() => {
+  consumeFacebookRouteQuery(() => {
+    void refreshFacebookStatus()
+  })
+})
+
+setupFacebookOAuthWindowRefresh(() => {
+  void refreshFacebookStatus()
+})
 
 async function publishInfoToFacebook(row: MunicipalInfo) {
   try {
