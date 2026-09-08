@@ -82,23 +82,28 @@ env:
 
   # Cloudinary
   - variable: CLOUDINARY_CLOUD_NAME
-    value: "REDACTED"
+    secret: CLOUDINARY_CLOUD_NAME
     availability:
       - BUILD
       - RUNTIME
   - variable: CLOUDINARY_UPLOAD_PRESET
-    value: "Commune Plus"
+    secret: CLOUDINARY_UPLOAD_PRESET
     availability:
       - BUILD
       - RUNTIME
   - variable: CLOUDINARY_API_KEY
     secret: CLOUDINARY_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: CLOUDINARY_API_SECRET
     secret: CLOUDINARY_API_SECRET
+    availability:
+      - RUNTIME
 
   # PostHog
   - variable: POSTHOG_API_KEY
-    value: "REDACTED"
+    secret: POSTHOG_API_KEY
     availability:
       - BUILD
       - RUNTIME
@@ -108,10 +113,9 @@ env:
       - BUILD
       - RUNTIME
 
-
   # Resend
   - variable: RESEND_API_KEY
-    value: "REDACTED"
+    secret: RESEND_API_KEY
     availability:
       - RUNTIME
   - variable: RESEND_FROM_EMAIL
