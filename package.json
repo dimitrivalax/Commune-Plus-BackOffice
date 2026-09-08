@@ -1,5 +1,8 @@
 {
   "name": "Commune-Plus-BackOffice",
+  "description": "Backoffice Commune Plus - Solution pour faciliter la communication entre les mairies et les habitant·es.",
+  "license": "EUPL-1.2",
+  "author": "Dimitri Valax EI",
   "private": true,
   "type": "module",
   "scripts": {
